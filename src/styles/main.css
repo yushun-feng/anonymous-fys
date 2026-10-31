@@ -469,6 +469,148 @@ code {
   font-size: 0.85rem;
 }
 
+.shader-toy {
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #05070b;
+  overflow: hidden;
+}
+
+.shader-toy__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.85rem;
+  padding: 0.65rem 0.75rem 0.35rem;
+}
+
+.shader-toy__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.shader-toy__preset {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.shader-toy__preset:hover {
+  border-color: var(--accent);
+}
+
+.shader-toy__preset.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: #dceeff;
+}
+
+.shader-toy__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  user-select: none;
+}
+
+.shader-toy__blurb {
+  margin: 0;
+  padding: 0 0.75rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.shader-toy__stage {
+  position: relative;
+  width: 100%;
+  height: min(56vh, 440px);
+  touch-action: none;
+  cursor: crosshair;
+  background: #000;
+}
+
+.shader-toy__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.shader-toy--compact .shader-toy__stage {
+  height: min(40vh, 280px);
+}
+
+.shader-toy--compact .shader-toy__toolbar {
+  padding-bottom: 0.45rem;
+}
+
+.shader-toy--compact .shader-toy__blurb {
+  display: none;
+}
+
+.shader-toy__sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.55rem 0.85rem;
+  padding: 0.35rem 0.75rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 14, 20, 0.85);
+}
+
+.shader-toy__slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.shader-toy__slider-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.shader-toy__slider-label em {
+  font-style: normal;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.shader-toy__slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.shader-toy__fallback {
+  margin: 0;
+  padding: 1.25rem 1rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.shader-home-link {
+  margin: -0.5rem 0 1.25rem;
+  font-size: 0.9rem;
+}
+
+.shader-credit {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .site-main {
   flex: 1;
   width: 100%;
