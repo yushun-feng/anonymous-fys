@@ -21,7 +21,7 @@ source: https://learncpp.cn/
 7. **对象模型**：第 23–25 章（关系、继承、虚函数）
 8. **泛型、异常、I/O**：第 26–28 章；附录 A/B 按需
 
-已有相关笔记：[`../raii-and-ownership.md`](../raii-and-ownership.md)。
+已有相关笔记：[`../raii-and-ownership.md`](../raii-and-ownership.md)。演示驱动补充路线：[Cherno C++ 路线](../cherno/00-roadmap.md)。
 
 ## 章节地图（节选标题）
 

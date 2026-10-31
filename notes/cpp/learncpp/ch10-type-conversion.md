@@ -26,3 +26,5 @@ source: https://learncpp.cn/
 - 以为 `auto` 一定推成引用。
 - C 风格 `(int)x` 过于强力且难搜；优先具名 cast。
 - 表达式里无意触发的算术转换改变比较结果。
+
+视频向对照：[Cherno 转型](../cherno/14-casting.md)、[`auto`/lambda](../cherno/12-fp-lambdas-namespaces.md)。

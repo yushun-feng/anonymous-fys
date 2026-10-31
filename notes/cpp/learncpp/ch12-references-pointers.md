@@ -27,6 +27,8 @@ source: https://learncpp.cn/
 - `const int *` 与 `int * const` 混淆。
 - 输出参数过多，不如返回结构体/`optional`。
 
+视频向对照：[Cherno 指针与引用](../cherno/03-pointers-references.md)。
+
 ```cpp
 void scale(std::vector<double>& v, double k);           // 就地修改
 double mean(const std::vector<double>& v);              // 只读

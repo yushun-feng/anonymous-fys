@@ -37,6 +37,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 | `tags` | 是 | 字符串数组；浏览页按 tag 筛选 |
 | `topic` | 是 | `cpp` / `graphics` / `gpu`，须与父文件夹名一致 |
 | `updated` | 是 | 最后更新日期 |
+| `source` | 否 | 外部来源 URL（教材章节、YouTube 视频等）；有明确出处时建议填写 |
 
 ## 正文建议
 
