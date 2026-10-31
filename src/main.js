@@ -152,7 +152,7 @@ function renderPagodaPage() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>应县木塔</span></nav>
     <div class="pagoda-page-slot" data-pagoda-mount></div>
-    <p class="pagoda-credit">佛宫寺释迦塔（应县木塔）三维模型来自 <a href="https://github.com/huangbai-AI/yingxian-pagoda" rel="noopener noreferrer" target="_blank">huangbai-AI/yingxian-pagoda</a>（yingxian-v20）；科普展示性重建，非文物测绘。木纹素材见上游说明（Poly Haven CC0）。</p>
+    <p class="pagoda-credit">佛宫寺释迦塔（应县木塔）三维模型来自 <a href="https://github.com/huangbai-AI/yingxian-pagoda" rel="noopener noreferrer" target="_blank">huangbai-AI/yingxian-pagoda</a>（yingxian-v20，本站二次压缩以加快加载）；科普展示性重建，非文物测绘。木纹素材见上游说明（Poly Haven CC0）。</p>
   `);
 }
 

@@ -243,6 +243,7 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   let raf = 0;
   let visible = true;
   let root = null;
+  let loadStarted = false;
   const disposables = [ground.geometry, ground.material, sky.geo, sky.mat, sky.tex];
 
   const draco = new DRACOLoader();
@@ -251,57 +252,64 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
 
-  loader.load(
-    MODEL_URL,
-    (gltf) => {
-      if (disposed) {
-        gltf.scene.traverse((obj) => {
+  const startModelLoad = () => {
+    if (disposed || loadStarted) return;
+    loadStarted = true;
+    status.hidden = false;
+    status.textContent = '正在加载木塔模型…';
+
+    loader.load(
+      MODEL_URL,
+      (gltf) => {
+        if (disposed) {
+          gltf.scene.traverse((obj) => {
+            if (obj.isMesh) {
+              obj.geometry?.dispose?.();
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              mats.forEach((m) => m?.dispose?.());
+            }
+          });
+          return;
+        }
+        root = gltf.scene;
+        root.traverse((obj) => {
           if (obj.isMesh) {
-            obj.geometry?.dispose?.();
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach((m) => m?.dispose?.());
-          }
-        });
-        return;
-      }
-      root = gltf.scene;
-      root.traverse((obj) => {
-        if (obj.isMesh) {
-          obj.castShadow = !compact;
-          obj.receiveShadow = true;
-          if (obj.material) {
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            for (const m of mats) {
-              if (m && 'envMapIntensity' in m) m.envMapIntensity = 0.85;
+            obj.castShadow = !compact;
+            obj.receiveShadow = true;
+            if (obj.material) {
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              for (const m of mats) {
+                if (m && 'envMapIntensity' in m) m.envMapIntensity = 0.85;
+              }
             }
           }
-        }
-      });
-      scene.add(root);
-      const fit = fitCameraToObject(camera, controls, root, { compact });
-      ground.position.y = fit.box.min.y - 0.02;
-      sun.target.position.copy(fit.center);
-      scene.add(sun.target);
+        });
+        scene.add(root);
+        const fit = fitCameraToObject(camera, controls, root, { compact });
+        ground.position.y = fit.box.min.y - 0.02;
+        sun.target.position.copy(fit.center);
+        scene.add(sun.target);
 
-      const label = makeLabel('应县木塔 · 佛宫寺释迦塔');
-      label.position.set(fit.center.x, fit.box.max.y + fit.maxDim * 0.04, fit.center.z);
-      root.add(label);
+        const label = makeLabel('应县木塔 · 佛宫寺释迦塔');
+        label.position.set(fit.center.x, fit.box.max.y + fit.maxDim * 0.04, fit.center.z);
+        root.add(label);
 
-      status.textContent = '';
-      status.hidden = true;
-    },
-    (event) => {
-      if (disposed || !status || !event.total) return;
-      const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
-      status.textContent = `正在加载木塔模型… ${pct}%`;
-    },
-    (error) => {
-      console.error('应县木塔模型加载失败', error);
-      if (disposed) return;
-      status.hidden = false;
-      status.textContent = '木塔模型加载失败，笔记浏览不受影响。';
-    },
-  );
+        status.textContent = '';
+        status.hidden = true;
+      },
+      (event) => {
+        if (disposed || !status || !event.total) return;
+        const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
+        status.textContent = `正在加载木塔模型… ${pct}%`;
+      },
+      (error) => {
+        console.error('应县木塔模型加载失败', error);
+        if (disposed) return;
+        status.hidden = false;
+        status.textContent = '木塔模型加载失败，笔记浏览不受影响。';
+      },
+    );
+  };
 
   const resize = () => {
     if (disposed) return;
@@ -322,11 +330,14 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
       ? new IntersectionObserver(
           ([entry]) => {
             visible = entry?.isIntersecting ?? true;
+            // Defer the ~12MB GLB fetch until the stage is on-screen.
+            if (visible) startModelLoad();
           },
-          { threshold: 0.05 },
+          { threshold: 0.05, rootMargin: '80px' },
         )
       : null;
-  io?.observe(stage);
+  if (io) io.observe(stage);
+  else startModelLoad();
 
   let userControl = false;
   controls.addEventListener('start', () => {
