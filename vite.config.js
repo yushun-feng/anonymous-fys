@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
-// Project Pages: https://yushun-feng.github.io/anonymous-fys/
+// GitHub project Pages asset prefix (repo name).
 const PAGES_BASE = '/anonymous-fys/';
 
 export default defineConfig(({ command, mode }) => ({
