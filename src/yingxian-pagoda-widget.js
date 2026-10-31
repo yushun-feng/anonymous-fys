@@ -34,6 +34,85 @@ function makeLabel(text) {
   return obj;
 }
 
+/** Equirectangular starfield painted to a canvas — used as an inverted sky-sphere map. */
+function makeStarfieldTexture(width = 2048, height = 1024) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  const sky = ctx.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, '#050814');
+  sky.addColorStop(0.45, '#0a1230');
+  sky.addColorStop(0.72, '#121a3a');
+  sky.addColorStop(1, '#1a1428');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
+
+  // Soft Milky Way band
+  ctx.save();
+  ctx.translate(width * 0.5, height * 0.42);
+  ctx.rotate(-0.35);
+  const band = ctx.createLinearGradient(0, -height * 0.12, 0, height * 0.12);
+  band.addColorStop(0, 'rgba(120,140,200,0)');
+  band.addColorStop(0.5, 'rgba(170,185,230,0.18)');
+  band.addColorStop(1, 'rgba(120,140,200,0)');
+  ctx.fillStyle = band;
+  ctx.fillRect(-width * 0.7, -height * 0.14, width * 1.4, height * 0.28);
+  ctx.restore();
+
+  // Dense star field
+  for (let i = 0; i < 2800; i += 1) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const r = Math.random() < 0.08 ? 1.4 + Math.random() * 1.6 : 0.4 + Math.random() * 0.9;
+    const a = 0.35 + Math.random() * 0.65;
+    const tint = Math.random();
+    ctx.fillStyle =
+      tint > 0.92
+        ? `rgba(180,210,255,${a})`
+        : tint > 0.8
+          ? `rgba(255,230,190,${a})`
+          : `rgba(235,240,255,${a})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // A few brighter “guide” stars with soft glow
+  for (let i = 0; i < 40; i += 1) {
+    const x = Math.random() * width;
+    const y = Math.random() * height * 0.85;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 6 + Math.random() * 8);
+    glow.addColorStop(0, 'rgba(255,255,255,0.9)');
+    glow.addColorStop(0.25, 'rgba(200,220,255,0.35)');
+    glow.addColorStop(1, 'rgba(200,220,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - 14, y - 14, 28, 28);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeStarSkySphere(radius = 480) {
+  const tex = makeStarfieldTexture();
+  const geo = new THREE.SphereGeometry(radius, 64, 32);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = -1;
+  mesh.frustumCulled = false;
+  return { mesh, tex, geo, mat };
+}
+
 function fitCameraToObject(camera, controls, object, { compact = false } = {}) {
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
@@ -85,10 +164,10 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   }
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xb7c4d2);
-  scene.fog = new THREE.Fog(0xb7c4d2, 80, 320);
+  scene.background = new THREE.Color(0x050814);
+  scene.fog = new THREE.FogExp2(0x0a1230, 0.0016);
 
-  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 800);
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1200);
   camera.position.set(60, 45, 110);
 
   const renderer = new THREE.WebGLRenderer({
@@ -117,9 +196,9 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.35;
 
-  scene.add(new THREE.AmbientLight(0xdde6f0, 0.45));
-  scene.add(new THREE.HemisphereLight(0xe8f0ff, 0x6a7058, 0.55));
-  const sun = new THREE.DirectionalLight(0xffe2bd, 2.4);
+  scene.add(new THREE.AmbientLight(0x8a96b8, 0.35));
+  scene.add(new THREE.HemisphereLight(0x6a7aaa, 0x1a1820, 0.4));
+  const sun = new THREE.DirectionalLight(0xffd7a8, 1.85);
   sun.position.set(55, 90, 40);
   sun.castShadow = !compact;
   if (sun.castShadow) {
@@ -135,13 +214,19 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
     sun.shadow.camera.far = 260;
   }
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x9eb7ff, 0.55);
+  const fill = new THREE.DirectionalLight(0x7a9cff, 0.45);
   fill.position.set(-50, 40, -30);
   scene.add(fill);
+  const moon = new THREE.DirectionalLight(0xb8c8ff, 0.35);
+  moon.position.set(-30, 50, 70);
+  scene.add(moon);
+
+  const sky = makeStarSkySphere(520);
+  scene.add(sky.mesh);
 
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(160, 64),
-    new THREE.MeshStandardMaterial({ color: 0x6e7a68, roughness: 0.95, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ color: 0x2a2e34, roughness: 0.95, metalness: 0.05 }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -151,7 +236,7 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   let raf = 0;
   let visible = true;
   let root = null;
-  const disposables = [ground.geometry, ground.material];
+  const disposables = [ground.geometry, ground.material, sky.geo, sky.mat, sky.tex];
 
   const draco = new DRACOLoader();
   draco.setDecoderPath(DRACO_PATH);
@@ -252,6 +337,9 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
     if (disposed) return;
     raf = requestAnimationFrame(tick);
     if (!visible) return;
+    // Keep the sky sphere centered on the camera so it reads as an infinite backdrop.
+    sky.mesh.position.copy(camera.position);
+    sky.mesh.rotation.y += 0.00015;
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
