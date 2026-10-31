@@ -1,6 +1,6 @@
 ---
 title: 第 2 章：函数与多文件
-tags: [cpp, learncpp, functions]
+tags: [cpp, learncpp, cherno, functions]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -297,6 +297,39 @@ int main()
 7. **指望局部变量在两次调用间保持值** → 默认不会（`static` 局部变量见第 7 章）。
 8. **修改形参以为能改实参** → 传值只改副本；改调用方需引用/指针（第 12 章）。
 9. **`#include` 顺序混乱导致偶发编译成功**：头文件应自给自足（包含自己需要的头），不要依赖「别人先包含了 iostream」。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。函数是可复用的「命名代码块」；头文件则是**跨翻译单元的契约墙**——声明给编译器看，定义给链接器找。
+
+### 调用约定的工程读法
+
+```cpp
+int blendAlpha(int src, int dst, int t /*0..100*/)
+{
+    return (src * t + dst * (100 - t)) / 100;
+}
+
+int main()
+{
+    int ignored = blendAlpha(10, 90, 25); // 结果被使用才有意义
+    (void)ignored;
+    blendAlpha(10, 90, 25);               // 返回值被丢弃——合法但常是意图不清
+}
+```
+
+Cherno 常提醒：算完却不用返回值时，要么你在做副作用函数（应标 `void`），要么漏了赋值。`[[nodiscard]]`（正文工具链章节已触达）把这种失误变成编译期提示。
+
+### 头文件卫生（比「能编过」更重要）
+
+- 头文件放声明；普通非模板函数定义放 `.cpp`，避免 ODR 炸裂。
+- `#pragma once` 或 include guard 二选一，团队统一即可。
+- 头文件自给自足：需要 `<cstdint>` 就自己 include，别指望「别人先包含了」。
+- 避免在头里 `using namespace std;`——污染每个包含者。
+
+### 多文件不是仪式，是边界
+
+把「读配置 / 算分数 / 打日志」拆文件，是为了**编译防火墙**：改一处不必重编全世界。正文已有 `add.h`/`add.cpp` 示意；补充口径：公共 API 越窄，重构越便宜。命名空间用来分区，而不是堆全局符号。
 
 ## 练习指引
 

@@ -1,38 +1,27 @@
 ---
-title: Cherno：变量、函数、头文件与控制流
-tags: [cpp, cherno, basics, control-flow]
+title: Cherno：基础与控制流
+tags: [cpp, cherno, basics]
 topic: cpp
 updated: 2026-10-31
-source: https://www.youtube.com/watch?v=zB9RI8_wExo
+source: https://www.youtube.com/watch?v=z1EQXzwV54k
 ---
 
-# Cherno：变量、函数、头文件与控制流
+# Cherno：基础与控制流
 
-> 学习材料：[Variables](https://www.youtube.com/watch?v=zB9RI8_wExo) · [Functions](https://www.youtube.com/watch?v=V9zuox47zr0) · [Header Files](https://www.youtube.com/watch?v=9RJTQmK0YPI) · [Conditions](https://www.youtube.com/watch?v=qEgCT87KOfc) · [Loops](https://www.youtube.com/watch?v=_1AwR-un4Hk) · [Control Flow](https://www.youtube.com/watch?v=a3IZ8WaIFAA)  
-> 相关：[LearnCpp ch01](../learncpp/ch01-basics.md)、[ch02](../learncpp/ch02-functions-files.md)、[ch08](../learncpp/ch08-control-flow.md)、[ch03 调试](../learncpp/ch03-debugging.md)
+> 学习材料：变量 / 函数 / 头文件 / 条件 / 循环 / 控制语句  
+> **完整笔记**：[ch01 基础](../learncpp/ch01-basics.md) · [ch02](../learncpp/ch02-functions-files.md) · [ch08 控制流](../learncpp/ch08-control-flow.md)
 
 ## 本课范围
 
-变量与类型体感；函数与调用；头文件 / include guard；调试入门；`if`、循环、`continue` / `break` / `return`。
+类型与 sizeof；函数与头文件；if/循环/`continue`/`break`。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **约 8–15**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。

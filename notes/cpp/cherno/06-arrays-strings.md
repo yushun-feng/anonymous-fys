@@ -8,31 +8,20 @@ source: https://www.youtube.com/watch?v=ENDaJi08jCU
 
 # Cherno：数组与字符串
 
-> 学习材料：[Arrays](https://www.youtube.com/watch?v=ENDaJi08jCU) · [How Strings Work](https://www.youtube.com/watch?v=ijIxcB9qjaU) · [String Literals](https://www.youtube.com/watch?v=FeHZHF0f2dw)  
-> 相关：[LearnCpp ch05](../learncpp/ch05-constants-strings.md)、[ch16–17](../learncpp/ch16-17-arrays.md)
+> 学习材料：Arrays · Strings · String Literals  
+> **完整笔记**：[ch05 常量与字符串](../learncpp/ch05-constants-strings.md) · [ch16–17 数组](../learncpp/ch16-17-arrays.md)
 
 ## 本课范围
 
-连续内存中的数组；栈上 vs 堆上数组；C 风格字符串与 `std::string`；字符串字面量与编码直觉。
+连续内存；C 字符串与 `std::string`；字面量。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **31–33**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。

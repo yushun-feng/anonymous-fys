@@ -1,6 +1,6 @@
 ---
 title: 第 22 章：移动语义与智能指针
-tags: [cpp, learncpp, move, smart-pointers]
+tags: [cpp, learncpp, cherno, move, smart-pointers]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -10,7 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 22 章  
 > 相关：[RAII 与所有权](../raii-and-ownership.md)  
-> 对照笔记：[Cherno 智能指针](../cherno/09-smart-pointers.md)、[现代工具与移动](../cherno/15-modern-utilities.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[智能指针](../cherno/09-smart-pointers.md)、[现代工具与移动](../cherno/15-modern-utilities.md)。
 
 ## 章节地图
 
@@ -249,6 +249,63 @@ int main() {
 7. **把 `unique_ptr` 存入容器后拿裸指针长期用**：元素移动/擦除后裸指针失效。  
 8. **混淆 `T&&` 成员与模板转发引用**：非模板的 `void f(std::string&&)` 只收右值。
 
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。移动语义解决「昂贵资源不该傻拷贝」；智能指针解决「谁 delete」。Cherno 路线把两者接到同一所有权故事：先弄清拥有者，再谈共享。
+
+### 移动 = 偷资源，留下合法空壳
+
+```cpp
+#include <utility>
+#include <vector>
+
+std::vector<int> buildPalette()
+{
+    std::vector<int> colors{8, 16, 32};
+    return colors; // 通常移动或 NRVO，而不是深拷贝缓冲
+}
+
+void ingest(std::vector<int> batch)
+{
+    auto local = std::move(batch); // batch 此后勿当还有内容用
+    (void)local;
+}
+```
+
+`std::move` 不移动任何东西——它把表达式标成可被窃取的右值。被移从对象应保持有效但未指定状态；典型习惯是立刻不再读它的「旧内容」。
+
+### 指针选型（实战缩略）
+
+| 类型 | 含义 |
+|------|------|
+| `unique_ptr` | 独占；可移动不可拷贝；默认首选 |
+| `shared_ptr` | 共享所有权；有控制块开销；慎用成「到处 shared」 |
+| `weak_ptr` | 不延长寿命；观察与破环 |
+
+```cpp
+#include <memory>
+
+struct TextureAtlas {
+    static std::unique_ptr<TextureAtlas> load(const char* path)
+    {
+        return std::make_unique<TextureAtlas>(/* path */);
+    }
+    explicit TextureAtlas(const char*) {}
+};
+
+void bind(std::unique_ptr<TextureAtlas> atlas)
+{
+    // 所有权传入即接管
+    (void)atlas;
+}
+```
+
+工厂返回 `unique_ptr`；需要共享再在明确边界 `std::shared_ptr` 化。循环引用用 `weak_ptr` 掐断。正文已有综合示例与选型表——补充 Cherno 口径：**先 unique，证明需要共享再用 shared；裸 `new` 只短暂出现在接管点**。
+
+### 性能旁注
+
+移动不是免费魔法：指针级移动很便宜，但「移动」若仍触发深拷贝（实现拙劣或类型不可移动）就骗了自己。测热点时对比拷贝/移动/就地构造，不要只看关键词。
+
 ## 练习指引
 
 1. 为「堆上 int 数组」手写移动构造/赋值，禁止拷贝，测 `vector<Buffer>` 扩容。  
@@ -256,7 +313,7 @@ int main() {
 3. 构造 `shared_ptr` 环并观察泄漏；改一处为 `weak_ptr` 验证释放。  
 4. 比较 `new` + `shared_ptr` 构造 vs `make_shared` 的写法差异。  
 5. 实现 `swap` 友好的移动赋值（移动构造到临时再交换）。  
-6. 对照 [Cherno 智能指针](../cherno/09-smart-pointers.md) 的例子，用 `unique_ptr` 重写一轮裸 `new`/`delete` 代码。
+6. 结合下文 Cherno 视角与视频索引中的例子，用 `unique_ptr` 重写一轮裸 `new`/`delete` 代码。
 
 ## 小结
 

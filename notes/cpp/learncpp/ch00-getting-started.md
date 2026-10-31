@@ -1,6 +1,6 @@
 ---
 title: 第 0 章：入门与工具链
-tags: [cpp, learncpp, toolchain]
+tags: [cpp, learncpp, cherno, toolchain]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -199,6 +199,61 @@ IDE 若用 CMake，把标准与警告写进构建图，比每次手改命令行�
 6. **Release 才崩溃、Debug 正常**：高度怀疑 UB 或依赖未初始化内存；不要用「Release 关优化试试」当根治手段。
 7. **控制台一闪而过**：在 IDE 里用「开始调试 / 运行但不调试」看输出，或在 `main` 末尾临时等待输入；根本办法是在集成终端里运行。
 8. **语言标准设太低**：例如代码用了 `std::string_view`（C++17）却停在 C++14，表现为「不是类型」类离谱错误。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。LearnCpp 第 0 章把工具装好；Cherno 更强调：**你真正在控制的是机器上的比特与指令流**——选 C++ 往往是因为内存布局、延迟与确定性重要，而不是「再学一门语法」。
+
+### 为什么还要碰编译/链接心智模型
+
+把一次构建想成流水线，而不是「点运行」黑盒：
+
+1. **预处理**：展开 `#include` / 宏，得到翻译单元文本。
+2. **编译**：源 → 目标文件（`.o` / `.obj`），检查语法与类型，但**还不要求所有函数已有定义**。
+3. **链接**：把多个目标文件与库粘成可执行文件；缺定义、重复定义、ABI 不一致都在这里炸。
+
+工程直觉：看到 `undefined reference`，先问「哪个 `.cpp` 该进工程」，而不是先改调用方语法。
+
+```cpp
+// gauge_main.cpp —— 只有声明
+int readGaugeMilli();
+int main() { return readGaugeMilli() > 0 ? 0 : 1; }
+```
+
+若工程未编译进提供 `readGaugeMilli` 定义的翻译单元，编译可能过、链接必败——这与正文「链接失败最小复现」同构，只换了名字。
+
+### Debug 与 Release 是两种产品观
+
+Cherno 式习惯：日常学习与查错用 Debug（`-g -O0` 或等价），确认逻辑后再开优化看性能。Release 下变量可能被优化掉、断言消失、未初始化内存「碰巧」变成 0——这些都会制造假象。
+
+```cpp
+#include <iostream>
+
+int saturateGain(int raw)
+{
+    if (raw > 100) return 100;
+    if (raw < 0) return 0;
+    return raw;
+}
+
+int main()
+{
+    std::cout << saturateGain(42) << '\n';
+}
+```
+
+打开 `-Wall -Wextra`，再故意删掉一条 `return` 路径，体会「警告是廉价的代码审查」。
+
+### 工具链选择的工程口径
+
+- 一个仓库固定一套编译器族（GCC / Clang / MSVC），不要混链目标文件。
+- 语言标准写进构建图（CMake `CXX_STANDARD` 或等价），避免「本机能编、CI 不能编」。
+- 学习项目路径尽量 ASCII、无空格；中文路径问题属于环境噪声，尽早排除。
+- 预编译头、Unity build 等是规模化手段；入门阶段先保证「单文件可复现构建」。
+
+### 与正文的分工
+
+正文已覆盖 Hello World、警告开关、链接失败最小复现与 CMake 片段。本节不重复步骤清单，只补 **「编译器在干什么、为何要管内存与确定性」** 的动机层。装好手术台之后，后面每一章的 UB、优化、多文件链接才说得通。
 
 ## 练习指引
 

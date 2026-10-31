@@ -1,6 +1,6 @@
 ---
 title: 第 20 章：函数进阶
-tags: [cpp, learncpp, lambda, functions]
+tags: [cpp, learncpp, cherno, lambda, functions]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 20 章：函数进阶
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 20 章  
-> 对照笔记：[Cherno auto/函数指针/lambda](../cherno/12-fp-lambdas-namespaces.md)、[栈堆](../cherno/07-const-objects-memory.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[auto/函数指针/lambda](../cherno/12-fp-lambdas-namespaces.md)、[栈堆](../cherno/07-const-objects-memory.md)。
 
 ## 章节地图
 
@@ -229,6 +229,47 @@ int main() {
 6. **省略号 + 错误类型**：`va_arg` 类型不对即 UB，无编译期检查。  
 7. **`std::function` 空对象调用**：默认构造的 `std::function` 调用会抛 `std::bad_function_call`。  
 8. **成员函数当回调**：需要 `std::bind` / lambda 包一层，或使用 `std::mem_fn`；不能直接赋给普通函数指针。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。函数指针、`std::function`、lambda 在 Cherno 后期是「把行为当数据传」的工具箱；代价是类型擦除或堆分配可能潜入热路径。
+
+### 函数指针：最薄的回调
+
+```cpp
+using TickFn = void (*)(int dtMs);
+
+void tickPhysics(int dtMs) { /* … */ }
+
+void runLoop(TickFn fn)
+{
+    fn(16);
+}
+
+int main() { runLoop(tickPhysics); }
+```
+
+适合 C API、无捕获的简单回调。一有状态要带，就转向 lambda 或绑定对象。
+
+### Lambda：就地策略对象
+
+```cpp
+#include <algorithm>
+#include <vector>
+
+void retainPositive(std::vector<int>& xs)
+{
+    xs.erase(std::remove_if(xs.begin(), xs.end(),
+                            [](int v) { return v <= 0; }),
+             xs.end());
+}
+```
+
+捕获默认宁可写清 `[=]` / `[&]` / 显式名单；悬垂捕获（按引用抓住即将销毁的局部）与返回局部 lambda 引用捕获同级危险。需要存异种可调用包装时用 `std::function`，但要意识到可能的分配与间接调用成本。
+
+### 与栈/堆章节的交接
+
+大对象默认别按值塞进频繁回调；`const&` 或视图类型更合适。正文对照 Cherno 的 `auto`/lambda 笔记即可——补充口径：**回调接口先问频率与是否在热路径**，再选函数指针 / lambda / `function`。
 
 ## 练习指引
 

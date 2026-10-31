@@ -1,6 +1,6 @@
 ---
 title: 第 3 章：调试
-tags: [cpp, learncpp, debugging]
+tags: [cpp, learncpp, cherno, debugging]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -211,6 +211,41 @@ int main()
 6. **忽略编译器警告**：警告往往已经指出未使用、有符号比较、可能未初始化。
 7. **Heisenbug**：加打印后 bug「消失」——可能是时序/UB；改用调试器观察或 AddressSanitizer 等工具（进阶）。
 8. **一次改太多**：无法知道哪次修改有效；配合 git diff。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。调试在 Cherno 流程里不是「出 bug 才开」，而是**默认开发模式**：断点、调用栈、内存视图比猜打印更快建立心智模型。
+
+### 先复现，再假设
+
+1. 固定输入与期望输出（可复现才谈修复）。
+2. 用断点卡在「第一次看起来不对」的表达式。
+3. 沿调用栈向上看：坏值常常来自调用方，而不是崩溃行本身。
+
+```cpp
+#include <iostream>
+
+double loadFactor(int used, int capacity)
+{
+    // 断点打在 return：分别监视 used、capacity、以及除法类型
+    return used / capacity; // 整数除法陷阱——正文示例同类问题
+}
+
+int main()
+{
+    std::cout << loadFactor(1, 2) << '\n';
+}
+```
+
+修法是改成浮点除法；更重要的是练习：**用监视窗口证明假设**，而不是改完碰运气。
+
+### 日志宏的取舍
+
+学习阶段可用临时 `std::cerr`；稍大一点的练习可做成可开关宏（仅 Debug 打印）。正文已警告「断言当用户校验」——补充：发布路径需要正规错误通道（后续异常/错误码章节），调试设施应能整批关掉以免污染输出对比。
+
+### 与正文分工
+
+易错清单（优化下单步、Heisenbug、一次改太多）正文已列全。本节强调 Cherno 式节奏：**Debug 构建 + 断点优先，打印作辅助，修复后立刻删噪声日志**。
 
 ## 练习指引
 

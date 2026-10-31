@@ -1,6 +1,6 @@
 ---
 title: 第 18–19 章：迭代器、算法与动态分配
-tags: [cpp, learncpp, iterators, memory]
+tags: [cpp, learncpp, cherno, iterators, memory]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -322,6 +322,63 @@ int main() {
 10. **计时用 `system_clock` 或未防优化**：基准测试需注意编译器把空循环优化掉；用 `steady_clock`，并对结果做可观察使用（打印 checksum）。
 11. **`shared_ptr` 循环引用**（预告）：需要 `weak_ptr`；默认优先 `unique_ptr`。
 12. **容器元素是裸指针拥有堆对象**：元素拷贝导致双删——应存智能指针或值。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。迭代器把「指向序列中位置」抽象成可递增、可解引用的对象；动态分配则把寿命从作用域里解放出来——两者都迫使你回答：**谁拥有这块内存**。
+
+### 迭代器：指针的堂兄弟
+
+```cpp
+#include <iostream>
+#include <vector>
+
+void dumpScores(const std::vector<int>& scores)
+{
+    for (auto it = scores.begin(); it != scores.end(); ++it) {
+        std::cout << *it << ' ';
+    }
+}
+```
+
+范围 for 是语法糖；底层仍是 begin/end。失效规则与指针类似：`vector` 重分配、`erase` 之后，旧迭代器往往作废。算法（`find`/`sort`）吃的是迭代器对，而不是容器类型本身——这是泛型的入口。
+
+```cpp
+#include <algorithm>
+
+bool hasZero(const std::vector<int>& xs)
+{
+    return std::find(xs.begin(), xs.end(), 0) != xs.end();
+}
+```
+
+### `new[]` / `delete[]` 的纪律
+
+```cpp
+int* histogram = new int[64]{};
+histogram[3] = 9;
+delete[] histogram;
+histogram = nullptr;
+```
+
+漏 `[]`、重复释放、释放后继续用，都是经典 UB。Cherno 会演示堆与栈的速度与确定性差异：堆分配更贵、可能失败、寿命手动；能用 `vector`/`unique_ptr<T[]>`/`std::make_unique` 就不要长期裸奔。
+
+```cpp
+#include <memory>
+
+auto bins = std::make_unique<int[]>(64);
+bins[0] = 1; // 离开作用域自动释放
+```
+
+### 自定义资源包装的方向
+
+若必须自己管动态缓冲，把指针藏进类，在析构释放，并禁用或正确实现拷贝——这是 RAII 预习。正文若已讲 `std::vector` 增长与迭代器类别，本节不重复 API 表，只强调：
+
+- 动态内存 = 所有权问题；
+- 迭代器 = 位置问题；
+- 两者交叉时（持有指向 vector 元素的迭代器跨过 `push_back`）最容易炸。
+
+调试建议：对可疑堆代码开 AddressSanitizer；对迭代器失效，优先把「容器操作」和「持有迭代器的窗口」画在时间线上。
 
 ## 练习指引
 

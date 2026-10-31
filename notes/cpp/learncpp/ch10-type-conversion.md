@@ -1,6 +1,6 @@
 ---
 title: 第 10 章：类型转换、别名与推断
-tags: [cpp, learncpp, conversion, auto]
+tags: [cpp, learncpp, cherno, conversion, auto]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 10 章：类型转换、别名与推断
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 10 章
-> 对照笔记：[Cherno 转型](../cherno/14-casting.md)、[`auto`/lambda](../cherno/12-fp-lambdas-namespaces.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[转型](../cherno/14-casting.md)、[`auto`/lambda](../cherno/12-fp-lambdas-namespaces.md)。
 
 ## 小节地图
 
@@ -239,6 +239,35 @@ auto multiply(A a, B b) -> decltype(a * b) {
 8. **`bool` 参与算术**：合法但可读性差；显式转换更清楚。
 9. **窄化后比较或打印 `char`**：可能当字符输出；调试时 `static_cast<int>(c)`。
 10. **模板里过度依赖 `auto` 返回**：错误信息变长；公开 API 宜写出类型。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。Cherno 讲隐式转换时的核心态度：**方便的转换往往是静默的坑**；需要转换就写出来，不想要的转换就 `explicit` 挡掉。
+
+### 可见的转换 vs 隐形的转换
+
+```cpp
+struct SampleRate {
+    explicit SampleRate(int hz) : hz_(hz) {}
+    int hz_;
+};
+
+void configure(SampleRate rate);
+
+void demo()
+{
+    // configure(44100);           // explicit：拒绝静默 int→SampleRate
+    configure(SampleRate{44100});  // 意图写在调用点
+}
+```
+
+数值收窄用 `{}` 初始化拦住；跨类型用 `static_cast` 点名。C 风格强制转换在指针场景尤其危险——统一现代转型写法。
+
+### `auto` 的工程纪律
+
+`auto` 减少重复类型名，但会剥掉引用与顶层 `const`。遍历要改元素写 `auto&`；只读写 `const auto&`。正文「auto 漂移」示例已说明 map 拷贝问题——补充口径：**公开 API 返回类型宜写明，模板内部可用 `auto` 减轻噪声**。
+
+类型别名（`using`）提升可读性，但不提供单位安全；真正要防混加，靠强类型包装（如上 `SampleRate`），而不是别名。
 
 ## 练习指引
 

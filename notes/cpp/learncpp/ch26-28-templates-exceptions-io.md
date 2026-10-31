@@ -1,6 +1,6 @@
 ---
 title: 第 26–28 章：类模板、异常与 I/O
-tags: [cpp, learncpp, templates, exceptions, io]
+tags: [cpp, learncpp, cherno, templates, exceptions, io]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -467,6 +467,70 @@ void save(const std::string& path, const std::vector<Record>& rows) {
 - 析构未 `flush` 的担忧：正常离开作用域会关闭并刷新；异常路径依赖 RAII。
 
 ---
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。本合章跨模板深化、异常与 I/O。Cherno 侧可对齐的直觉是：**模板在编译期生成代码**、**异常是控制流的非常规出口**、**I/O 失败是常态不是意外**。
+
+### 模板：付编译时间，换类型安全
+
+```cpp
+template <typename T>
+T maxOf(T a, T b)
+{
+    return (a < b) ? b : a;
+}
+
+template <typename T, typename... Rest>
+T maxOf(T first, Rest... rest)
+{
+    return maxOf(first, maxOf(rest...));
+}
+```
+
+变参与特化让库码紧凑，但错误信息会变长。工程习惯：约束写清楚（概念/static_assert）、公开 API 可考虑封装模板实现，避免每个调用方吞下一整份重型头依赖。
+
+### 异常：用于「函数契约无法继续」
+
+```cpp
+#include <stdexcept>
+#include <string>
+
+int parsePositive(const std::string& text)
+{
+    try {
+        int v = std::stoi(text);
+        if (v <= 0) throw std::invalid_argument("need positive");
+        return v;
+    } catch (const std::exception& ex) {
+        // 边界：记录并转换错误；勿空 catch 吞掉
+        throw;
+    }
+}
+```
+
+异常安全与 RAII 绑定：栈展开时析构必须释放资源。不要用异常做普通分支（「文件结束」优先流状态/`optional`）。热路径上关异常或避免抛，需要团队级约定与测量。
+
+### I/O：检查状态，别假设成功
+
+```cpp
+#include <fstream>
+#include <string>
+
+bool slurpFile(const std::string& path, std::string& out)
+{
+    std::ifstream in(path);
+    if (!in) return false;
+    out.assign(std::istreambuf_iterator<char>(in), {});
+    return static_cast<bool>(in) || in.eof();
+}
+```
+
+二进制 vs 文本、局部 vs 全局、异常 vs 错误码——正文会铺开。Cherno 式补充：工具/引擎里常把「读失败」变成可预期错误对象，把异常留给真正罕见的崩坏；日志里带上路径与错误码，便于现场复盘。
+
+### 三者交汇
+
+模板库若抛异常，文档写清；I/O 模板（如序列化）要把错误通道设计进接口，而不是只在快乐路径演示。读完合章后，用一次「读写配置失败」走通错误路径，比再抄一个成功案例更有价值。
 
 ## 练习指引
 

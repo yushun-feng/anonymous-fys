@@ -1,38 +1,27 @@
 ---
-title: Cherno：现代工具、optional 与移动语义
-tags: [cpp, cherno, optional, move, cpp17]
+title: Cherno：现代工具与移动语义
+tags: [cpp, cherno, modern, move]
 topic: cpp
 updated: 2026-10-31
-source: https://www.youtube.com/watch?v=UAAiwObNhQ0
+source: https://www.youtube.com/watch?v=THhSMEgxCMC
 ---
 
-# Cherno：现代工具、optional 与移动语义
+# Cherno：现代工具与移动语义
 
-> 学习材料：[OPTIONAL](https://www.youtube.com/watch?v=UAAiwObNhQ0) · [variant](https://www.youtube.com/watch?v=qCc_Vqg3hJk) · [any](https://www.youtube.com/watch?v=7nPrUBNGRAk) · [async](https://www.youtube.com/watch?v=5HWCsmE9DrE) · [Move Semantics](https://www.youtube.com/watch?v=ehMg6zvXuMY) · [std::move](https://www.youtube.com/watch?v=OWNeCTd7yQE)  
-> 相关：[LearnCpp ch22](../learncpp/ch22-move-smart-pointers.md)、[ch09](../learncpp/ch09-error-handling.md)、[ch20](../learncpp/ch20-advanced-functions.md)、[线程](./13-threads.md)
+> 学习材料：Structured Bindings · optional / variant / any · async · 左值右值 / move  
+> **完整笔记**：[ch22](../learncpp/ch22-move-smart-pointers.md) · [appendix](../learncpp/appendix-misc-updates.md)
 
 ## 本课范围
 
-`std::optional` / `variant` / `any`；`std::async`；左值右值与移动；`std::move` 与移动赋值。
+C++17 工具类型；移动语义与 `std::move`。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **75–79、约 85–90**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。

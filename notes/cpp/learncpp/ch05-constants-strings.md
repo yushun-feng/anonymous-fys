@@ -1,6 +1,6 @@
 ---
 title: 第 5 章：常量与字符串
-tags: [cpp, learncpp, const, string]
+tags: [cpp, learncpp, cherno, const, string]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -313,6 +313,45 @@ int main()
 8. **频繁 `string` 拼接大循环**：可能多次分配；进阶可用 `reserve` 或流（了解即可）。
 9. **修改字符串字面量**：`"hi"[0] = 'H';` 非法；字面量在只读存储。应用 `std::string`。
 10. **语言标准不足 C++17** 却使用 `string_view`——回到 [第 0 章](./ch00-getting-started.md) 打开 `-std=c++17`。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。`const` 在 Cherno 系列里是 API 契约工具：标了 `const` 的成员函数承诺不改对象可观察状态；字符串则要分清**拥有缓冲**与**只是眺望一段字符**。
+
+### `const` 作为接口语言
+
+```cpp
+struct ScoreBoard {
+    int points{0};
+
+    int current() const { return points; }   // 只读查询
+    void add(int delta) { points += delta; } // 写路径单独暴露
+};
+
+void show(const ScoreBoard& board)
+{
+    // board.add(1); // 非法：const 引用挡住写接口
+    (void)board.current();
+}
+```
+
+能标 `const` 就标——调用方与编译器一起帮你守不变式。`mutable`（缓存、统计）是例外阀门，不是逃课按钮。
+
+### 字符串的成本直觉
+
+短字符串常吃 SSO（小字符串优化），长串会堆分配。热点路径上反复 `+` 拼接可能触发多次分配；需要拥有时用 `std::string`，只读浏览时优先 `std::string_view`（正文已强调悬垂风险）。
+
+```cpp
+#include <string>
+#include <string_view>
+
+std::size_t glyphCount(std::string_view slice)
+{
+    return slice.size(); // 不拥有；调用方保证 slice 存活
+}
+```
+
+工程口径：函数参数「只读文本」默认考虑 `string_view`；返回新串或需要修改缓冲再返回 `string`。字面量与进制陷阱正文已覆盖，此处不重复。
 
 ## 练习指引
 
