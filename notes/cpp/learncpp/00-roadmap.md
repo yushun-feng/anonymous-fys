@@ -8,7 +8,7 @@ source: https://learncpp.cn/
 
 # LearnCpp 学习路线与章节地图
 
-按 [learncpp.cn](https://learncpp.cn/)（结构与 [learncpp.com](https://www.learncpp.com/) 一致）排好的**学习壳索引**：边学边往各章笔记里填「概念 / 例子 / 易错 / 我的补充」。
+按 [learncpp.cn](https://learncpp.cn/)（结构与 [learncpp.com](https://www.learncpp.com/) 一致）排好的**完整学习笔记索引**：各章为可独立研读的专业中文笔记（概念、语法/API、示例、易错、练习指引），覆盖教程主干而非逐字摘抄。
 
 相关：[`../raii-and-ownership.md`](../raii-and-ownership.md) · [Cherno C++ 路线](../cherno/00-roadmap.md)
 
@@ -25,8 +25,8 @@ source: https://learncpp.cn/
 
 ## 章节地图
 
-| 章 | 主题 | 本库笔记壳 |
-|----|------|------------|
+| 章 | 主题 | 本库笔记 |
+|----|------|----------|
 | 0 | 简介 / 入门 | [ch00](./ch00-getting-started.md) |
 | 1 | C++ 基础 | [ch01](./ch01-basics.md) |
 | 2 | 函数与文件 | [ch02](./ch02-functions-files.md) |

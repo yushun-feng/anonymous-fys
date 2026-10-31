@@ -36,4 +36,4 @@ private:
 
 现代 C++ 里优先用 `unique_ptr` / `shared_ptr` / 容器表达所有权，少写裸 `new`/`delete`。
 
-系统学习移动语义与智能指针，见 [LearnCpp 第 22 章笔记壳](./learncpp/ch22-move-smart-pointers.md)、[Cherno 智能指针笔记壳](./cherno/09-smart-pointers.md)。
+系统学习移动语义与智能指针，见 [LearnCpp 第 22 章笔记](./learncpp/ch22-move-smart-pointers.md)、[Cherno 智能指针笔记](./cherno/09-smart-pointers.md)。
