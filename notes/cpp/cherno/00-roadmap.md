@@ -8,9 +8,9 @@ source: https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb
 
 # Cherno C++ 学习路线与剧集地图
 
-精炼笔记，对应 [The Cherno — C++ 播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb)（约百集）。**只做提纲与要点复述，非逐字稿。** 细节、演示与勘误以原视频为准。
+对应 [The Cherno — C++ 播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 的**学习壳索引**：边看视频边往各篇笔记填「概念 / 例子 / 易错 / 我的补充」。
 
-与系统教材路线互补：语法地图见 [LearnCpp 路线](../learncpp/00-roadmap.md)；所有权总览见 [`../raii-and-ownership.md`](../raii-and-ownership.md)。本目录偏「演示驱动」：工具链直觉、内存模型、OOP 与现代工具。
+互补路线：[LearnCpp 路线](../learncpp/00-roadmap.md) · [`../raii-and-ownership.md`](../raii-and-ownership.md)
 
 ## 建议路径
 
@@ -26,10 +26,10 @@ source: https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb
 10. **并发与类型技巧**：线程、转型与 type punning（[13](./13-threads.md)、[14](./14-casting.md)）
 11. **C++17 工具与移动**：optional/variant、move（[15](./15-modern-utilities.md)）
 
-## 剧集 → 本库笔记
+## 剧集 → 本库笔记壳
 
-| 大致集号（系列传统编号） | 主题 | 本库笔记 |
-|--------------------------|------|----------|
+| 大致集号（系列传统编号） | 主题 | 本库笔记壳 |
+|--------------------------|------|------------|
 | 1–7 | 欢迎、安装、C++/编译器/链接器如何工作 | [01](./01-welcome-toolchain.md) |
 | 8–15 | 变量、函数、头文件、调试、分支与循环 | [02](./02-basics-control.md) |
 | 16–17 | 指针、引用 | [03](./03-pointers-references.md) |
@@ -46,12 +46,12 @@ source: https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb
 | 66–67、69、73 | type punning、union、转型 | [14](./14-casting.md) |
 | 75–79、86–87 | optional/variant/any/async、移动语义 | [15](./15-modern-utilities.md) |
 
-未单独成篇但仍值得按需回看的集：库链接（49–51）、宏（55）、多维数组/排序（64–65）、PCH/断点/基准测试、自写容器与迭代器等——可在看完上表主干后再补。
+未单独成篇、可按需回看：库链接（49–51）、宏（55）、多维数组/排序（64–65）、PCH/断点/基准测试、自写容器与迭代器等。
 
 ## 与 LearnCpp 的重叠导航
 
-| Cherno 主题 | LearnCpp 笔记 |
-|-------------|---------------|
+| Cherno 主题 | LearnCpp 笔记壳 |
+|-------------|-----------------|
 | 指针/引用 | [ch12](../learncpp/ch12-references-pointers.md) |
 | 类 | [ch14–15](../learncpp/ch14-15-classes.md) |
 | 继承/虚函数 | [ch23–25](../learncpp/ch23-25-oop-hierarchy.md) |
@@ -60,7 +60,3 @@ source: https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb
 | 类型转换 | [ch10](../learncpp/ch10-type-conversion.md) |
 | 数组/vector | [ch16–17](../learncpp/ch16-17-arrays.md) |
 | lambda / 函数指针 | [ch20](../learncpp/ch20-advanced-functions.md) |
-
-## 版权与用法
-
-笔记为自学提纲（归纳/复述），**不是**视频字幕镜像。完整讲解与演示以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 为准。
