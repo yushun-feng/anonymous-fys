@@ -2,6 +2,11 @@ import 'highlight.js/styles/github-dark.min.css';
 import { loadNotes, getNoteById } from './notes.js';
 import { renderMarkdown, escapeHtml } from './render.js';
 import { isUnlocked, renderGate } from './gate.js';
+import {
+  mountPlayground,
+  bindPlaygroundChrome,
+  bindCodeBlockActions,
+} from './playground.js';
 
 const TOPICS = ['cpp', 'graphics', 'gpu'];
 const TOPIC_LABELS = {
@@ -14,6 +19,8 @@ const TOPIC_LABELS = {
 let solarHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let solarMountGen = 0;
+/** Whether the browse+playground shell has been created after unlock. */
+let shellReady = false;
 
 function disposeSolar() {
   solarMountGen += 1;
@@ -200,9 +207,50 @@ async function mountSolarIfPresent(root) {
   }
 }
 
-function mountContent() {
+/**
+ * Ensure browse + playground shell exists; return the browse pane to fill.
+ * Playground mounts once so hash navigations keep editor state.
+ * @returns {HTMLElement | null}
+ */
+function ensureShell() {
   const app = document.querySelector('#app');
-  if (!app) return;
+  if (!app) return null;
+
+  if (shellReady) {
+    const browse = app.querySelector('[data-browse-pane]');
+    if (browse) return browse;
+    shellReady = false;
+  }
+
+  app.innerHTML = `
+    <div class="app-shell">
+      <div class="browse-pane" data-browse-pane></div>
+      <div
+        class="playground-splitter"
+        data-playground-splitter
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整 Playground 宽度"
+        tabindex="0"
+      ></div>
+      <aside class="playground-pane" data-playground-pane aria-label="代码 Playground"></aside>
+    </div>
+  `;
+
+  const browse = /** @type {HTMLElement} */ (app.querySelector('[data-browse-pane]'));
+  const pane = /** @type {HTMLElement} */ (app.querySelector('[data-playground-pane]'));
+  const splitter = /** @type {HTMLElement} */ (app.querySelector('[data-playground-splitter]'));
+  const shell = /** @type {HTMLElement} */ (app.querySelector('.app-shell'));
+
+  mountPlayground(pane);
+  bindPlaygroundChrome(shell, splitter, pane);
+  shellReady = true;
+  return browse;
+}
+
+function mountContent() {
+  const browse = ensureShell();
+  if (!browse) return;
 
   disposeSolar();
 
@@ -215,14 +263,15 @@ function mountContent() {
   }
 
   if (route.name === 'note') {
-    app.innerHTML = renderNote(route.id);
+    browse.innerHTML = renderNote(route.id);
+    bindCodeBlockActions(browse);
   } else if (route.name === 'solar') {
-    app.innerHTML = renderSolarPage();
-    mountSolarIfPresent(app);
+    browse.innerHTML = renderSolarPage();
+    mountSolarIfPresent(browse);
   } else {
-    app.innerHTML = renderHome();
-    bindHomeFilters(app);
-    mountSolarIfPresent(app);
+    browse.innerHTML = renderHome();
+    bindHomeFilters(browse);
+    mountSolarIfPresent(browse);
   }
 }
 
@@ -231,7 +280,12 @@ function mount() {
   if (!app) return;
 
   if (!isUnlocked()) {
-    renderGate(app, { onSuccess: mountContent });
+    shellReady = false;
+    renderGate(app, {
+      onSuccess: () => {
+        mountContent();
+      },
+    });
     return;
   }
 
