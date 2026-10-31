@@ -172,7 +172,8 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050814);
-  scene.fog = new THREE.FogExp2(0x0a1230, 0.0016);
+  // Light fog only — strong night fog made the timber read too dark.
+  scene.fog = new THREE.FogExp2(0x0a1230, 0.0007);
 
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1200);
   camera.position.set(60, 45, 110);
@@ -185,7 +186,7 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.35;
   renderer.shadowMap.enabled = !compact;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   stage.appendChild(renderer.domElement);
@@ -203,9 +204,10 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.35;
 
-  scene.add(new THREE.AmbientLight(0x8a96b8, 0.35));
-  scene.add(new THREE.HemisphereLight(0x6a7aaa, 0x1a1820, 0.4));
-  const sun = new THREE.DirectionalLight(0xffd7a8, 1.85);
+  // Keep starfield, but light the timber brightly so details stay readable.
+  scene.add(new THREE.AmbientLight(0xd8e0f0, 0.75));
+  scene.add(new THREE.HemisphereLight(0xc8d6ff, 0x3a3a48, 0.85));
+  const sun = new THREE.DirectionalLight(0xffe6c4, 3.1);
   sun.position.set(55, 90, 40);
   sun.castShadow = !compact;
   if (sun.castShadow) {
@@ -221,12 +223,15 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
     sun.shadow.camera.far = 260;
   }
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x7a9cff, 0.45);
+  const fill = new THREE.DirectionalLight(0xa8c0ff, 1.15);
   fill.position.set(-50, 40, -30);
   scene.add(fill);
-  const moon = new THREE.DirectionalLight(0xb8c8ff, 0.35);
+  const moon = new THREE.DirectionalLight(0xd0dcff, 0.7);
   moon.position.set(-30, 50, 70);
   scene.add(moon);
+  const rim = new THREE.DirectionalLight(0xfff0d8, 0.55);
+  rim.position.set(20, 25, -60);
+  scene.add(rim);
 
   const sky = makeStarSkySphere(520);
   scene.add(sky.mesh);
@@ -243,6 +248,7 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   let raf = 0;
   let visible = true;
   let root = null;
+  let loadStarted = false;
   const disposables = [ground.geometry, ground.material, sky.geo, sky.mat, sky.tex];
 
   const draco = new DRACOLoader();
@@ -251,57 +257,64 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
 
-  loader.load(
-    MODEL_URL,
-    (gltf) => {
-      if (disposed) {
-        gltf.scene.traverse((obj) => {
+  const startModelLoad = () => {
+    if (disposed || loadStarted) return;
+    loadStarted = true;
+    status.hidden = false;
+    status.textContent = '正在加载木塔模型…';
+
+    loader.load(
+      MODEL_URL,
+      (gltf) => {
+        if (disposed) {
+          gltf.scene.traverse((obj) => {
+            if (obj.isMesh) {
+              obj.geometry?.dispose?.();
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              mats.forEach((m) => m?.dispose?.());
+            }
+          });
+          return;
+        }
+        root = gltf.scene;
+        root.traverse((obj) => {
           if (obj.isMesh) {
-            obj.geometry?.dispose?.();
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach((m) => m?.dispose?.());
-          }
-        });
-        return;
-      }
-      root = gltf.scene;
-      root.traverse((obj) => {
-        if (obj.isMesh) {
-          obj.castShadow = !compact;
-          obj.receiveShadow = true;
-          if (obj.material) {
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            for (const m of mats) {
-              if (m && 'envMapIntensity' in m) m.envMapIntensity = 0.85;
+            obj.castShadow = !compact;
+            obj.receiveShadow = true;
+            if (obj.material) {
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              for (const m of mats) {
+                if (m && 'envMapIntensity' in m) m.envMapIntensity = 0.85;
+              }
             }
           }
-        }
-      });
-      scene.add(root);
-      const fit = fitCameraToObject(camera, controls, root, { compact });
-      ground.position.y = fit.box.min.y - 0.02;
-      sun.target.position.copy(fit.center);
-      scene.add(sun.target);
+        });
+        scene.add(root);
+        const fit = fitCameraToObject(camera, controls, root, { compact });
+        ground.position.y = fit.box.min.y - 0.02;
+        sun.target.position.copy(fit.center);
+        scene.add(sun.target);
 
-      const label = makeLabel('应县木塔 · 佛宫寺释迦塔');
-      label.position.set(fit.center.x, fit.box.max.y + fit.maxDim * 0.04, fit.center.z);
-      root.add(label);
+        const label = makeLabel('应县木塔 · 佛宫寺释迦塔');
+        label.position.set(fit.center.x, fit.box.max.y + fit.maxDim * 0.04, fit.center.z);
+        root.add(label);
 
-      status.textContent = '';
-      status.hidden = true;
-    },
-    (event) => {
-      if (disposed || !status || !event.total) return;
-      const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
-      status.textContent = `正在加载木塔模型… ${pct}%`;
-    },
-    (error) => {
-      console.error('应县木塔模型加载失败', error);
-      if (disposed) return;
-      status.hidden = false;
-      status.textContent = '木塔模型加载失败，笔记浏览不受影响。';
-    },
-  );
+        status.textContent = '';
+        status.hidden = true;
+      },
+      (event) => {
+        if (disposed || !status || !event.total) return;
+        const pct = Math.min(99, Math.round((event.loaded / event.total) * 100));
+        status.textContent = `正在加载木塔模型… ${pct}%`;
+      },
+      (error) => {
+        console.error('应县木塔模型加载失败', error);
+        if (disposed) return;
+        status.hidden = false;
+        status.textContent = '木塔模型加载失败，笔记浏览不受影响。';
+      },
+    );
+  };
 
   const resize = () => {
     if (disposed) return;
@@ -322,11 +335,14 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
       ? new IntersectionObserver(
           ([entry]) => {
             visible = entry?.isIntersecting ?? true;
+            // Defer the ~12MB GLB fetch until the stage is on-screen.
+            if (visible) startModelLoad();
           },
-          { threshold: 0.05 },
+          { threshold: 0.05, rootMargin: '80px' },
         )
       : null;
-  io?.observe(stage);
+  if (io) io.observe(stage);
+  else startModelLoad();
 
   let userControl = false;
   controls.addEventListener('start', () => {
