@@ -30,7 +30,13 @@ jobs:
       - name: Install
         run: npm ci
 
+      # Soft browse gate only (password ships in the client bundle — not real secrets).
+      # Repo Settings → Secrets and variables → Actions → New repository secret:
+      #   Name: VITE_SITE_PASSWORD
+      # If unset, the app falls back to the documented default `notes`.
       - name: Build
+        env:
+          VITE_SITE_PASSWORD: ${{ secrets.VITE_SITE_PASSWORD }}
         run: npm run build
 
       - name: Upload Pages artifact

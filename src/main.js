@@ -1,6 +1,7 @@
 import 'highlight.js/styles/github-dark.min.css';
 import { loadNotes, getNoteById } from './notes.js';
 import { renderMarkdown, escapeHtml } from './render.js';
+import { isUnlocked, renderGate } from './gate.js';
 
 const TOPICS = ['cpp', 'graphics', 'gpu'];
 const TOPIC_LABELS = {
@@ -156,7 +157,7 @@ function bindHomeFilters(root) {
   });
 }
 
-function mount() {
+function mountContent() {
   const app = document.querySelector('#app');
   if (!app) return;
 
@@ -169,5 +170,25 @@ function mount() {
   }
 }
 
-window.addEventListener('hashchange', mount);
+/**
+ * Soft gate first; hash routing only runs after unlock.
+ * Password / unlock state: see `./gate.js` (obfuscation only — not real auth).
+ */
+function mount() {
+  const app = document.querySelector('#app');
+  if (!app) return;
+
+  if (!isUnlocked()) {
+    renderGate(app, { onSuccess: mountContent });
+    return;
+  }
+
+  mountContent();
+}
+
+window.addEventListener('hashchange', () => {
+  // Ignore hash changes while the soft gate is still showing.
+  if (!isUnlocked()) return;
+  mountContent();
+});
 mount();
