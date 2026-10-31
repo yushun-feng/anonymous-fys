@@ -27,6 +27,8 @@ source: https://learncpp.cn/
 - 可变参数省略号无类型安全；改用变参模板。
 - 深递归处理大规模数据。
 
+视频向对照：[Cherno auto/函数指针/lambda](../cherno/12-fp-lambdas-namespaces.md)、[栈堆](../cherno/07-const-objects-memory.md)。
+
 ```cpp
 std::vector<int> v{1,2,3};
 int factor = 10;

@@ -26,3 +26,5 @@ source: https://learncpp.cn/
 - 重载集含模板时匹配结果出乎意料。
 - 模板定义放 `.cpp` 却未显式实例化 → 链接失败。
 - 默认实参与重载组合导致调用歧义。
+
+视频向对照：[Cherno 模板](../cherno/11-templates.md)。

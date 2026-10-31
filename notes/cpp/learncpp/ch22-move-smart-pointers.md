@@ -28,6 +28,8 @@ source: https://learncpp.cn/
 - 无必要地到处 `shared_ptr`。
 - 用裸 `new` 喂给智能指针前先考虑 `std::make_unique` / `make_shared`。
 
+视频向对照：[Cherno 智能指针](../cherno/09-smart-pointers.md)、[现代工具与移动](../cherno/15-modern-utilities.md)。
+
 ```cpp
 auto p = std::make_unique<int>(42);
 std::unique_ptr<int> q = std::move(p);  // 所有权转移

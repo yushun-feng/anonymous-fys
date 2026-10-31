@@ -1,3 +1,5 @@
+import { seriesFromPath, chapterOrderFrom, compareNotes } from './note-sort.js';
+
 const rawModules = import.meta.glob('../notes/**/*.md', {
   query: '?raw',
   import: 'default',
@@ -49,9 +51,13 @@ export function parseFrontmatter(raw) {
  *   tags: string[],
  *   topic: string,
  *   updated: string,
+ *   order: number,
+ *   series: string,
  *   body: string,
  * }} Note
  */
+
+export { seriesFromPath, chapterOrderFrom, compareNotes };
 
 /** @returns {Note[]} */
 export function loadNotes() {
@@ -64,6 +70,7 @@ export function loadNotes() {
     const { meta, body } = parseFrontmatter(/** @type {string} */ (raw));
     const relative = modulePath.replace(/^\.\.\/notes\//, '');
     const id = relative.replace(/\.md$/, '');
+    const series = seriesFromPath(relative);
 
     notes.push({
       id,
@@ -72,14 +79,13 @@ export function loadNotes() {
       tags: Array.isArray(meta.tags) ? meta.tags.map(String) : [],
       topic: String(meta.topic ?? relative.split('/')[0] ?? 'misc'),
       updated: String(meta.updated ?? ''),
+      order: chapterOrderFrom(relative, meta),
+      series,
       body,
     });
   }
 
-  notes.sort((a, b) => {
-    if (a.updated !== b.updated) return b.updated.localeCompare(a.updated);
-    return a.title.localeCompare(b.title, 'zh');
-  });
+  notes.sort(compareNotes);
 
   return notes;
 }

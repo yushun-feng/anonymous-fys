@@ -28,3 +28,5 @@ source: https://learncpp.cn/
 - 非虚函数“以为多态”。
 - 多重继承菱形未用虚基类导致重复子对象。
 - `dynamic_cast` 滥用代替良好设计。
+
+视频向对照：[Cherno 继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。

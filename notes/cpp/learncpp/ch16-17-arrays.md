@@ -27,3 +27,5 @@ source: https://learncpp.cn/
 - 依赖 `vector<bool>` 的“真 `bool&`”行为（它是特化代理）。
 - 循环中一边遍历一边无节制 `push_back` 却抓着旧迭代器。
 - 把 C 字符串当普通数组随便 `strcpy` 导致溢出。
+
+视频向对照：[Cherno 数组与字符串](../cherno/06-arrays-strings.md)、[拷贝与 vector](../cherno/10-copy-vector.md)。

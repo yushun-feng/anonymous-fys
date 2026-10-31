@@ -28,3 +28,5 @@ source: https://learncpp.cn/
 - 在构造函数体内赋值代替初始化列表（const/引用成员无法如此）。
 - friend 范围过大，耦合上升。
 - 忘记虚析构（有继承多态时）——见第 25 章。
+
+视频向对照：[Cherno 类](../cherno/04-classes.md)、[继承与虚函数](../cherno/05-inheritance-virtual.md)。
