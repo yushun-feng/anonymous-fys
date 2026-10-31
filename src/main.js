@@ -153,7 +153,7 @@ function renderShaderPage() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>Shader Toy</span></nav>
     <div class="shader-page-slot" data-shader-mount></div>
-    <p class="shader-credit">原生 WebGL 全屏四边形 + 片段着色器；uniform 滑条与鼠标可选。预设均为自包含演示，非 Shadertoy.com 嵌入。</p>
+    <p class="shader-credit">原生 WebGL 全屏四边形 + 片段着色器；CodeMirror 编辑 GLSL，应用/防抖自动重编译，并保留预设与 uniform 滑条。非 Shadertoy.com 嵌入。</p>
   `);
 }
 
