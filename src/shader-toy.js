@@ -410,7 +410,6 @@ export function mountShaderToy(container, { compact = false } = {}) {
   function setPreset(id) {
     const idx = PRESETS.findIndex((p) => p.id === id);
     if (idx < 0) return;
-    presetIndex = idx;
     const preset = PRESETS[idx];
     blurbEl.textContent = preset.blurb;
     shell.querySelectorAll('[data-preset]').forEach((btn) => {
