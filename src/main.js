@@ -16,10 +16,10 @@ const TOPIC_LABELS = {
   gpu: 'GPU',
 };
 
-/** Active Three.js Portal co-op bots instance; disposed on every remount. */
-let portalHandle = null;
+/** Active Three.js Yingxian pagoda instance; disposed on every remount. */
+let pagodaHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
-let portalMountGen = 0;
+let pagodaMountGen = 0;
 /** Active WebGL shader-toy instance; disposed on every remount. */
 let shaderHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
@@ -27,10 +27,10 @@ let shaderMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 
-function disposePortal() {
-  portalMountGen += 1;
-  portalHandle?.dispose();
-  portalHandle = null;
+function disposePagoda() {
+  pagodaMountGen += 1;
+  pagodaHandle?.dispose();
+  pagodaHandle = null;
 }
 
 function disposeShader() {
@@ -43,9 +43,14 @@ function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
-  // Prefer #/portal; keep #/solar and #/moon as redirect aliases.
-  if (pathPart === 'portal' || pathPart === 'solar' || pathPart === 'moon') {
-    return { name: 'portal' };
+  // Prefer #/pagoda; keep #/portal, #/solar, #/moon as redirect aliases.
+  if (
+    pathPart === 'pagoda' ||
+    pathPart === 'portal' ||
+    pathPart === 'solar' ||
+    pathPart === 'moon'
+  ) {
+    return { name: 'pagoda' };
   }
   if (pathPart === 'shader') return { name: 'shader' };
   if (pathPart.startsWith('note/')) {
@@ -60,7 +65,7 @@ function layout(content) {
       <a class="brand" href="#/">anonymous-fys</a>
       <nav class="site-nav" aria-label="站点导航">
         <a href="#/">笔记</a>
-        <a href="#/portal">Portal</a>
+        <a href="#/pagoda">木塔</a>
         <a href="#/shader">Shader</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
@@ -122,8 +127,8 @@ function renderHome() {
   }).join('');
 
   return layout(`
-    <div class="portal-home-slot" data-portal-mount data-portal-compact></div>
-    <p class="portal-home-link"><a href="#/portal">打开完整 Portal 展台 →</a></p>
+    <div class="pagoda-home-slot" data-pagoda-mount data-pagoda-compact></div>
+    <p class="pagoda-home-link"><a href="#/pagoda">打开完整应县木塔展台 →</a></p>
     <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
     <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
     <section class="filters">
@@ -143,11 +148,11 @@ function renderHome() {
   `);
 }
 
-function renderPortalPage() {
+function renderPagodaPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>Portal</span></nav>
-    <div class="portal-page-slot" data-portal-mount></div>
-    <p class="portal-credit">程序化低/中模风格的 Atlas 与 P-body（灵感来自 Portal 2 合作机器人外形）；未使用 Valve 游戏资产或贴图。</p>
+    <nav class="crumb"><a href="#/">首页</a> / <span>应县木塔</span></nav>
+    <div class="pagoda-page-slot" data-pagoda-mount></div>
+    <p class="pagoda-credit">佛宫寺释迦塔（应县木塔）程序化高细节示意模型：八角平面、五层外观、斗拱翼角与铁刹；非现场扫描，比例为可读性示意。</p>
   `);
 }
 
@@ -216,19 +221,19 @@ function bindHomeFilters(root) {
   });
 }
 
-async function mountPortalIfPresent(root) {
-  const slot = root.querySelector('[data-portal-mount]');
+async function mountPagodaIfPresent(root) {
+  const slot = root.querySelector('[data-pagoda-mount]');
   if (!slot) return;
-  const compact = slot.hasAttribute('data-portal-compact');
-  const gen = portalMountGen;
+  const compact = slot.hasAttribute('data-pagoda-compact');
+  const gen = pagodaMountGen;
   try {
-    const { mountPortalPropsWidget } = await import('./portal-props-widget.js');
-    if (gen !== portalMountGen || !slot.isConnected) return;
-    portalHandle = mountPortalPropsWidget(slot, { compact });
+    const { mountYingxianPagodaWidget } = await import('./yingxian-pagoda-widget.js');
+    if (gen !== pagodaMountGen || !slot.isConnected) return;
+    pagodaHandle = mountYingxianPagodaWidget(slot, { compact });
   } catch {
-    if (gen !== portalMountGen || !slot.isConnected) return;
+    if (gen !== pagodaMountGen || !slot.isConnected) return;
     slot.innerHTML =
-      '<p class="portal-widget__fallback">三维 Portal 展台加载失败，笔记浏览不受影响。</p>';
+      '<p class="pagoda-widget__fallback">三维木塔展台加载失败，笔记浏览不受影响。</p>';
   }
 }
 
@@ -293,30 +298,30 @@ function mountContent() {
   const browse = ensureShell();
   if (!browse) return;
 
-  disposePortal();
+  disposePagoda();
   disposeShader();
 
   const route = parseRoute();
-  // Normalize legacy #/solar and #/moon → #/portal without breaking history mid-render.
+  // Normalize legacy showcase hashes → #/pagoda.
   const rawPath = window.location.hash.replace(/^#/, '').split('?')[0].replace(/^\//, '');
-  if (rawPath === 'solar' || rawPath === 'moon') {
-    window.location.replace(`${window.location.pathname}${window.location.search}#/portal`);
+  if (rawPath === 'portal' || rawPath === 'solar' || rawPath === 'moon') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/pagoda`);
     return;
   }
 
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
-  } else if (route.name === 'portal') {
-    browse.innerHTML = renderPortalPage();
-    mountPortalIfPresent(browse);
+  } else if (route.name === 'pagoda') {
+    browse.innerHTML = renderPagodaPage();
+    mountPagodaIfPresent(browse);
   } else if (route.name === 'shader') {
     browse.innerHTML = renderShaderPage();
     mountShaderIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     bindHomeFilters(browse);
-    mountPortalIfPresent(browse);
+    mountPagodaIfPresent(browse);
     mountShaderIfPresent(browse);
   }
 }
