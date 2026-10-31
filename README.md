@@ -82,7 +82,7 @@ GitHub Pages **不会**向仓库所有者提供可查询的访问者真实 IP �
 
 路由使用 hash（`#/note/...`、`#/solar`；旧 `#/moon` 会重定向到 `#/solar`），在 `/anonymous-fys/` 基路径下笔记与太阳系展台链接可正常工作。
 
-解锁浏览后，右侧为可拖拽调节宽度的 **代码 Playground**：JS/TS 在沙箱 iframe 中运行（TS 经 Sucrase 浏览器内转译）；C++ 通过嵌入/跳转 [Compiler Explorer（Godbolt）](https://godbolt.org/) 执行（本站无本地 C++ 后端）。笔记中的 JS/TS/C/C++ 代码块可点「→ Playground」发送到面板。窄屏默认收起，可用右下角按钮展开。
+解锁浏览后，右侧为可拖拽调节宽度的 **代码 Playground**（CodeMirror 语法高亮）：JS/TS 在沙箱 iframe 中一键运行（TS 经 Sucrase 浏览器内转译）；C++ 不在本站编译，可复制代码并打开 [OnlineGDB](https://www.onlinegdb.com/online_c++_compiler) 粘贴运行，或一键带源码打开 [Compiler Explorer](https://godbolt.org/)。笔记中的 JS/TS/C/C++ 代码块可点「→ Playground」发送到面板。窄屏默认收起，可用右下角按钮展开。
 
 ## 仓库结构（摘要）
 
