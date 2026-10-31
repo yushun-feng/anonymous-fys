@@ -1,6 +1,6 @@
 ---
 title: 第 13 章：枚举与结构体
-tags: [cpp, learncpp, enum, struct]
+tags: [cpp, learncpp, cherno, enum, struct]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -265,6 +265,43 @@ enum class Pet2 { cat, fish };  // OK：名称在各自作用域
 8. **用指针成员却未定义所有权**：struct 里裸 `T*` 要问清谁释放；现代做法见 RAII / 智能指针。
 9. **CTAD 失败**：初始化实参类型不一致或过于依赖隐式转换时，显式写 `Pair<int>`。
 10. **在头文件定义无作用域枚举**易与其它翻译单元/库冲突；优先有作用域枚举或嵌套在命名空间/类中。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。`enum` 给整数贴语义标签；`struct`/`class` 在 Cherno 对比里往往只差**默认访问**：`struct` 默认 public，适合纯数据聚合；要守不变量再升级为带私有状态的类。
+
+### 有作用域枚举是默认档
+
+```cpp
+enum class MoveState { idle, walk, dash };
+
+void apply(MoveState s)
+{
+    if (s == MoveState::dash) {
+        // ...
+    }
+}
+```
+
+无作用域枚举污染外围命名空间且易与 `int` 悄悄互转；新代码默认 `enum class`。边界输入（文件/网络）仍要校验底层值是否合法——`static_cast` 挡不住脏数据。
+
+### 聚合：数据先行
+
+```cpp
+struct Vec2f {
+    float x{};
+    float y{};
+};
+
+Vec2f offset{1.5f, -2.0f};
+auto [ox, oy] = offset;
+```
+
+Cherno 常先用 `struct` 攒字段，需要不变量（如分母非 0）再引入构造与私有化——与正文「预习第 14 章」一致。成员里出现裸指针时，立刻问所有权：谁分配、谁释放；答不清就不要把指针塞进「朴素聚合」假装简单。
+
+### `struct` vs `class` 的团队约定
+
+语言上几乎等价；团队可约定：纯数据 / POD 风格用 `struct`，带行为与不变量用 `class`。比纠结关键字更重要的是：**公共数据能否被任意写入而不破坏含义**。
 
 ## 练习指引
 

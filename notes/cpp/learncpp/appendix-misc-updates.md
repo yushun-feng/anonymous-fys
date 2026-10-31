@@ -1,6 +1,6 @@
 ---
 title: 附录：杂项与语言版本速览
-tags: [cpp, learncpp, appendix, standards]
+tags: [cpp, learncpp, cherno, appendix, standards]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -212,6 +212,40 @@ constexpr int sum_span(std::span<const int> xs) {
 3. 把技术预览当已可移植特性（模块、部分 `format`）。  
 4. 在附录里迷路：附录是地图，不是替代第 1–28 章习题。  
 5. 以为「标准有了编译器就有了」——查 [compiler support](https://en.cppreference.com/w/cpp/compiler_support)。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。附录盘点标准版本与杂项库能力；Cherno 播放列表后半则不断塞进 C++17 工具（`optional`/`variant`/`any`）、计时基准、SSO 等——合在一起的读法是：**用标准版本锁定团队能力地板，用测量决定要不要上奇技**。
+
+### 版本地板先于炫技
+
+```cpp
+// 团队约定示例：C++17 为地板
+#if __cplusplus < 201703L
+#  error "Need C++17"
+#endif
+
+#include <optional>
+#include <string>
+
+std::optional<std::string> findTag(bool ok)
+{
+    if (!ok) return std::nullopt;
+    return std::string{"release"};
+}
+```
+
+正文已有各版本要点表。补充 Cherno 工程口吻：能用 `optional` 表达「可能没有」就少用魔数；能用 `variant` 表达闭集代数数据类型就少用危险的万能指针；`any` 最后才考虑。
+
+### 性能相关附件怎么用
+
+字符串 SSO、基准计时、分配追踪等视频适合在附录阶段回看：先有正确性与清晰所有权，再谈小字符串是否避开堆、某一调用是否值得 `std::async`。把「看过视频」当成假设来源，用本地计时验证，而不是把示范数字当真理。
+
+### 学习顺序建议
+
+1. 用附录确认自己编译器开到了目标标准。  
+2. 结合下文 Cherno 视角，把 `optional`/`variant`/结构化绑定接到已有笔记。  
+3. 需要并发/计时时再进线程篇；本附录不替代专题深潜。
 
 ## 练习指引
 

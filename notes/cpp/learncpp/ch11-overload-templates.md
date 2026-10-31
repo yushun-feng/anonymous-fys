@@ -1,6 +1,6 @@
 ---
 title: 第 11 章：函数重载与函数模板
-tags: [cpp, learncpp, overloading, templates]
+tags: [cpp, learncpp, cherno, overloading, templates]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 11 章：函数重载与函数模板
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 11 章
-> 对照笔记：[Cherno 模板](../cherno/11-templates.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[模板](../cherno/11-templates.md)。
 
 ## 小节地图
 
@@ -303,6 +303,44 @@ int main() {
 8. **函数模板「偏特化」写法**：应改为重载或类模板委托。
 9. **默认实参写在定义又写在声明**：非法重复；只留一处（通常声明）。
 10. **忽略 ADL / 命名空间**：`swap`、运算符查找依赖关联命名空间——进阶议题，但重载放错命名空间会导致找不到候选。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。重载是「同名、不同参数形状」的接口族；模板则是**编译期代码生成器**——Cherno 强调：模板强大，但错误信息与编译时间是真实成本。
+
+### 先重载表达意图，再模板消除重复
+
+```cpp
+void emitLog(int code) { /* 整型事件 */ }
+void emitLog(const char* msg) { /* 文本事件 */ }
+
+template <typename T>
+T clampValue(T v, T lo, T hi)
+{
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+```
+
+当若干重载主体只差类型时，再收成函数模板。对「不良类型」用 `= delete` 关门（例如禁止悄然 `bool` 匹配），比事后文档警告更硬。
+
+### 模板可见性
+
+函数模板的定义通常必须对实例化点可见（放头文件或显式实例化）。这与普通函数「声明在头、定义在 cpp」相反——正文陷阱已列；工程上把小型泛型工具放 `*.hpp`，并接受更频繁的重编。
+
+### NTTP 与接口设计
+
+非类型模板参数适合把容量、维度等**写进类型**：
+
+```cpp
+template <typename T, int N>
+struct FixedBag {
+    T data[N]{};
+};
+```
+
+`FixedBag<float, 16>` 与 `FixedBag<float, 32>` 是不同类型——利于静态检查，也避免运行时越界配置。过早特化一切通常不值；先清晰主模板，热点再动手。
 
 ## 练习指引
 

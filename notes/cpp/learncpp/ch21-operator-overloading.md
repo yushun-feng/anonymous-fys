@@ -1,6 +1,6 @@
 ---
 title: 第 21 章：运算符重载
-tags: [cpp, learncpp, operator-overloading]
+tags: [cpp, learncpp, cherno, operator-overloading]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -254,6 +254,39 @@ int main() {
 6. **浅拷贝指针成员**：两个对象析构 double-free；用智能指针或深拷贝。  
 7. **自赋值未处理**：`a = a` 先释放再读，UB。  
 8. **改变运算符优先级幻觉**：括号该加还是得加；重载不改语法结构。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。运算符重载让类型「用起来像内建」；Cherno 的警告同样经典：**别为了炫技让 `+` 做 `+` 以外的事**。
+
+### 保持直觉语义
+
+```cpp
+struct PixelCoord {
+    int x{};
+    int y{};
+};
+
+PixelCoord operator+(PixelCoord a, PixelCoord b)
+{
+    return PixelCoord{a.x + b.x, a.y + b.y};
+}
+
+bool operator==(PixelCoord a, PixelCoord b)
+{
+    return a.x == b.x && a.y == b.y;
+}
+```
+
+`+` 应近似可交换的组合；`==` 应是等价关系；`<<` 用于流输出时保持「写入」含义。隐藏副作用（`+` 居然写磁盘）会毁可读性。
+
+### 成员 vs 非成员
+
+左操作数需要隐式转换时，对称二元运算常做成非成员（或 `friend`）。赋值、下标、调用、箭头通常必须是成员。返回值：`+` 返回新值；`+=` 返回 `*this` 引用以便链式。
+
+### `->` 与代理对象
+
+智能指针/迭代器重载 `->` 时，记得它是「找到下一个箭头」的链式规则——正文语法处已述。工程上先保证普通成员函数 API 清晰，再考虑是否值得提供运算符糖。
 
 ## 练习指引
 

@@ -1,38 +1,27 @@
 ---
-title: Cherno：继承、虚函数与接口
-tags: [cpp, cherno, inheritance, virtual, polymorphism]
+title: Cherno：继承与虚函数
+tags: [cpp, cherno, inheritance, virtual]
 topic: cpp
 updated: 2026-10-31
-source: https://www.youtube.com/watch?v=X8nYM8wdNRE
+source: https://www.youtube.com/watch?v=X8nYM8wdqjI
 ---
 
-# Cherno：继承、虚函数与接口
+# Cherno：继承与虚函数
 
-> 学习材料：[Inheritance](https://www.youtube.com/watch?v=X8nYM8wdNRE) · [Virtual Functions](https://www.youtube.com/watch?v=oIV2KchSyGQ) · [Interfaces](https://www.youtube.com/watch?v=UWAdd13EfM8) · [Visibility](https://www.youtube.com/watch?v=6OVQ8nh3KP0) · [Virtual Destructors](https://www.youtube.com/watch?v=jELbKhGkEi0)  
-> 相关：[LearnCpp ch23–25](../learncpp/ch23-25-oop-hierarchy.md)
+> 学习材料：Inheritance · Virtual Functions · Interfaces · Visibility · Virtual Destructors  
+> **完整笔记**：[ch23–25 对象关系 / 继承 / 虚函数](../learncpp/ch23-25-oop-hierarchy.md)
 
 ## 本课范围
 
-继承；虚函数与多态；纯虚 / 接口；可见性；虚析构。
+is-a；vtable / 动态派发；纯虚与接口；虚析构。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **27–30、68**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。

@@ -1,6 +1,6 @@
 ---
 title: 第 16–17 章：vector 与 array
-tags: [cpp, learncpp, vector, array]
+tags: [cpp, learncpp, cherno, vector, array]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 16–17 章：vector 与 array
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 16–17 章
-> 对照笔记：[Cherno 数组与字符串](../cherno/06-arrays-strings.md)、[拷贝与 vector](../cherno/10-copy-vector.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[数组与字符串](../cherno/06-arrays-strings.md)、[拷贝与 vector](../cherno/10-copy-vector.md)。
 
 ## 小节地图
 
@@ -303,6 +303,64 @@ std::array<std::array<int, 3>, 2> fixed{};
 11. **误以为 `capacity` 缩小会释放内存**：`resize` 变小通常不降 capacity；可用 `shrink_to_fit`（非绑定请求）。
 12. **对 `const vector` 调用非 const 接口**或丢失 const 传递。
 
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。数组在 Cherno 叙事里是**连续内存**：下标本质是起点地址加偏移。`std::vector` 则是可增长的动态数组——方便，但重分配会让旧指针/迭代器失效。
+
+### 静态连续块
+
+```cpp
+#include <array>
+#include <iostream>
+
+int main()
+{
+    std::array<int, 4> heat{10, 20, 30, 40};
+    for (int v : heat) std::cout << v << ' ';
+    std::cout << '
+' << heat.size() << '
+';
+}
+```
+
+`std::array` 保留栈上布局与长度信息，比裸 `T[N]` 更难「退化丢尺寸」。多维数组注意行主序：内层下标变化时地址连续，利于缓存。
+
+```cpp
+int grid[2][3]{{1, 2, 3}, {4, 5, 6}};
+// 遍历时让最后一维跑得最快，更贴硬件预取
+```
+
+### `vector` 的工程使用
+
+```cpp
+#include <vector>
+
+std::vector<float> samples;
+samples.reserve(256);          // 先说清容量意图
+samples.push_back(0.1f);
+samples.emplace_back(0.2f);    // 原地构造，少一次临时
+```
+
+Cherno「优化 vector」口径可浓缩为：
+
+1. 知道大致规模就 `reserve`，减少搬迁。
+2. 循环内避免无必要的拷贝；能 `emplace` 就别先建临时再 `push`。
+3. 重分配后，不要使用旧的指针/引用/迭代器。
+4. 需要稳定地址时，考虑 `deque`/节点容器，或先定容再填充。
+
+```cpp
+std::vector<int> ids{1, 2, 3};
+int* first = ids.data();
+ids.push_back(4);              // 可能重分配
+// 此后不要假设 first 仍有效
+```
+
+### 字符串仍是字符的连续块
+
+`std::string` 可改、可拥有；字面量只读。与数组章节交叉处：不要假设「拿到 `data()` 就能永远当稳定 C 字符串缓冲」——容量变化可能搬家。深拷贝 vs 共享缓冲的直觉对照 Cherno 数组/拷贝笔记；LearnCpp 正文已有容器用法时，本节只强调**连续性与失效规则**。
+
+短字符串常走 SSO（小字符串优化），长串才堆分配——附录/性能视频可回看，但正确性优先于「避开堆」的臆测。
+
 ## 练习指引
 
 - 实现：读入未知个数整数（直到 EOF），存 `vector`，打印平均值与最大值。
@@ -311,7 +369,7 @@ std::array<std::array<int, 3>, 2> fixed{};
 - 写一个接受 `const vector<int>&` 的查找函数，再用迭代器版本改写（为第 18 章铺路）。
 - 故意在范围 for 里 `push_back`，在 sanitizer 下观察问题（实验后改掉）。
 - 把一段 C 数组 API 改成 `std::array` 或 `vector`，记录长度安全上的收益。
-- 对照 [Cherno 数组与字符串](../cherno/06-arrays-strings.md)、[拷贝与 vector](../cherno/10-copy-vector.md) 补“深拷贝 vs 缓冲共享”直觉。
+- 结合下文 Cherno 视角与 [拷贝索引](../cherno/10-copy-vector.md)，整理「深拷贝 vs 缓冲共享」直觉。
 
 ## 小结
 

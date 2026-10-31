@@ -1,6 +1,6 @@
 ---
 title: 第 14–15 章：类
-tags: [cpp, learncpp, class, oop]
+tags: [cpp, learncpp, cherno, class, oop]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 14–15 章：类
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 14–15 章
-> 对照笔记：[Cherno 类](../cherno/04-classes.md)、[继承与虚函数](../cherno/05-inheritance-virtual.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[类](../cherno/04-classes.md)、[继承与虚函数](../cherno/05-inheritance-virtual.md)。
 
 ## 小节地图
 
@@ -17,7 +17,7 @@ source: https://learncpp.cn/
 
 **第 15 章**：`this` 指针与链式调用 → 类与头文件 / 多文件 → 嵌套类型 → 析构函数 → 类模板的成员 → `static` 成员 → `friend` → 引用限定符（ref-qualifiers）。
 
-与 [Cherno 类](../cherno/04-classes.md) 对照阅读效果更好；所有权与资源类见 [RAII](../raii-and-ownership.md)、[第 22 章](./ch22-move-smart-pointers.md)。
+Cherno 类相关直觉见下文「Cherno 视角补充」与 [剧集索引](../cherno/04-classes.md)；所有权与资源类见 [RAII](../raii-and-ownership.md)、[第 22 章](./ch22-move-smart-pointers.md)。
 
 ## 核心概念
 
@@ -333,6 +333,57 @@ private:
 11. **类定义放进 `.cpp` 却在多处需要完整类型**：导致不完整类型错误；共享类型应进头文件。
 12. **默认成员初始化与 MIL 混淆**：MIL 优先覆盖默认成员初始化器。
 
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。类把「数据 + 操作数据的规则」捆在一起。Cherno 视角强调两件事：**对象在哪分配（栈/堆）**，以及**构造/析构如何成对管理资源**。正文已系统覆盖封装、MIL、`explicit`、`this`、static、friend——这里补工程直觉与示例命名空间。
+
+### 栈上实例 vs `new`
+
+```cpp
+class ParticleBurst {
+public:
+    explicit ParticleBurst(int count) : count_(count) {}
+    int count() const { return count_; }
+private:
+    int count_;
+};
+
+void tick()
+{
+    ParticleBurst local{16};           // 栈：离开作用域自动析构
+    auto* heap = new ParticleBurst{32}; // 堆：必须有人 delete
+    delete heap;
+}
+```
+
+能栈就栈。堆分配出现在：尺寸运行期才知、需要超出作用域存活、或多态基类指针持有派生对象（见第 23–25 章）。现代代码优先智能指针接管 `new`，避免手工 `delete` 漏网。
+
+### 成员初始化列表不是样式问题
+
+引用成员、`const` 成员、以及「先于函数体完成子对象构造」的场景，都必须走 MIL。函数体内赋值是「先默认建再改」，对有资源的成员可能多一次浪费或根本非法。
+
+```cpp
+class Viewport {
+public:
+    Viewport(int w, int h) : width_(w), height_(h) {}
+private:
+    int width_;
+    int height_;
+};
+```
+
+### `explicit` 单参构造
+
+防止 `Viewport v = 1080;` 这类无意转换污染重载集。API 边界上，宁可调用点多写 `Viewport{1080, 720}`，也不要静默把 `int` 变成领域对象。
+
+### 析构与规则直觉
+
+若类拥有裸资源（文件句柄、堆缓冲），析构里释放；同时认真对待拷贝/移动（三/五法则，移动见第 22 章）。`struct`/`class` 默认访问差异正文与 Cherno 对照表可自行补一行——真正分水岭是**有没有不变量要守**。
+
+### 与正文分工
+
+日期封装、链式调用、`friend` 对称运算等示例不重复。读完正文后，用调试器看一个栈上对象的构造/析构顺序，再对同一个类型 `new`/`delete` 一次，把「寿命」刻进肌肉记忆。
+
 ## 练习指引
 
 - 实现 `Fraction`：约分、乘加、`explicit` 单参构造、`operator==` 友元、const 访问器。
@@ -340,7 +391,7 @@ private:
 - 把类拆成 `.h` / `.cpp`，确认成员函数类外定义与 `#pragma once`。
 - 刻意去掉 `explicit`，观察 `void f(Fraction); f(3);` 是否意外通过。
 - 为链式 setter 与 `&&` 限定的 `consume()` 各写测试用例。
-- 对照 [Cherno 类](../cherno/04-classes.md) 补一节“类与结构体默认访问”的对比表。
+- 结合下文 Cherno 视角，补一节「类与结构体默认访问」对比表。
 - 预习：若类管理 `new` 内存，为何下一阶段必须学析构、拷贝/移动与智能指针（[ch18–19](./ch18-19-iterators-dynamic.md)、[ch22](./ch22-move-smart-pointers.md)）。
 
 ## 小结

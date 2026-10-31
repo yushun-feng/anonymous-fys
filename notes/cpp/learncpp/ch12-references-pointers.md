@@ -1,6 +1,6 @@
 ---
 title: 第 12 章：引用与指针
-tags: [cpp, learncpp, references, pointers]
+tags: [cpp, learncpp, cherno, references, pointers]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 12 章：引用与指针
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 12 章
-> 对照笔记：[Cherno 指针与引用](../cherno/03-pointers-references.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[指针与引用](../cherno/03-pointers-references.md)。
 
 ## 小节地图
 
@@ -246,6 +246,57 @@ int main() {
 8. **用指针表示可选时所有权不清**：谁释放？是否共享？优先 `optional`、引用或智能指针（[ch22](./ch22-move-smart-pointers.md)、[RAII](../raii-and-ownership.md)）。
 9. **`optional::value()` 无值时抛异常**；`operator*` 无值时是 UB——选对检查方式。
 10. **`auto` 丢引用**：`auto x = get_ref();` 可能变成拷贝；需要别名时写 `auto&` / `const auto&`。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。指针与引用是 Cherno 系列的招牌关卡：引用是**必须绑定的别名**，指针是**可空、可改绑的地址值**。正文已覆盖语法、`const` 位置、`optional` 与悬垂——这里补内存与传参的工程直觉。
+
+### 一张图：名字、地址、值
+
+```cpp
+int health{100};
+int& alias = health;     // alias 就是 health 的另一个名字
+int* cursor = &health;   // cursor 存的是地址
+
+alias = 80;              // 改的是 health
+*cursor = 60;            // 同样改 health
+cursor = nullptr;        // 指针可改绑/置空；引用不行
+```
+
+调试器里同时看 `&health`、`cursor` 的值，比背定义记得牢。
+
+### 传参默认策略（Cherno 口径）
+
+| 场景 | 常见选择 |
+|------|----------|
+| 小对象输入 | 按值 |
+| 大对象只读 | `const T&` |
+| 需要改调用方对象 | `T&` |
+| 可有可无 | `std::optional` 或约定好的指针 |
+| 接管/共享所有权 | 智能指针（见第 22 章） |
+
+```cpp
+void rescale(float& sx, float& sy, float factor)
+{
+    sx *= factor;
+    sy *= factor;
+}
+
+float lengthSq(const float& x, const float& y)
+{
+    return x * x + y * y;
+}
+```
+
+不要用指针表达「必有对象」——那是引用的工作。不要用裸指针表达所有权——那是后续 RAII / smart pointer 的工作。
+
+### 栈上对象优先
+
+能放栈上就放栈上：自动生命周期、缓存友好、无手动释放。`new` 把对象丢到堆上时，你立刻多了「谁 delete、何时 delete」的责任；正文指针算术仅作底层认知——日常遍历交给数组/容器/`span`。
+
+### 悬垂是本章最高刑
+
+返回局部变量的引用/指针、绑定已销毁临时、容器重分配后旧指针……任何「地址还在、对象已无」都是 UB。修复原则只有一条：**保证所指对象活得比使用者久**，或改成按值/拥有型返回。
 
 ## 练习指引
 

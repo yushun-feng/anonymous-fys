@@ -1,6 +1,6 @@
 ---
 title: 第 7 章：作用域、生命周期与链接
-tags: [cpp, learncpp, scope, linkage]
+tags: [cpp, learncpp, cherno, scope, linkage]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -245,6 +245,57 @@ int main() {
 8. **匿名命名空间放进头文件**：每个翻译单元得到**不同**的内部实体，通常不是想要的共享，反而可能重复代码或 ODR 怪异问题——匿名命名空间留在 `.cpp`。
 9. **误以为 `const` 全局一定跨文件共享**：默认内部链接，每个 TU 一份；要共享需 `extern const` 或 `inline constexpr`。
 10. **静态局部保存巨大对象或锁**：生命周期长，注意内存与销毁时机；测试中「重置状态」会变麻烦。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。`static` 在 Cherno 视频里常被拆成三条不同故事：文件作用域「藏起来」、类作用域「属于类型」、函数内「第一次进门才建、之后一直活」。正文已系统讲作用域 / 存储期 / 链接——这里补**工程选型口径**。
+
+### 三种 `static` 一眼分辨
+
+| 写法 | 直觉 |
+|------|------|
+| `.cpp` 里文件级 `static` / 匿名命名空间 | 「这个翻译单元私有」 |
+| `static` 数据成员 | 「所有实例共享一份」 |
+| 函数内 `static` 局部 | 「惰性初始化的持久状态」 |
+
+```cpp
+namespace {
+int gHiddenCounter = 0; // 仅本 .cpp 可见
+}
+
+struct WidgetFactory {
+    static int liveCount;           // 属于类型
+    WidgetFactory() { ++liveCount; }
+    ~WidgetFactory() { --liveCount; }
+};
+int WidgetFactory::liveCount = 0;
+
+int nextStamp()
+{
+    static int seq = 0;             // 跨调用保持
+    return ++seq;
+}
+```
+
+### 全局可变状态的代价
+
+Cherno 演示里全局很方便，但真实项目里它会变成：隐藏依赖、测试难重置、多线程竞态。优先把状态变成参数或对象成员；确需进程级单例时，倾向函数内 `static` 局部（延迟构造），并清楚销毁顺序风险。
+
+### 头文件共享常量
+
+跨 TU 共享只读配置，现代默认：
+
+```cpp
+// config_tokens.h
+#pragma once
+inline constexpr int kMaxPlayers = 8;
+```
+
+避免在头里定义非 `inline` 的可变全局。匿名命名空间请留在 `.cpp`，否则每个包含者各得一份「同名不同实体」。
+
+### 与正文分工
+
+生命周期对比、`extern`、跨 TU 初始化顺序未指定等正文已详述。本节聚焦：**何时用私有链接、何时用类型级共享、何时把全局降级为参数**。
 
 ## 练习指引
 

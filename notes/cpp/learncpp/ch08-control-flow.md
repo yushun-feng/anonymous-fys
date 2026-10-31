@@ -1,6 +1,6 @@
 ---
 title: 第 8 章：控制流
-tags: [cpp, learncpp, control-flow]
+tags: [cpp, learncpp, cherno, control-flow]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -259,6 +259,38 @@ int main() {
 9. **每次调用都 `mt19937{random_device{}()}`**：性能差且可能相关；引擎应长寿。
 10. **`uniform_int_distribution<>(1, 6)` 误写成对引擎直接 `% 6`**：引入模偏差；用分布类。
 11. **死循环**：条件从不假、忘记递增、`continue` 跳过更新；调试时检查循环变量与 `cin` 失败状态（见 [第 9 章](./ch09-error-handling.md)）。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。分支与循环是程序的「路径图」；Cherno 更在意**热路径是否可预测、嵌套是否可读**，而不是堆砌语法糖。
+
+### 提前返回压扁嵌套
+
+```cpp
+bool trySpawnPickup(int inventorySlots, bool mapAllows)
+{
+    if (!mapAllows) return false;
+    if (inventorySlots <= 0) return false;
+    // 真正生成逻辑……
+    return true;
+}
+```
+
+卫语句让失败路径靠上、成功路径直线向下——调试时断点更好放。
+
+### 三元与 `switch` 的使用边界
+
+三元适合「两个表达式选一个值」；有副作用或长语句时用 `if`。`switch` 适合离散标签；有意穿透写 `[[fallthrough]]`，无意穿透是经典事故。正文已覆盖 `break`/`continue`、随机数三件套与 `if constexpr`——补充一句：游戏循环里少在条件里塞重分配或 I/O，先把控制流读干净。
+
+### 循环的成本意识
+
+```cpp
+for (int wave = 0; wave < 3; ++wave) {
+    // 每波只做必要工作；别在内层反复构造昂贵引擎
+}
+```
+
+`mt19937` 等重对象应长寿复用（正文已强调）。控制流章节练的是结构清晰；性能测量留给基准测试习惯，但心中要有「这段多久跑一次」。
 
 ## 练习指引
 

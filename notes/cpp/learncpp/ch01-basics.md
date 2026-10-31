@@ -1,6 +1,6 @@
 ---
 title: 第 1 章：C++ 基础
-tags: [cpp, learncpp, basics]
+tags: [cpp, learncpp, cherno, basics]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -262,6 +262,39 @@ int main()
 6. **把编译错误当运行结果**：缺分号、拼错 `cout` 是编译期问题，程序根本没开始跑。
 7. **在头文件里乱写 `using namespace std;`**（本章若暂未分文件也要知道）：后续多文件会污染命名空间，见第 2 章。
 8. **整数溢出**：`int` 有范围；超出有符号范围是 UB——类型范围见第 4 章。
+
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。变量在 Cherno 叙事里首先是**一块有大小的内存**，类型决定占多少字节、如何解释比特；「名字」只是程序员给这块内存贴的标签。
+
+### 用 `sizeof` 建立尺度感
+
+```cpp
+#include <iostream>
+
+int main()
+{
+    std::cout << sizeof(bool) << ' '
+              << sizeof(int) << ' '
+              << sizeof(double) << '\n';
+}
+```
+
+不同平台上具体数字可能不同，但习惯问「这个对象有多大」会自然衔接到对齐、缓存行与后面的栈/堆选择。
+
+### 初始化不是客套话
+
+未初始化的局部对象读起来是垃圾比特。Cherno 风格演示常靠调试器看内存窗口；LearnCpp 正文已强调 `{}` 初始化——补充一句工程口径：**能在定义点给确定值，就不要留给「第一次赋值」**。
+
+```cpp
+int frameIndex{0};   // 意图：计数从零
+int scratch{};       // 零初始化，稍后填
+scratch = frameIndex + 1;
+```
+
+### I/O 与「真实程序」的距离
+
+`std::cin` / `std::cout` 适合测验与脚手架；游戏/工具里更多是文件、网络、UI。初学仍应练熟流式读写，但要知道：**控制台不是性能路径，也不是唯一输入面**。正文已覆盖花括号拒绝收窄与整数除法——此处不再展开语法表，只提醒：类型选择会在热点路径上变成真实成本。
 
 ## 练习指引
 

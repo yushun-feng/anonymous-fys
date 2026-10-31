@@ -1,38 +1,27 @@
 ---
-title: Cherno：运算符重载与对象寿命
+title: Cherno：运算符与对象寿命
 tags: [cpp, cherno, operators, lifetime]
 topic: cpp
 updated: 2026-10-31
-source: https://www.youtube.com/watch?v=mS9755gF66w
+source: https://www.youtube.com/watch?v=mS2451Wly0U
 ---
 
-# Cherno：运算符重载与对象寿命
+# Cherno：运算符与对象寿命
 
-> 学习材料：[Operators](https://www.youtube.com/watch?v=mS9755gF66w) · [Object Lifetime](https://www.youtube.com/watch?v=Z_hPJ_EhceI) · [Arrow Operator](https://www.youtube.com/watch?v=4p3grlSpWYA)  
-> 相关：[LearnCpp ch21](../learncpp/ch21-operator-overloading.md)、[ch07 作用域寿命](../learncpp/ch07-scope-duration-linkage.md)
+> 学习材料：Implicit/Explicit · Operator Overloading · `this` · Object Lifetime · Arrow  
+> **完整笔记**：[ch21 运算符重载](../learncpp/ch21-operator-overloading.md) · [ch07](../learncpp/ch07-scope-duration-linkage.md) · [ch14–15](../learncpp/ch14-15-classes.md)
 
 ## 本课范围
 
-运算符重载；对象 / 作用域寿命；箭头运算符；与拷贝、智能指针的衔接。
+运算符重载；作用域寿命；箭头运算符与智能包装。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **40–43、46**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。

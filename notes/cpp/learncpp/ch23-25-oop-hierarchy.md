@@ -1,6 +1,6 @@
 ---
 title: 第 23–25 章：对象关系、继承与虚函数
-tags: [cpp, learncpp, inheritance, virtual]
+tags: [cpp, learncpp, cherno, inheritance, virtual]
 topic: cpp
 updated: 2026-10-31
 source: https://learncpp.cn/
@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 23–25 章：对象关系、继承与虚函数
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 23–25 章  
-> 对照笔记：[Cherno 继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。
+> Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。
 
 ## 章节地图
 
@@ -359,7 +359,7 @@ Derived& dr = dynamic_cast<Derived&>(r); // 失败抛 std::bad_cast
 
 指针版失败返回 `nullptr`；引用版失败抛异常。优先通过虚函数接口避免到处 `dynamic_cast`；真正需要「稀有下行」时再用。
 
-对照 [Cherno 转型笔记](../cherno/14-casting.md)。
+剧集索引：[Cherno 转型](../cherno/14-casting.md)。
 
 ### 虚继承（菱形）
 
@@ -440,6 +440,63 @@ int main() {
 7. **忘记纯虚未覆盖导致「莫名无法实例化」**。  
 8. **把非多态类型拿去 `dynamic_cast`**：需要至少一个虚函数。
 
+## Cherno 视角补充
+
+视频索引见 [Cherno 路线](../cherno/00-roadmap.md)。继承与虚函数让「同一接口、不同实现」成为可能；Cherno 反复强调的代价是：**间接跳转、对象布局变复杂、切片与错误析构**。正文已分组合/聚合、继承、多态三块——这里补运行时模型与工程默认项。
+
+### 先问：是否真的需要继承
+
+能用组合（「有一个」）表达的，优先组合。继承适合真正的「是一个」且需要同一套虚接口调度的家族。接口膨胀或仅为了复用几行代码而继承，长期会痛。
+
+```cpp
+struct IAudioVoice {
+    virtual ~IAudioVoice() = default;
+    virtual void play() = 0;
+};
+
+struct SineVoice : IAudioVoice {
+    void play() override { /* 生成正弦 */ }
+};
+
+struct NoiseVoice : IAudioVoice {
+    void play() override { /* 生成噪声 */ }
+};
+```
+
+纯虚函数 = 接口约定；别忘了**虚析构**：经基类指针 `delete` 派生对象时，无虚析构是经典 UB。
+
+### vtable 直觉（够用即可）
+
+带虚函数的类，对象里通常有指向虚表的指针；调用 `p->play()` 时按**动态类型**查表。这带来灵活性，也带来一层间接——热点里是否可接受要用测量说话，而不是先微优化掉所有虚函数。
+
+```cpp
+void kick(IAudioVoice& voice)
+{
+    voice.play(); // 动态绑定
+}
+```
+
+按值传基类会**切片**，虚行为与派生状态一起丢失——多态边界上传引用/智能指针。
+
+```cpp
+void badByValue(IAudioVoice voice); // 危险：切片
+void ok(IAudioVoice& voice);
+```
+
+### `override` / `final` 是安全带
+
+签名写错时，没有 `override` 会变成静默的新函数而非重写。`final` 阻止再派生或再覆盖，便于封死扩展点。
+
+### `dynamic_cast` 与设计味道
+
+能靠虚接口表达就不向下转型；偶尔需要时，指针版失败得 `nullptr`，引用版抛异常。Cherno 转型篇与正文交叉——补充：频繁 `dynamic_cast` 往往说明接口切分不对。
+
+### 与智能指针一起用
+
+拥有型多态集合常用 `vector<unique_ptr<Base>>`；共享再用 `shared_ptr`。组合/聚合的寿命规则正文已述：补一句 Cherno 习惯——**演示阶段可用裸指针讲清 vtable，产品代码立刻换成智能指针托管**。
+
+构造顺序「基类 → 成员 → 派生」、析构逆序，调试崩溃时先核对这一条，再查虚表。
+
 ## 练习指引
 
 **第 23 章**
@@ -459,7 +516,7 @@ int main() {
 7. 故意去掉 `override` 并改错参数类型，观察行为；加回 `override` 看编译错误。  
 8. 写切片示例并改成引用参数。  
 9. 用 `dynamic_cast` 识别某一派生类型，再重构为纯虚接口消掉转型。  
-10. 对照 [Cherno 继承与虚函数](../cherno/05-inheritance-virtual.md) 把同一例子用智能指针重写。
+10. 结合 [Cherno 路线](../cherno/00-roadmap.md) 把同一例子用智能指针重写。
 
 ## 小结
 

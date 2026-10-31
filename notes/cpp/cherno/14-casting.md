@@ -1,38 +1,27 @@
 ---
-title: Cherno：转型、union 与 type punning
-tags: [cpp, cherno, casting, union]
+title: Cherno：转型与类型技巧
+tags: [cpp, cherno, casting]
 topic: cpp
 updated: 2026-10-31
 source: https://www.youtube.com/watch?v=pWZS1MtxI-A
 ---
 
-# Cherno：转型、union 与 type punning
+# Cherno：转型与类型技巧
 
-> 学习材料：[Type Punning](https://www.youtube.com/watch?v=8egZ_5GA9Bc) · [Unions](https://www.youtube.com/watch?v=6uqU9Y578n4) · [Casting](https://www.youtube.com/watch?v=pWZS1MtxI-A) · [Dynamic Casting](https://www.youtube.com/watch?v=CiHfz6pTolQ)  
-> 相关：[LearnCpp ch10](../learncpp/ch10-type-conversion.md)、[ch23–25 多态](../learncpp/ch23-25-oop-hierarchy.md)
+> 学习材料：Type Punning · Unions · Casting · `dynamic_cast`  
+> **完整笔记**：[ch10 类型转换](../learncpp/ch10-type-conversion.md) · [ch23–25](../learncpp/ch23-25-oop-hierarchy.md)
 
 ## 本课范围
 
-C 风格转型 vs C++ 命名转型；`static_cast` / `reinterpret_cast` / `const_cast` / `dynamic_cast`；union 与底层 bit 重解释的风险。
+C++ 命名转型；类型双关风险；RTTI 下行。
 
-## 概念
+## 剧集
 
-<!-- 用自己的话写下关键定义与关系 -->
+约 **66–67、69、73**（以 [播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 传统编号为准）。
 
-- 
+## 交叉链接
 
-## 例子
+- 总索引：[Cherno 路线](./00-roadmap.md)
+- 系统教材路径：[LearnCpp 路线](../learncpp/00-roadmap.md)
 
-```cpp
-
-```
-
-## 易错
-
-<!-- 自己踩过或书上强调的坑 -->
-
-- 
-
-## 我的补充
-
--
+正文讲解与示例以 LearnCpp 对应章为准；此处仅作视频导航，避免与 LearnCpp 长文重复。
