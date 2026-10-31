@@ -10,22 +10,23 @@ const TOPIC_LABELS = {
   gpu: 'GPU',
 };
 
-/** Active Three.js moon instance; disposed on every remount. */
-let moonHandle = null;
+/** Active Three.js solar-system instance; disposed on every remount. */
+let solarHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
-let moonMountGen = 0;
+let solarMountGen = 0;
 
-function disposeMoon() {
-  moonMountGen += 1;
-  moonHandle?.dispose();
-  moonHandle = null;
+function disposeSolar() {
+  solarMountGen += 1;
+  solarHandle?.dispose();
+  solarHandle = null;
 }
 
 function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
-  if (pathPart === 'moon') return { name: 'moon' };
+  // Prefer #/solar; keep #/moon as a redirect alias.
+  if (pathPart === 'solar' || pathPart === 'moon') return { name: 'solar' };
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -38,7 +39,7 @@ function layout(content) {
       <a class="brand" href="#/">anonymous-fys</a>
       <nav class="site-nav" aria-label="站点导航">
         <a href="#/">笔记</a>
-        <a href="#/moon">月球</a>
+        <a href="#/solar">太阳系</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
     </header>
@@ -99,8 +100,8 @@ function renderHome() {
   }).join('');
 
   return layout(`
-    <div class="moon-home-slot" data-moon-mount data-moon-compact></div>
-    <p class="moon-home-link"><a href="#/moon">打开完整月球展台 →</a></p>
+    <div class="solar-home-slot" data-solar-mount data-solar-compact></div>
+    <p class="solar-home-link"><a href="#/solar">打开完整太阳系展台 →</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -118,11 +119,11 @@ function renderHome() {
   `);
 }
 
-function renderMoonPage() {
+function renderSolarPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>月球</span></nav>
-    <div class="moon-page-slot" data-moon-mount></div>
-    <p class="moon-credit">纹理来源见仓库 README「月球纹理」一节。</p>
+    <nav class="crumb"><a href="#/">首页</a> / <span>太阳系</span></nav>
+    <div class="solar-page-slot" data-solar-mount></div>
+    <p class="solar-credit">纹理来源见仓库 README「太阳系纹理」一节。轨道与尺寸为可读性示意，非真实比例。</p>
   `);
 }
 
@@ -183,19 +184,19 @@ function bindHomeFilters(root) {
   });
 }
 
-async function mountMoonIfPresent(root) {
-  const slot = root.querySelector('[data-moon-mount]');
+async function mountSolarIfPresent(root) {
+  const slot = root.querySelector('[data-solar-mount]');
   if (!slot) return;
-  const compact = slot.hasAttribute('data-moon-compact');
-  const gen = moonMountGen;
+  const compact = slot.hasAttribute('data-solar-compact');
+  const gen = solarMountGen;
   try {
-    const { mountMoonWidget } = await import('./moon-widget.js');
-    if (gen !== moonMountGen || !slot.isConnected) return;
-    moonHandle = mountMoonWidget(slot, { compact });
+    const { mountSolarSystemWidget } = await import('./solar-system-widget.js');
+    if (gen !== solarMountGen || !slot.isConnected) return;
+    solarHandle = mountSolarSystemWidget(slot, { compact });
   } catch {
-    if (gen !== moonMountGen || !slot.isConnected) return;
+    if (gen !== solarMountGen || !slot.isConnected) return;
     slot.innerHTML =
-      '<p class="moon-widget__fallback">三维月球模块加载失败，笔记浏览不受影响。</p>';
+      '<p class="solar-widget__fallback">三维太阳系模块加载失败，笔记浏览不受影响。</p>';
   }
 }
 
@@ -203,18 +204,25 @@ function mountContent() {
   const app = document.querySelector('#app');
   if (!app) return;
 
-  disposeMoon();
+  disposeSolar();
 
   const route = parseRoute();
+  // Normalize legacy #/moon → #/solar without breaking history mid-render.
+  const rawPath = window.location.hash.replace(/^#/, '').split('?')[0].replace(/^\//, '');
+  if (rawPath === 'moon') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/solar`);
+    return;
+  }
+
   if (route.name === 'note') {
     app.innerHTML = renderNote(route.id);
-  } else if (route.name === 'moon') {
-    app.innerHTML = renderMoonPage();
-    mountMoonIfPresent(app);
+  } else if (route.name === 'solar') {
+    app.innerHTML = renderSolarPage();
+    mountSolarIfPresent(app);
   } else {
     app.innerHTML = renderHome();
     bindHomeFilters(app);
-    mountMoonIfPresent(app);
+    mountSolarIfPresent(app);
   }
 }
 

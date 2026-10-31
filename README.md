@@ -46,7 +46,7 @@ npm run preview  # 预览构建结果
 
 公开仓库按上述步骤即可发布 Pages。若仓库为 private，则通常需要 Pro / Team / Enterprise。
 
-路由使用 hash（`#/note/...`、`#/moon`），在 `/anonymous-fys/` 基路径下笔记与月球展台链接可正常工作。
+路由使用 hash（`#/note/...`、`#/solar`；旧 `#/moon` 会重定向到 `#/solar`），在 `/anonymous-fys/` 基路径下笔记与太阳系展台链接可正常工作。
 
 ## 仓库结构（摘要）
 
@@ -64,10 +64,16 @@ package.json
 
 首页按 **topic / tag** 列出笔记；详情页渲染 Markdown，并对 `cpp` / `glsl` / `hlsl` 等做代码高亮。示例笔记仅为通用技术占位，不含个人事务内容。
 
-站点另提供 **Interactive Moon** 展台（Three.js）：首页有压缩预览，完整页路由为 `#/moon`。拖拽旋转、滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。
+站点另提供 **太阳系** 三维展台（Three.js）：太阳与八大行星（含地球旁月球、土星环），双语名称标签随 3D 位置跟踪；首页有压缩预览，完整页路由为 `#/solar`。支持拖拽旋转与滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。轨道半径与天体尺寸为可读性示意，非真实比例。
 
-## 月球纹理
+## 太阳系纹理
 
-本地资源：[`public/textures/moon.jpg`](./public/textures/moon.jpg)（1024×512）。
+本地资源目录：[`public/textures/solar/`](./public/textures/solar/)。
 
-来源为 [three.js 示例行星贴图](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/moon_1024.jpg) 所用的公开月球影像（源自 NASA 月球探测数据，如 Clementine / LRO 公开产品）。NASA 影像一般可按 NASA 媒体使用政策用于非商业/教育展示；仓库仅做浏览展台，未宣称对原始数据拥有版权。
+| 文件 | 来源 |
+|------|------|
+| `sun.jpg`、`mercury.jpg`、`venus.jpg`、`mars.jpg`、`jupiter.jpg`、`saturn.jpg`、`uranus.jpg`、`neptune.jpg`、`saturn-ring.jpg`、`saturn-ring-alpha.gif` | [threex.planets](https://github.com/jeromeetienne/threex.planets) 示例贴图（多为 NASA 公开行星影像改编） |
+| `earth.jpg` | [three.js 示例](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/earth_atmos_2048.jpg) |
+| `moon.jpg` | [three.js 示例月球贴图](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/moon_1024.jpg)（NASA 公开月球影像） |
+
+NASA 影像一般可按 NASA 媒体使用政策用于非商业/教育展示；仓库仅做浏览展台，未宣称对原始数据拥有版权。
