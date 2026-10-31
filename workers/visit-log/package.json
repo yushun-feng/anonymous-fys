@@ -1,0 +1,13 @@
+{
+  "name": "anonymous-fys-visit-log",
+  "private": true,
+  "description": "Cloudflare Worker receiver for anonymous-fys visit beacons",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
