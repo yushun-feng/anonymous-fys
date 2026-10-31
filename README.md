@@ -32,7 +32,7 @@ npm run preview  # 预览构建结果
 2. **Build and deployment → Source** 选择 **GitHub Actions**
 3. 确认 workflow `Deploy GitHub Pages` 在 `main` 上成功跑通（也可手动 **Actions → Deploy GitHub Pages → Run workflow**）
 
-> **私有仓库限制：** GitHub Pages 用于私有仓库通常需要 **GitHub Pro / Team / Enterprise** 等付费计划。免费个人账号下的私有仓可能无法发布 Pages；公开仓库或对应付费计划可用。
+仓库为 **public** 时，按上述步骤启用 GitHub Actions 源即可发布 Pages（无需付费计划）。若仓库仍为 private，则 GitHub Pages 通常需要 Pro / Team / Enterprise。
 
 路由使用 hash（`#/note/...`），在 `/anonymous-fys/` 基路径下笔记链接可正常工作。
 
