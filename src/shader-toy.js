@@ -1,7 +1,23 @@
 /**
  * Lightweight WebGL fragment-shader showcase (ShaderToy-style).
- * Fullscreen quad + a few presets; uniforms exposed as sliders.
+ * Fullscreen quad + presets/sliders; full page also mounts a CodeMirror GLSL editor
+ * with apply + debounced live recompile and compile-error display.
  */
+
+import { EditorState } from '@codemirror/state';
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+  placeholder,
+} from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { bracketMatching, foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { cpp } from '@codemirror/lang-cpp';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 const VERT = `
 attribute vec2 a_position;
@@ -10,7 +26,7 @@ void main() {
 }
 `;
 
-/** Shared helpers prepended to every preset fragment source. */
+/** Shared helpers prepended to every preset / editor fragment source. */
 const FRAG_PRELUDE = `
 precision highp float;
 uniform vec3 iResolution;
@@ -21,6 +37,12 @@ uniform float uScale;
 uniform float uContrast;
 uniform float uHue;
 `;
+
+/** Newlines in the prelude (= line offset so editor L1 maps past the prepended uniforms). */
+const PRELUDE_LINE_COUNT = (FRAG_PRELUDE.match(/\n/g) || []).length;
+
+/** Debounce for live recompile while typing (ms). */
+const LIVE_RECOMPILE_MS = 550;
 
 const PRESETS = [
   {
@@ -279,6 +301,100 @@ function escapeHtml(text) {
 }
 
 /**
+ * Map ANGLE/driver info-log line numbers (which include the prelude) to editor lines.
+ * @param {string} info
+ */
+function remapShaderInfoLog(info) {
+  return String(info)
+    .split('\n')
+    .map((line) => {
+      // Common forms: "ERROR: 0:12: ..." or "0:12: ..."
+      return line.replace(/(ERROR:\s*)?(\d+):(\d+)/g, (full, errPrefix, colOrShader, lineNo) => {
+        const n = Number(lineNo);
+        if (!Number.isFinite(n) || n <= 0) return full;
+        // Driver line includes leading blank from FRAG_PRELUDE template + prelude body.
+        const editorLine = Math.max(1, n - PRELUDE_LINE_COUNT);
+        return `${errPrefix || ''}${colOrShader}:${editorLine}`;
+      });
+    })
+    .join('\n')
+    .trim();
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {string} doc
+ * @param {(code: string) => void} onDocChange
+ * @param {() => void} onApply
+ */
+function createGlslEditor(host, doc, onDocChange, onApply) {
+  const view = new EditorView({
+    parent: host,
+    state: EditorState.create({
+      doc,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        drawSelection(),
+        indentOnInput(),
+        bracketMatching(),
+        foldGutter(),
+        history(),
+        keymap.of([
+          indentWithTab,
+          ...defaultKeymap,
+          ...historyKeymap,
+          {
+            key: 'Mod-Enter',
+            run: () => {
+              onApply();
+              return true;
+            },
+          },
+        ]),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        oneDark,
+        // GLSL is close enough to C/C++ for tokenization in this toy editor.
+        cpp(),
+        placeholder('在此编辑片段着色器…'),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) onDocChange(update.state.doc.toString());
+        }),
+        EditorView.theme({
+          '&': {
+            height: '100%',
+            fontSize: '0.8rem',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+          },
+          '.cm-scroller': {
+            fontFamily: 'var(--font-mono)',
+            lineHeight: '1.5',
+            overflow: 'auto',
+          },
+          '&.cm-focused': {
+            outline: '2px solid var(--accent-soft)',
+            outlineOffset: '0',
+            borderColor: 'var(--accent)',
+          },
+          '.cm-content': {
+            padding: '0.55rem 0',
+            caretColor: 'var(--accent)',
+          },
+          '.cm-gutters': {
+            backgroundColor: '#0a0e13',
+            borderRight: '1px solid var(--border)',
+            color: 'var(--muted)',
+          },
+        }),
+      ],
+    }),
+  });
+  return view;
+}
+
+/**
  * Mount a realtime WebGL shader toy into `container`.
  * Returns `{ dispose }` for tear-down on route change.
  * @param {HTMLElement} container
@@ -293,6 +409,23 @@ export function mountShaderToy(container, { compact = false } = {}) {
       `<button type="button" class="shader-toy__preset${i === 0 ? ' is-active' : ''}" data-preset="${escapeHtml(p.id)}">${escapeHtml(p.label)}</button>`,
   ).join('');
 
+  const editorMarkup = compact
+    ? ''
+    : `
+    <aside class="shader-toy__editor-panel" aria-label="GLSL 片段着色器编辑器">
+      <div class="shader-toy__editor-toolbar">
+        <span class="shader-toy__editor-title">片段着色器 <kbd>⌘/Ctrl+Enter</kbd></span>
+        <div class="shader-toy__editor-actions">
+          <label class="shader-toy__toggle"><input type="checkbox" data-live checked /> 自动编译</label>
+          <button type="button" class="shader-toy__apply" data-apply>应用</button>
+        </div>
+      </div>
+      <p class="shader-toy__editor-hint">自动前置 precision / iResolution · iTime · iMouse · uSpeed · uScale · uContrast · uHue</p>
+      <div class="shader-toy__editor-host" data-editor></div>
+      <pre class="shader-toy__error" data-error hidden></pre>
+      <p class="shader-toy__status" data-status>就绪</p>
+    </aside>`;
+
   shell.innerHTML = `
     <div class="shader-toy__toolbar">
       <div class="shader-toy__presets" role="tablist" aria-label="着色器预设">${presetButtons}</div>
@@ -304,8 +437,11 @@ export function mountShaderToy(container, { compact = false } = {}) {
     </div>
     <p class="shader-toy__blurb" data-blurb>${escapeHtml(PRESETS[0].blurb)}</p>
     <div class="shader-toy__sliders" data-sliders></div>
-    <div class="shader-toy__stage" role="img" aria-label="实时片段着色器画布">
-      <canvas data-canvas></canvas>
+    <div class="shader-toy__workspace">
+      <div class="shader-toy__stage" role="img" aria-label="实时片段着色器画布">
+        <canvas data-canvas></canvas>
+      </div>
+      ${editorMarkup}
     </div>
     <p class="shader-toy__fallback" hidden>当前环境无法使用 WebGL，已跳过 Shader Toy 展示。</p>
   `;
@@ -317,6 +453,11 @@ export function mountShaderToy(container, { compact = false } = {}) {
   const blurbEl = /** @type {HTMLElement} */ (shell.querySelector('[data-blurb]'));
   const fallback = /** @type {HTMLElement} */ (shell.querySelector('.shader-toy__fallback'));
   const pauseInput = /** @type {HTMLInputElement | null} */ (shell.querySelector('[data-pause]'));
+  const editorHost = /** @type {HTMLElement | null} */ (shell.querySelector('[data-editor]'));
+  const errorEl = /** @type {HTMLElement | null} */ (shell.querySelector('[data-error]'));
+  const statusEl = /** @type {HTMLElement | null} */ (shell.querySelector('[data-status]'));
+  const applyBtn = /** @type {HTMLButtonElement | null} */ (shell.querySelector('[data-apply]'));
+  const liveInput = /** @type {HTMLInputElement | null} */ (shell.querySelector('[data-live]'));
 
   if (!canUseWebGL()) {
     stage.hidden = true;
@@ -351,16 +492,40 @@ export function mountShaderToy(container, { compact = false } = {}) {
 
   /** @type {WebGLProgram | null} */
   let program = null;
-  /** @type {Record<string, WebGLUniformLocation | null>} */
+  /** @type {Record<string, WebGLUniformLocation | null | number>} */
   let locs = {};
   /** @type {Record<string, number>} */
   let values = {};
+  /** @type {string} */
+  let lastGoodSource = PRESETS[0].source.trim() + '\n';
+  /** @type {EditorView | null} */
+  let editorView = null;
   let disposed = false;
   let paused = false;
+  let liveRecompile = true;
+  let suppressEditorChange = false;
+  let debounceTimer = 0;
   let raf = 0;
   let start = performance.now();
   let pausedAt = 0;
   const mouse = { x: 0, y: 0, z: 0, w: 0 };
+
+  function setStatus(text, kind = 'ok') {
+    if (!statusEl) return;
+    statusEl.textContent = text;
+    statusEl.dataset.kind = kind;
+  }
+
+  function setError(message) {
+    if (!errorEl) return;
+    if (!message) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+      return;
+    }
+    errorEl.hidden = false;
+    errorEl.textContent = message;
+  }
 
   function cacheLocations(prog) {
     locs = {
@@ -407,7 +572,65 @@ export function mountShaderToy(container, { compact = false } = {}) {
     });
   }
 
-  function setPreset(id) {
+  /**
+   * Compile + swap program. On failure keep the previous working program.
+   * @param {string} fragSource
+   * @param {{ announceOk?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function compileAndUse(fragSource, { announceOk = true } = {}) {
+    try {
+      const next = createProgram(gl, fragSource);
+      if (program) gl.deleteProgram(program);
+      program = next;
+      gl.useProgram(program);
+      cacheLocations(program);
+      lastGoodSource = fragSource;
+      setError('');
+      if (announceOk) setStatus('编译成功', 'ok');
+      return true;
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      const mapped = remapShaderInfoLog(raw) || raw;
+      setError(mapped);
+      setStatus('编译失败（画布仍显示上一份成功着色器）', 'error');
+      return false;
+    }
+  }
+
+  function setEditorDoc(source) {
+    if (!editorView) return;
+    const next = source.trim() + '\n';
+    suppressEditorChange = true;
+    editorView.dispatch({
+      changes: { from: 0, to: editorView.state.doc.length, insert: next },
+    });
+    suppressEditorChange = false;
+  }
+
+  function getEditorSource() {
+    return editorView ? editorView.state.doc.toString() : lastGoodSource;
+  }
+
+  function applyFromEditor() {
+    if (disposed || compact) return;
+    window.clearTimeout(debounceTimer);
+    debounceTimer = 0;
+    compileAndUse(getEditorSource());
+  }
+
+  function scheduleLiveRecompile() {
+    if (!liveRecompile || disposed || compact) return;
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      debounceTimer = 0;
+      if (disposed) return;
+      compileAndUse(getEditorSource(), { announceOk: true });
+    }, LIVE_RECOMPILE_MS);
+    setStatus('输入中…将自动编译', 'pending');
+  }
+
+  function setPreset(id, { resetUniforms = true } = {}) {
     const idx = PRESETS.findIndex((p) => p.id === id);
     if (idx < 0) return;
     const preset = PRESETS[idx];
@@ -415,16 +638,16 @@ export function mountShaderToy(container, { compact = false } = {}) {
     shell.querySelectorAll('[data-preset]').forEach((btn) => {
       btn.classList.toggle('is-active', btn.getAttribute('data-preset') === id);
     });
-    try {
-      const next = createProgram(gl, preset.source);
-      if (program) gl.deleteProgram(program);
-      program = next;
-      gl.useProgram(program);
-      cacheLocations(program);
+    if (resetUniforms) {
       applyUniformDefaults(preset);
       renderSliders(preset);
-    } catch (err) {
-      blurbEl.textContent = `着色器编译失败：${err instanceof Error ? err.message : String(err)}`;
+    }
+    const source = preset.source.trim() + '\n';
+    setEditorDoc(source);
+    window.clearTimeout(debounceTimer);
+    debounceTimer = 0;
+    if (!compileAndUse(source)) {
+      blurbEl.textContent = `着色器编译失败：预设 ${preset.label}`;
     }
   }
 
@@ -451,13 +674,13 @@ export function mountShaderToy(container, { compact = false } = {}) {
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.enableVertexAttribArray(aPos);
     gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-    if (locs.iResolution) gl.uniform3f(locs.iResolution, canvas.width, canvas.height, 1);
-    if (locs.iTime) gl.uniform1f(locs.iTime, t);
-    if (locs.iMouse) gl.uniform4f(locs.iMouse, mouse.x, mouse.y, mouse.z, mouse.w);
-    if (locs.uSpeed) gl.uniform1f(locs.uSpeed, values.uSpeed ?? 1);
-    if (locs.uScale) gl.uniform1f(locs.uScale, values.uScale ?? 1);
-    if (locs.uContrast) gl.uniform1f(locs.uContrast, values.uContrast ?? 1);
-    if (locs.uHue) gl.uniform1f(locs.uHue, values.uHue ?? 0);
+    if (locs.iResolution) gl.uniform3f(/** @type {WebGLUniformLocation} */ (locs.iResolution), canvas.width, canvas.height, 1);
+    if (locs.iTime) gl.uniform1f(/** @type {WebGLUniformLocation} */ (locs.iTime), t);
+    if (locs.iMouse) gl.uniform4f(/** @type {WebGLUniformLocation} */ (locs.iMouse), mouse.x, mouse.y, mouse.z, mouse.w);
+    if (locs.uSpeed) gl.uniform1f(/** @type {WebGLUniformLocation} */ (locs.uSpeed), values.uSpeed ?? 1);
+    if (locs.uScale) gl.uniform1f(/** @type {WebGLUniformLocation} */ (locs.uScale), values.uScale ?? 1);
+    if (locs.uContrast) gl.uniform1f(/** @type {WebGLUniformLocation} */ (locs.uContrast), values.uContrast ?? 1);
+    if (locs.uHue) gl.uniform1f(/** @type {WebGLUniformLocation} */ (locs.uHue), values.uHue ?? 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
@@ -509,6 +732,29 @@ export function mountShaderToy(container, { compact = false } = {}) {
     }
   });
 
+  applyBtn?.addEventListener('click', () => applyFromEditor());
+  liveInput?.addEventListener('change', () => {
+    liveRecompile = !!liveInput.checked;
+    if (liveRecompile) scheduleLiveRecompile();
+    else {
+      window.clearTimeout(debounceTimer);
+      debounceTimer = 0;
+      setStatus(errorEl && !errorEl.hidden ? '编译失败' : '自动编译已关闭', errorEl && !errorEl.hidden ? 'error' : 'ok');
+    }
+  });
+
+  if (!compact && editorHost) {
+    editorView = createGlslEditor(
+      editorHost,
+      lastGoodSource,
+      () => {
+        if (suppressEditorChange) return;
+        scheduleLiveRecompile();
+      },
+      applyFromEditor,
+    );
+  }
+
   const onResize = () => resize();
   window.addEventListener('resize', onResize);
 
@@ -520,6 +766,7 @@ export function mountShaderToy(container, { compact = false } = {}) {
   return {
     dispose() {
       disposed = true;
+      window.clearTimeout(debounceTimer);
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
       stage.removeEventListener('pointerdown', onPointerDown);
@@ -527,6 +774,8 @@ export function mountShaderToy(container, { compact = false } = {}) {
       stage.removeEventListener('pointerup', onPointerUp);
       stage.removeEventListener('pointercancel', onPointerUp);
       stage.removeEventListener('pointerleave', onPointerUp);
+      editorView?.destroy();
+      editorView = null;
       if (program) gl.deleteProgram(program);
       if (quad) gl.deleteBuffer(quad);
       const ext = gl.getExtension('WEBGL_lose_context');
@@ -536,4 +785,4 @@ export function mountShaderToy(container, { compact = false } = {}) {
   };
 }
 
-export { PRESETS };
+export { PRESETS, FRAG_PRELUDE };
