@@ -398,7 +398,7 @@ code {
   margin: 0 0 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #b7c4d2;
+  background: #050814;
   overflow: hidden;
 }
 
@@ -431,11 +431,17 @@ code {
   height: min(44vh, 320px);
 }
 
-.pagoda-widget__fallback {
+.pagoda-widget__fallback,
+.pagoda-widget__status {
   margin: 0;
   padding: 1.25rem 1rem 1.5rem;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.pagoda-widget__status:empty,
+.pagoda-widget__status[hidden] {
+  display: none;
 }
 
 .pagoda-label {
