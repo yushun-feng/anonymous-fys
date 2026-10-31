@@ -30,11 +30,24 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Optional: Settings → Secrets and variables → Actions → VITE_SITE_PASSWORD
-      # (falls back to default `notes` when unset).
+      # Optional Secrets (Settings → Secrets and variables → Actions):
+      #   VITE_SITE_PASSWORD — browse gate (default `notes` when unset)
+      #   VITE_VISIT_LOG_ENDPOINT — JSON beacon webhook for access records
+      #   VITE_VISIT_LOG_GEO / VITE_VISIT_LOG_GEO_URL — approx geo (optional)
+      #   VITE_UMAMI_SRC + VITE_UMAMI_WEBSITE_ID — Umami
+      #   VITE_PLAUSIBLE_DOMAIN / VITE_PLAUSIBLE_SRC — Plausible
+      #   VITE_GOATCOUNTER_CODE — GoatCounter
       - name: Build
         env:
           VITE_SITE_PASSWORD: ${{ secrets.VITE_SITE_PASSWORD }}
+          VITE_VISIT_LOG_ENDPOINT: ${{ secrets.VITE_VISIT_LOG_ENDPOINT }}
+          VITE_VISIT_LOG_GEO: ${{ secrets.VITE_VISIT_LOG_GEO }}
+          VITE_VISIT_LOG_GEO_URL: ${{ secrets.VITE_VISIT_LOG_GEO_URL }}
+          VITE_UMAMI_SRC: ${{ secrets.VITE_UMAMI_SRC }}
+          VITE_UMAMI_WEBSITE_ID: ${{ secrets.VITE_UMAMI_WEBSITE_ID }}
+          VITE_PLAUSIBLE_DOMAIN: ${{ secrets.VITE_PLAUSIBLE_DOMAIN }}
+          VITE_PLAUSIBLE_SRC: ${{ secrets.VITE_PLAUSIBLE_SRC }}
+          VITE_GOATCOUNTER_CODE: ${{ secrets.VITE_GOATCOUNTER_CODE }}
         run: npm run build
 
       - name: Upload Pages artifact

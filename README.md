@@ -33,6 +33,40 @@ npm run preview  # 预览构建结果
 
 未设置 `VITE_SITE_PASSWORD` 时，默认口令为 `notes`（方便本地直接打开）。
 
+### 访客访问记录（IP / 时间 / 地点 / 设备）
+
+GitHub Pages **不会**向仓库所有者提供可查询的访问者真实 IP 日志。本站用可选的前端 beacon +（可选）隐私向分析产品来补齐「谁在何时从哪类设备访问」：
+
+| 字段 | 来源 |
+|------|------|
+| 时间、path/hash、referrer | 浏览器 |
+| userAgent、platform/OS、browser、screen/viewport、language、mobile | 浏览器（见 `src/visit-log.js`） |
+| 近似 IP / 城市国家 | 浏览器请求公共 geo API（默认 `ipapi.co/json/`，可关） |
+| **边缘真实 IP** | 需 Cloudflare（或同类）代理日志，或你的接收端用连接方 `remoteAddr` 记账 |
+
+**推荐配置（二选一或组合）：**
+
+1. **JSON beacon（细字段，含设备 + 近似 geo）**  
+   - 本地 / Secret：`VITE_VISIT_LOG_ENDPOINT=https://你的接收地址`  
+   - 页面加载与 hash 路由变化时 `POST` 正文为 JSON 字符串（`Content-Type: text/plain`，避免 CORS 预检；接收端按 JSON 解析 body）。  
+   - 接收端示例：Cloudflare Worker 写入 KV/D1、Pipedream / Make / n8n、自建 webhook。测试可用 [webhook.site](https://webhook.site)。  
+   - 关闭近似 IP：`VITE_VISIT_LOG_GEO=0`。
+
+2. **隐私向仪表盘（汇总 PV，不自带「逐条 IP」）**  
+   - Umami：`VITE_UMAMI_SRC` + `VITE_UMAMI_WEBSITE_ID` → 在 Umami 控制台看访问。  
+   - Plausible：`VITE_PLAUSIBLE_DOMAIN` → [Plausible](https://plausible.io) 站点报表。  
+   - GoatCounter：`VITE_GOATCOUNTER_CODE` → `https://<code>.goatcounter.com` 报表。
+
+未配置上述变量时，模块为空操作，不影响浏览。
+
+**站长如何查看日志：**
+
+- Beacon：打开你配置的 webhook / Worker / 自动化工具的投递历史或数据库。  
+- Umami / Plausible / GoatCounter：登录对应控制台。  
+- 若要 **服务器侧真实 IP**：把 Pages 挂到 Cloudflare（橙云代理）看 Analytics / Logpush，或让 `VITE_VISIT_LOG_ENDPOINT` 的服务端记录请求 IP（可与 body 里的近似 geo 对照）。
+
+完整变量列表见 [`.env.example`](./.env.example)；Pages 构建通过 Actions Secrets 注入（见 workflow）。
+
 ## GitHub Pages（网页浏览）
 
 项目站地址形态：`https://<owner>.github.io/anonymous-fys/`（当前 owner 下即为 GitHub 项目 Pages URL）。
@@ -41,7 +75,7 @@ npm run preview  # 预览构建结果
 
 1. 打开仓库 **Settings → Pages**
 2. **Build and deployment → Source** 选择 **GitHub Actions**
-3. （可选）在 **Settings → Secrets and variables → Actions** 添加 `VITE_SITE_PASSWORD`（见上）
+3. （可选）在 **Settings → Secrets and variables → Actions** 添加 `VITE_SITE_PASSWORD`、以及访客记录相关 `VITE_VISIT_LOG_*` / Umami·Plausible·GoatCounter 变量（见上「访客访问记录」）
 4. 确认 workflow `Deploy GitHub Pages` 在 `main` 上成功跑通（也可手动 **Actions → Deploy GitHub Pages → Run workflow**）
 
 公开仓库按上述步骤即可发布 Pages。若仓库为 private，则通常需要 Pro / Team / Enterprise。
