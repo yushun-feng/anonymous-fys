@@ -1,5 +1,5 @@
 /**
- * Right-side code playground: in-browser JS/TS runner + simple C++ copy/open helpers.
+ * Right-side code playground: in-browser JS/TS runner + Wandbox C++ compile/run.
  * Mount once after unlock so hash navigations do not wipe editor state.
  */
 
@@ -28,8 +28,12 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH_RATIO = 0.62;
 const DEFAULT_WIDTH = 400;
 
-/** Simple browser C++ runner (paste after copy). */
-const ONLINE_CPP_RUNNER = 'https://www.onlinegdb.com/online_c++_compiler';
+/** Wandbox public compile API (CORS enabled). */
+const WANDBOX_COMPILE_URL = 'https://wandbox.org/api/compile.json';
+/** Stable gcc with C++20-class dialect switches. */
+const WANDBOX_COMPILER = 'gcc-13.2.0';
+const WANDBOX_OPTIONS = 'warning,c++2b';
+const WANDBOX_TIMEOUT_MS = 25000;
 
 const SAMPLES = {
   js: `// 浏览器内运行（沙箱 iframe）
@@ -135,7 +139,7 @@ function languageSupport(lang) {
 }
 
 /**
- * Prefill Compiler Explorer in a new tab (no embed). Optional advanced path.
+ * Prefill Compiler Explorer in a new tab (optional fallback).
  * @param {string} source
  */
 function godboltClientStateUrl(source) {
@@ -166,6 +170,87 @@ function godboltClientStateUrl(source) {
   const json = JSON.stringify(payload);
   const b64 = btoa(unescape(encodeURIComponent(json)));
   return `https://godbolt.org/clientstate/${encodeURIComponent(b64)}`;
+}
+
+/**
+ * Compile & run C++ via Wandbox; stream textual results through onLog.
+ * @param {string} code
+ * @param {(line: { level: string, text: string }) => void} onLog
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+async function runCppViaWandbox(code, onLog) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), WANDBOX_TIMEOUT_MS);
+  try {
+    const res = await fetch(WANDBOX_COMPILE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        compiler: WANDBOX_COMPILER,
+        options: WANDBOX_OPTIONS,
+        save: false,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      onLog({
+        level: 'error',
+        text: `Wandbox HTTP ${res.status}${body ? `: ${body.slice(0, 200)}` : ''}`,
+      });
+      return { ok: false, error: `http-${res.status}` };
+    }
+    /** @type {Record<string, unknown>} */
+    const data = await res.json();
+    // Wandbox puts both errors and warnings in compiler_error (even when status is 0).
+    const compilerDiag = String(data.compiler_error || '').trim();
+    const programOut = String(data.program_output || '').replace(/\r\n/g, '\n');
+    const programErr = String(data.program_error || '').replace(/\r\n/g, '\n');
+    const status = data.status != null ? String(data.status) : '';
+    const signal = data.signal != null ? String(data.signal) : '';
+    const okStatus = status === '0';
+
+    if (compilerDiag) {
+      const level = okStatus ? 'warn' : 'error';
+      onLog({ level, text: okStatus ? '—— 编译警告 ——' : '—— 编译错误 ——' });
+      compilerDiag.split('\n').forEach((line) => onLog({ level, text: line }));
+    }
+
+    if (programOut) {
+      onLog({ level: 'info', text: '—— stdout ——' });
+      programOut.replace(/\n$/, '').split('\n').forEach((line) => onLog({ level: 'log', text: line }));
+    }
+    if (programErr) {
+      onLog({ level: 'warn', text: '—— stderr ——' });
+      programErr.replace(/\n$/, '').split('\n').forEach((line) => onLog({ level: 'warn', text: line }));
+    }
+
+    if (!programOut && !programErr && !compilerDiag) {
+      onLog({ level: 'info', text: '（无输出）' });
+    }
+
+    if (signal) {
+      onLog({ level: 'error', text: `进程信号：${signal}` });
+    }
+    if (!okStatus) {
+      onLog({ level: 'error', text: `退出码：${status || '?'}` });
+      return { ok: false, error: compilerDiag ? 'compile' : `exit-${status || '?'}` };
+    }
+    onLog({ level: 'info', text: `✓ 完成（${WANDBOX_COMPILER}）` });
+    return { ok: true };
+  } catch (err) {
+    const aborted =
+      (typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError') ||
+      (err instanceof Error && err.name === 'AbortError');
+    const msg = aborted
+      ? `请求超时（>${WANDBOX_TIMEOUT_MS / 1000}s）。可稍后重试或用「Compiler Explorer」备用。`
+      : `网络/API 失败：${err instanceof Error ? err.message : String(err)}`;
+    onLog({ level: 'error', text: msg });
+    return { ok: false, error: aborted ? 'timeout' : 'network' };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -298,53 +383,19 @@ function setEditorLanguage(lang) {
   });
 }
 
-/**
- * @param {string} text
- * @returns {Promise<boolean>}
- */
-async function copyText(text) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    /* fall through */
-  }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:fixed;left:-9999px;top:0';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
 function setModeUi(root, lang) {
   root.querySelectorAll('[data-pg-lang]').forEach((btn) => {
     btn.classList.toggle('is-active', btn.getAttribute('data-pg-lang') === lang);
     btn.setAttribute('aria-selected', btn.getAttribute('data-pg-lang') === lang ? 'true' : 'false');
   });
-  const runBtn = root.querySelector('[data-pg-run]');
-  const copyBtn = root.querySelector('[data-pg-copy]');
-  const openRunnerBtn = root.querySelector('[data-pg-open-runner]');
   const openGodboltBtn = root.querySelector('[data-pg-open-godbolt]');
   const hint = root.querySelector('[data-pg-hint]');
 
   const isCpp = lang === 'cpp';
-  if (runBtn) runBtn.hidden = isCpp;
-  if (copyBtn) copyBtn.hidden = !isCpp;
-  if (openRunnerBtn) openRunnerBtn.hidden = !isCpp;
   if (openGodboltBtn) openGodboltBtn.hidden = !isCpp;
   if (hint) {
     hint.textContent = isCpp
-      ? '本站不编译 C++。可复制代码，到简易在线运行器粘贴运行；或一键打开 Compiler Explorer（带源码）。'
+      ? 'C++ 经 Wandbox（gcc-13.2，C++2b）远程编译运行，stdout/stderr 显示在下方；也可打开 Compiler Explorer 备用。'
       : lang === 'ts'
         ? 'TypeScript 由 Sucrase 在浏览器内转译后于沙箱 iframe 执行。'
         : 'JavaScript 在沙箱 iframe 中执行（无 DOM / 无网络）。';
@@ -438,9 +489,7 @@ export function mountPlayground(pane) {
       <div id="playground-editor-host" class="playground-editor-host" data-pg-editor role="textbox" aria-label="代码编辑器" aria-multiline="true"></div>
       <div class="playground-actions">
         <button type="button" class="playground-btn playground-btn--primary" data-pg-run>运行</button>
-        <button type="button" class="playground-btn playground-btn--primary" data-pg-copy hidden>复制代码</button>
-        <button type="button" class="playground-btn" data-pg-open-runner hidden>打开简易运行器</button>
-        <button type="button" class="playground-btn" data-pg-open-godbolt hidden>Compiler Explorer</button>
+        <button type="button" class="playground-btn" data-pg-open-godbolt hidden title="备用：新标签打开 Compiler Explorer">Compiler Explorer</button>
         <button type="button" class="playground-btn" data-pg-reset>重置示例</button>
         <button type="button" class="playground-btn" data-pg-clear>清空输出</button>
       </div>
@@ -474,54 +523,41 @@ export function mountPlayground(pane) {
     });
   });
 
-  pane.querySelector('[data-pg-run]')?.addEventListener('click', async () => {
-    if (!state || state.lang === 'cpp') return;
+  const runBtn = /** @type {HTMLButtonElement | null} */ (pane.querySelector('[data-pg-run]'));
+  runBtn?.addEventListener('click', async () => {
+    if (!state || !runBtn) return;
     clearOutput(state.output);
-    appendOutputLine(state.output, 'info', `▶ 运行 ${state.lang.toUpperCase()}…`);
-    let code = getEditorCode();
+    const code = getEditorCode();
     writeCode(state.lang, code);
-    if (state.lang === 'ts') {
-      try {
-        const { transform } = await import('sucrase');
-        code = transform(code, {
-          transforms: ['typescript'],
-          disableESTransforms: true,
-        }).code;
-      } catch (err) {
-        appendOutputLine(state.output, 'error', `转译失败：${err instanceof Error ? err.message : String(err)}`);
+    runBtn.disabled = true;
+    try {
+      if (state.lang === 'cpp') {
+        appendOutputLine(state.output, 'info', `▶ 编译运行 C++（Wandbox ${WANDBOX_COMPILER}）…`);
+        await runCppViaWandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
         return;
       }
+      appendOutputLine(state.output, 'info', `▶ 运行 ${state.lang.toUpperCase()}…`);
+      let runnable = code;
+      if (state.lang === 'ts') {
+        try {
+          const { transform } = await import('sucrase');
+          runnable = transform(code, {
+            transforms: ['typescript'],
+            disableESTransforms: true,
+          }).code;
+        } catch (err) {
+          appendOutputLine(
+            state.output,
+            'error',
+            `转译失败：${err instanceof Error ? err.message : String(err)}`,
+          );
+          return;
+        }
+      }
+      await runInSandbox(runnable, ({ level, text }) => appendOutputLine(state.output, level, text));
+    } finally {
+      runBtn.disabled = false;
     }
-    await runInSandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
-  });
-
-  pane.querySelector('[data-pg-copy]')?.addEventListener('click', async () => {
-    if (!state || state.lang !== 'cpp') return;
-    const source = getEditorCode();
-    writeCode('cpp', source);
-    const ok = await copyText(source);
-    clearOutput(state.output);
-    appendOutputLine(
-      state.output,
-      ok ? 'info' : 'error',
-      ok ? '已复制到剪贴板。可点「打开简易运行器」粘贴运行。' : '复制失败，请手动选中编辑器内容复制。',
-    );
-  });
-
-  pane.querySelector('[data-pg-open-runner]')?.addEventListener('click', async () => {
-    if (!state || state.lang !== 'cpp') return;
-    const source = getEditorCode();
-    writeCode('cpp', source);
-    const ok = await copyText(source);
-    window.open(ONLINE_CPP_RUNNER, '_blank', 'noopener,noreferrer');
-    clearOutput(state.output);
-    appendOutputLine(
-      state.output,
-      'info',
-      ok
-        ? '已复制代码并打开 OnlineGDB。在对方编辑器中粘贴后运行即可。'
-        : '已打开 OnlineGDB。请手动复制左侧代码后粘贴运行。',
-    );
   });
 
   pane.querySelector('[data-pg-open-godbolt]')?.addEventListener('click', () => {
@@ -530,8 +566,7 @@ export function mountPlayground(pane) {
     writeCode('cpp', source);
     const url = godboltClientStateUrl(source);
     window.open(url, '_blank', 'noopener,noreferrer');
-    clearOutput(state.output);
-    appendOutputLine(state.output, 'info', '已在新标签打开 Compiler Explorer（源码已预填）。');
+    appendOutputLine(state.output, 'info', '已在新标签打开 Compiler Explorer（源码已预填，备用）。');
   });
 
   pane.querySelector('[data-pg-reset]')?.addEventListener('click', () => {
