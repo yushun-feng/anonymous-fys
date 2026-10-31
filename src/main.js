@@ -16,10 +16,10 @@ const TOPIC_LABELS = {
   gpu: 'GPU',
 };
 
-/** Active Three.js solar-system instance; disposed on every remount. */
-let solarHandle = null;
+/** Active Three.js Portal co-op bots instance; disposed on every remount. */
+let portalHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
-let solarMountGen = 0;
+let portalMountGen = 0;
 /** Active WebGL shader-toy instance; disposed on every remount. */
 let shaderHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
@@ -27,10 +27,10 @@ let shaderMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 
-function disposeSolar() {
-  solarMountGen += 1;
-  solarHandle?.dispose();
-  solarHandle = null;
+function disposePortal() {
+  portalMountGen += 1;
+  portalHandle?.dispose();
+  portalHandle = null;
 }
 
 function disposeShader() {
@@ -43,8 +43,10 @@ function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
-  // Prefer #/solar; keep #/moon as a redirect alias.
-  if (pathPart === 'solar' || pathPart === 'moon') return { name: 'solar' };
+  // Prefer #/portal; keep #/solar and #/moon as redirect aliases.
+  if (pathPart === 'portal' || pathPart === 'solar' || pathPart === 'moon') {
+    return { name: 'portal' };
+  }
   if (pathPart === 'shader') return { name: 'shader' };
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
@@ -58,7 +60,7 @@ function layout(content) {
       <a class="brand" href="#/">anonymous-fys</a>
       <nav class="site-nav" aria-label="站点导航">
         <a href="#/">笔记</a>
-        <a href="#/solar">太阳系</a>
+        <a href="#/portal">Portal</a>
         <a href="#/shader">Shader</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
@@ -120,8 +122,8 @@ function renderHome() {
   }).join('');
 
   return layout(`
-    <div class="solar-home-slot" data-solar-mount data-solar-compact></div>
-    <p class="solar-home-link"><a href="#/solar">打开完整太阳系展台 →</a></p>
+    <div class="portal-home-slot" data-portal-mount data-portal-compact></div>
+    <p class="portal-home-link"><a href="#/portal">打开完整 Portal 展台 →</a></p>
     <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
     <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
     <section class="filters">
@@ -141,11 +143,11 @@ function renderHome() {
   `);
 }
 
-function renderSolarPage() {
+function renderPortalPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>太阳系</span></nav>
-    <div class="solar-page-slot" data-solar-mount></div>
-    <p class="solar-credit">纹理来源见仓库 README「太阳系纹理」一节。轨道与尺寸为可读性示意，非真实比例。</p>
+    <nav class="crumb"><a href="#/">首页</a> / <span>Portal</span></nav>
+    <div class="portal-page-slot" data-portal-mount></div>
+    <p class="portal-credit">程序化低/中模风格的 Atlas 与 P-body（灵感来自 Portal 2 合作机器人外形）；未使用 Valve 游戏资产或贴图。</p>
   `);
 }
 
@@ -214,19 +216,19 @@ function bindHomeFilters(root) {
   });
 }
 
-async function mountSolarIfPresent(root) {
-  const slot = root.querySelector('[data-solar-mount]');
+async function mountPortalIfPresent(root) {
+  const slot = root.querySelector('[data-portal-mount]');
   if (!slot) return;
-  const compact = slot.hasAttribute('data-solar-compact');
-  const gen = solarMountGen;
+  const compact = slot.hasAttribute('data-portal-compact');
+  const gen = portalMountGen;
   try {
-    const { mountSolarSystemWidget } = await import('./solar-system-widget.js');
-    if (gen !== solarMountGen || !slot.isConnected) return;
-    solarHandle = mountSolarSystemWidget(slot, { compact });
+    const { mountPortalPropsWidget } = await import('./portal-props-widget.js');
+    if (gen !== portalMountGen || !slot.isConnected) return;
+    portalHandle = mountPortalPropsWidget(slot, { compact });
   } catch {
-    if (gen !== solarMountGen || !slot.isConnected) return;
+    if (gen !== portalMountGen || !slot.isConnected) return;
     slot.innerHTML =
-      '<p class="solar-widget__fallback">三维太阳系模块加载失败，笔记浏览不受影响。</p>';
+      '<p class="portal-widget__fallback">三维 Portal 展台加载失败，笔记浏览不受影响。</p>';
   }
 }
 
@@ -291,30 +293,30 @@ function mountContent() {
   const browse = ensureShell();
   if (!browse) return;
 
-  disposeSolar();
+  disposePortal();
   disposeShader();
 
   const route = parseRoute();
-  // Normalize legacy #/moon → #/solar without breaking history mid-render.
+  // Normalize legacy #/solar and #/moon → #/portal without breaking history mid-render.
   const rawPath = window.location.hash.replace(/^#/, '').split('?')[0].replace(/^\//, '');
-  if (rawPath === 'moon') {
-    window.location.replace(`${window.location.pathname}${window.location.search}#/solar`);
+  if (rawPath === 'solar' || rawPath === 'moon') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/portal`);
     return;
   }
 
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
-  } else if (route.name === 'solar') {
-    browse.innerHTML = renderSolarPage();
-    mountSolarIfPresent(browse);
+  } else if (route.name === 'portal') {
+    browse.innerHTML = renderPortalPage();
+    mountPortalIfPresent(browse);
   } else if (route.name === 'shader') {
     browse.innerHTML = renderShaderPage();
     mountShaderIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     bindHomeFilters(browse);
-    mountSolarIfPresent(browse);
+    mountPortalIfPresent(browse);
     mountShaderIfPresent(browse);
   }
 }

@@ -394,15 +394,15 @@ code {
   font-size: 0.95rem;
 }
 
-.solar-widget {
+.portal-widget {
   margin: 0 0 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #05070b;
+  background: #12161c;
   overflow: hidden;
 }
 
-.solar-widget__stage {
+.portal-widget__stage {
   position: relative;
   width: 100%;
   height: min(72vh, 560px);
@@ -410,35 +410,35 @@ code {
   cursor: grab;
 }
 
-.solar-widget__stage:active {
+.portal-widget__stage:active {
   cursor: grabbing;
 }
 
-.solar-widget__stage canvas {
+.portal-widget__stage canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.solar-widget__labels {
+.portal-widget__labels {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
 }
 
-.solar-widget--compact .solar-widget__stage {
+.portal-widget--compact .portal-widget__stage {
   height: min(44vh, 300px);
 }
 
-.solar-widget__fallback {
+.portal-widget__fallback {
   margin: 0;
   padding: 1.25rem 1rem 1.5rem;
   color: var(--muted);
   font-size: 0.92rem;
 }
 
-.solar-label {
+.portal-label {
   color: #e8eef5;
   font-size: 0.72rem;
   line-height: 1.2;
@@ -453,17 +453,17 @@ code {
   user-select: none;
 }
 
-.solar-widget--compact .solar-label {
+.portal-widget--compact .portal-label {
   font-size: 0.65rem;
   padding: 0.08rem 0.3rem;
 }
 
-.solar-home-link {
+.portal-home-link {
   margin: -0.5rem 0 1.25rem;
   font-size: 0.9rem;
 }
 
-.solar-credit {
+.portal-credit {
   margin: 0.75rem 0 0;
   color: var(--muted);
   font-size: 0.85rem;

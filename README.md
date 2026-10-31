@@ -80,7 +80,7 @@ GitHub Pages **不会**向仓库所有者提供可查询的访问者真实 IP �
 
 公开仓库按上述步骤即可发布 Pages。若仓库为 private，则通常需要 Pro / Team / Enterprise。
 
-路由使用 hash（`#/note/...`、`#/solar`；旧 `#/moon` 会重定向到 `#/solar`），在 `/anonymous-fys/` 基路径下笔记与太阳系展台链接可正常工作。
+路由使用 hash（`#/note/...`、`#/portal`、`#/shader`；旧 `#/solar` / `#/moon` 会重定向到 `#/portal`），在 `/anonymous-fys/` 基路径下笔记与展台链接可正常工作。
 
 解锁浏览后，右侧为可拖拽调节宽度的 **代码 Playground**（CodeMirror 语法高亮）：JS/TS 在沙箱 iframe 中一键运行（TS 经 Sucrase 浏览器内转译）；C++ 默认在浏览器内用 [browsercc](https://github.com/BertalanD/browsercc)（Clang/LLD WASM → WASI）本地编译运行，stdout/stderr 显示在面板输出区（首次需从 CDN 拉取约 90MB 工具链，之后可缓存）。可选「远程备用」走 [Wandbox](https://wandbox.org/)，或新标签打开 [Compiler Explorer](https://godbolt.org/)。笔记中的 JS/TS/C/C++ 代码块可点「→ Playground」发送到面板。窄屏默认收起，可用右下角按钮展开。
 
@@ -101,16 +101,4 @@ package.json
 
 首页按 **topic / tag** 列出笔记；详情页渲染 Markdown，并对 `cpp` / `glsl` / `hlsl` 等做代码高亮。示例笔记仅为通用技术占位，不含个人事务内容。
 
-站点另提供 **太阳系** 三维展台（Three.js）：太阳与八大行星（含地球旁月球、土星环），双语名称标签随 3D 位置跟踪；首页有压缩预览，完整页路由为 `#/solar`。支持拖拽旋转与滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。轨道半径与天体尺寸为可读性示意，非真实比例。
-
-## 太阳系纹理
-
-本地资源目录：[`public/textures/solar/`](./public/textures/solar/)。
-
-| 文件 | 来源 |
-|------|------|
-| `sun.jpg`、`mercury.jpg`、`venus.jpg`、`mars.jpg`、`jupiter.jpg`、`saturn.jpg`、`uranus.jpg`、`neptune.jpg`、`saturn-ring.jpg`、`saturn-ring-alpha.gif` | [threex.planets](https://github.com/jeromeetienne/threex.planets) 示例贴图（多为 NASA 公开行星影像改编） |
-| `earth.jpg` | [three.js 示例](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/earth_atmos_2048.jpg) |
-| `moon.jpg` | [three.js 示例月球贴图](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/moon_1024.jpg)（NASA 公开月球影像） |
-
-NASA 影像一般可按 NASA 媒体使用政策用于非商业/教育展示；仓库仅做浏览展台，未宣称对原始数据拥有版权。
+站点另提供 **Portal** 三维展台（Three.js）：程序化低/中模风格的合作机器人 **Atlas** 与 **P-body**（外形灵感来自 Portal 2，未使用 Valve 游戏资产或贴图），带 idle / 张望动画；首页有压缩预览，完整页路由为 `#/portal`。支持拖拽旋转与滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。
