@@ -1,5 +1,5 @@
 /**
- * Right-side code playground: in-browser JS/TS runner + Wandbox C++ compile/run.
+ * Right-side code playground: in-browser JS/TS runner + local WASM C++ (browsercc).
  * Mount once after unlock so hash navigations do not wipe editor state.
  */
 
@@ -18,6 +18,7 @@ import { bracketMatching, foldGutter, indentOnInput, syntaxHighlighting, default
 import { javascript } from '@codemirror/lang-javascript';
 import { cpp } from '@codemirror/lang-cpp';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { runCppLocalWasm } from './cpp-local-runner.js';
 
 const WIDTH_KEY = 'anonymous-fys-playground-width';
 const COLLAPSED_KEY = 'anonymous-fys-playground-collapsed';
@@ -28,9 +29,8 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH_RATIO = 0.62;
 const DEFAULT_WIDTH = 400;
 
-/** Wandbox public compile API (CORS enabled). */
+/** Optional remote fallback when local WASM toolchain fails or is unwanted. */
 const WANDBOX_COMPILE_URL = 'https://wandbox.org/api/compile.json';
-/** Stable gcc with C++20-class dialect switches. */
 const WANDBOX_COMPILER = 'gcc-13.2.0';
 const WANDBOX_OPTIONS = 'warning,c++2b';
 const WANDBOX_TIMEOUT_MS = 25000;
@@ -244,7 +244,7 @@ async function runCppViaWandbox(code, onLog) {
       (typeof DOMException !== 'undefined' && err instanceof DOMException && err.name === 'AbortError') ||
       (err instanceof Error && err.name === 'AbortError');
     const msg = aborted
-      ? `请求超时（>${WANDBOX_TIMEOUT_MS / 1000}s）。可稍后重试或用「Compiler Explorer」备用。`
+      ? `请求超时（>${WANDBOX_TIMEOUT_MS / 1000}s）。可稍后重试、改用本地「运行」，或打开 Compiler Explorer。`
       : `网络/API 失败：${err instanceof Error ? err.message : String(err)}`;
     onLog({ level: 'error', text: msg });
     return { ok: false, error: aborted ? 'timeout' : 'network' };
@@ -389,13 +389,15 @@ function setModeUi(root, lang) {
     btn.setAttribute('aria-selected', btn.getAttribute('data-pg-lang') === lang ? 'true' : 'false');
   });
   const openGodboltBtn = root.querySelector('[data-pg-open-godbolt]');
+  const wandboxBtn = root.querySelector('[data-pg-wandbox]');
   const hint = root.querySelector('[data-pg-hint]');
 
   const isCpp = lang === 'cpp';
   if (openGodboltBtn) openGodboltBtn.hidden = !isCpp;
+  if (wandboxBtn) wandboxBtn.hidden = !isCpp;
   if (hint) {
     hint.textContent = isCpp
-      ? 'C++ 经 Wandbox（gcc-13.2，C++2b）远程编译运行，stdout/stderr 显示在下方；也可打开 Compiler Explorer 备用。'
+      ? 'C++ 在浏览器内用 Clang WASM（browsercc）本地编译为 WASI 并运行，stdout/stderr 显示在下方；首次需下载工具链。可选远程备用。'
       : lang === 'ts'
         ? 'TypeScript 由 Sucrase 在浏览器内转译后于沙箱 iframe 执行。'
         : 'JavaScript 在沙箱 iframe 中执行（无 DOM / 无网络）。';
@@ -489,6 +491,7 @@ export function mountPlayground(pane) {
       <div id="playground-editor-host" class="playground-editor-host" data-pg-editor role="textbox" aria-label="代码编辑器" aria-multiline="true"></div>
       <div class="playground-actions">
         <button type="button" class="playground-btn playground-btn--primary" data-pg-run>运行</button>
+        <button type="button" class="playground-btn" data-pg-wandbox hidden title="可选：经 Wandbox 远程 gcc 编译运行">远程备用</button>
         <button type="button" class="playground-btn" data-pg-open-godbolt hidden title="备用：新标签打开 Compiler Explorer">Compiler Explorer</button>
         <button type="button" class="playground-btn" data-pg-reset>重置示例</button>
         <button type="button" class="playground-btn" data-pg-clear>清空输出</button>
@@ -524,16 +527,22 @@ export function mountPlayground(pane) {
   });
 
   const runBtn = /** @type {HTMLButtonElement | null} */ (pane.querySelector('[data-pg-run]'));
+  const wandboxBtn = /** @type {HTMLButtonElement | null} */ (pane.querySelector('[data-pg-wandbox]'));
+
+  const setCppBusy = (busy) => {
+    if (runBtn) runBtn.disabled = busy;
+    if (wandboxBtn) wandboxBtn.disabled = busy;
+  };
+
   runBtn?.addEventListener('click', async () => {
     if (!state || !runBtn) return;
     clearOutput(state.output);
     const code = getEditorCode();
     writeCode(state.lang, code);
-    runBtn.disabled = true;
+    setCppBusy(true);
     try {
       if (state.lang === 'cpp') {
-        appendOutputLine(state.output, 'info', `▶ 编译运行 C++（Wandbox ${WANDBOX_COMPILER}）…`);
-        await runCppViaWandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
+        await runCppLocalWasm(code, ({ level, text }) => appendOutputLine(state.output, level, text));
         return;
       }
       appendOutputLine(state.output, 'info', `▶ 运行 ${state.lang.toUpperCase()}…`);
@@ -556,7 +565,21 @@ export function mountPlayground(pane) {
       }
       await runInSandbox(runnable, ({ level, text }) => appendOutputLine(state.output, level, text));
     } finally {
-      runBtn.disabled = false;
+      setCppBusy(false);
+    }
+  });
+
+  wandboxBtn?.addEventListener('click', async () => {
+    if (!state || state.lang !== 'cpp' || !wandboxBtn) return;
+    clearOutput(state.output);
+    const code = getEditorCode();
+    writeCode('cpp', code);
+    setCppBusy(true);
+    try {
+      appendOutputLine(state.output, 'info', `▶ 远程备用：Wandbox ${WANDBOX_COMPILER}…`);
+      await runCppViaWandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
+    } finally {
+      setCppBusy(false);
     }
   });
 

@@ -82,7 +82,7 @@ GitHub Pages **不会**向仓库所有者提供可查询的访问者真实 IP �
 
 路由使用 hash（`#/note/...`、`#/solar`；旧 `#/moon` 会重定向到 `#/solar`），在 `/anonymous-fys/` 基路径下笔记与太阳系展台链接可正常工作。
 
-解锁浏览后，右侧为可拖拽调节宽度的 **代码 Playground**（CodeMirror 语法高亮）：JS/TS 在沙箱 iframe 中一键运行（TS 经 Sucrase 浏览器内转译）；C++ 经 [Wandbox](https://wandbox.org/) 公共 API（gcc-13.2）远程编译运行，stdout/stderr 显示在面板输出区（可选备用打开 [Compiler Explorer](https://godbolt.org/)）。笔记中的 JS/TS/C/C++ 代码块可点「→ Playground」发送到面板。窄屏默认收起，可用右下角按钮展开。
+解锁浏览后，右侧为可拖拽调节宽度的 **代码 Playground**（CodeMirror 语法高亮）：JS/TS 在沙箱 iframe 中一键运行（TS 经 Sucrase 浏览器内转译）；C++ 默认在浏览器内用 [browsercc](https://github.com/BertalanD/browsercc)（Clang/LLD WASM → WASI）本地编译运行，stdout/stderr 显示在面板输出区（首次需从 CDN 拉取约 90MB 工具链，之后可缓存）。可选「远程备用」走 [Wandbox](https://wandbox.org/)，或新标签打开 [Compiler Explorer](https://godbolt.org/)。笔记中的 JS/TS/C/C++ 代码块可点「→ Playground」发送到面板。窄屏默认收起，可用右下角按钮展开。
 
 ## 仓库结构（摘要）
 
