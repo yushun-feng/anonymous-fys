@@ -10,10 +10,22 @@ const TOPIC_LABELS = {
   gpu: 'GPU',
 };
 
+/** Active Three.js moon instance; disposed on every remount. */
+let moonHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let moonMountGen = 0;
+
+function disposeMoon() {
+  moonMountGen += 1;
+  moonHandle?.dispose();
+  moonHandle = null;
+}
+
 function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
+  if (pathPart === 'moon') return { name: 'moon' };
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -24,6 +36,10 @@ function layout(content) {
   return `
     <header class="site-header">
       <a class="brand" href="#/">anonymous-fys</a>
+      <nav class="site-nav" aria-label="站点导航">
+        <a href="#/">笔记</a>
+        <a href="#/moon">月球</a>
+      </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
@@ -83,6 +99,8 @@ function renderHome() {
   }).join('');
 
   return layout(`
+    <div class="moon-home-slot" data-moon-mount data-moon-compact></div>
+    <p class="moon-home-link"><a href="#/moon">打开完整月球展台 →</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -97,6 +115,14 @@ function renderHome() {
     </section>
     <p class="result-count">${filtered.length} 篇笔记</p>
     ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
+  `);
+}
+
+function renderMoonPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>月球</span></nav>
+    <div class="moon-page-slot" data-moon-mount></div>
+    <p class="moon-credit">纹理来源见仓库 README「月球纹理」一节。</p>
   `);
 }
 
@@ -157,16 +183,38 @@ function bindHomeFilters(root) {
   });
 }
 
+async function mountMoonIfPresent(root) {
+  const slot = root.querySelector('[data-moon-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-moon-compact');
+  const gen = moonMountGen;
+  try {
+    const { mountMoonWidget } = await import('./moon-widget.js');
+    if (gen !== moonMountGen || !slot.isConnected) return;
+    moonHandle = mountMoonWidget(slot, { compact });
+  } catch {
+    if (gen !== moonMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="moon-widget__fallback">三维月球模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 function mountContent() {
   const app = document.querySelector('#app');
   if (!app) return;
 
+  disposeMoon();
+
   const route = parseRoute();
   if (route.name === 'note') {
     app.innerHTML = renderNote(route.id);
+  } else if (route.name === 'moon') {
+    app.innerHTML = renderMoonPage();
+    mountMoonIfPresent(app);
   } else {
     app.innerHTML = renderHome();
     bindHomeFilters(app);
+    mountMoonIfPresent(app);
   }
 }
 
