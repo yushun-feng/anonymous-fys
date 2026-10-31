@@ -20,6 +20,10 @@ const TOPIC_LABELS = {
 let solarHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let solarMountGen = 0;
+/** Active WebGL shader-toy instance; disposed on every remount. */
+let shaderHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let shaderMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 
@@ -29,12 +33,19 @@ function disposeSolar() {
   solarHandle = null;
 }
 
+function disposeShader() {
+  shaderMountGen += 1;
+  shaderHandle?.dispose();
+  shaderHandle = null;
+}
+
 function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
   // Prefer #/solar; keep #/moon as a redirect alias.
   if (pathPart === 'solar' || pathPart === 'moon') return { name: 'solar' };
+  if (pathPart === 'shader') return { name: 'shader' };
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -48,6 +59,7 @@ function layout(content) {
       <nav class="site-nav" aria-label="站点导航">
         <a href="#/">笔记</a>
         <a href="#/solar">太阳系</a>
+        <a href="#/shader">Shader</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
     </header>
@@ -110,6 +122,8 @@ function renderHome() {
   return layout(`
     <div class="solar-home-slot" data-solar-mount data-solar-compact></div>
     <p class="solar-home-link"><a href="#/solar">打开完整太阳系展台 →</a></p>
+    <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
+    <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -132,6 +146,14 @@ function renderSolarPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>太阳系</span></nav>
     <div class="solar-page-slot" data-solar-mount></div>
     <p class="solar-credit">纹理来源见仓库 README「太阳系纹理」一节。轨道与尺寸为可读性示意，非真实比例。</p>
+  `);
+}
+
+function renderShaderPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>Shader Toy</span></nav>
+    <div class="shader-page-slot" data-shader-mount></div>
+    <p class="shader-credit">原生 WebGL 全屏四边形 + 片段着色器；uniform 滑条与鼠标可选。预设均为自包含演示，非 Shadertoy.com 嵌入。</p>
   `);
 }
 
@@ -208,6 +230,22 @@ async function mountSolarIfPresent(root) {
   }
 }
 
+async function mountShaderIfPresent(root) {
+  const slot = root.querySelector('[data-shader-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-shader-compact');
+  const gen = shaderMountGen;
+  try {
+    const { mountShaderToy } = await import('./shader-toy.js');
+    if (gen !== shaderMountGen || !slot.isConnected) return;
+    shaderHandle = mountShaderToy(slot, { compact });
+  } catch {
+    if (gen !== shaderMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="shader-toy__fallback">Shader Toy 模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -254,6 +292,7 @@ function mountContent() {
   if (!browse) return;
 
   disposeSolar();
+  disposeShader();
 
   const route = parseRoute();
   // Normalize legacy #/moon → #/solar without breaking history mid-render.
@@ -269,10 +308,14 @@ function mountContent() {
   } else if (route.name === 'solar') {
     browse.innerHTML = renderSolarPage();
     mountSolarIfPresent(browse);
+  } else if (route.name === 'shader') {
+    browse.innerHTML = renderShaderPage();
+    mountShaderIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     bindHomeFilters(browse);
     mountSolarIfPresent(browse);
+    mountShaderIfPresent(browse);
   }
 }
 
