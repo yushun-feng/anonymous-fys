@@ -172,7 +172,8 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050814);
-  scene.fog = new THREE.FogExp2(0x0a1230, 0.0016);
+  // Light fog only — strong night fog made the timber read too dark.
+  scene.fog = new THREE.FogExp2(0x0a1230, 0.0007);
 
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1200);
   camera.position.set(60, 45, 110);
