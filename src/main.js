@@ -7,6 +7,7 @@ import {
   bindPlaygroundChrome,
   bindCodeBlockActions,
 } from './playground.js';
+import { startVisitLogging } from './visit-log.js';
 
 const TOPICS = ['cpp', 'graphics', 'gpu'];
 const TOPIC_LABELS = {
@@ -278,6 +279,9 @@ function mountContent() {
 function mount() {
   const app = document.querySelector('#app');
   if (!app) return;
+
+  // Access logging runs even on the soft gate (external visitors who bounce).
+  startVisitLogging();
 
   if (!isUnlocked()) {
     shellReady = false;
