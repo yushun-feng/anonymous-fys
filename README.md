@@ -46,7 +46,7 @@ npm run preview  # 预览构建结果
 
 公开仓库按上述步骤即可发布 Pages。若仓库为 private，则通常需要 Pro / Team / Enterprise。
 
-路由使用 hash（`#/note/...`），在 `/anonymous-fys/` 基路径下笔记链接可正常工作。
+路由使用 hash（`#/note/...`、`#/moon`），在 `/anonymous-fys/` 基路径下笔记与月球展台链接可正常工作。
 
 ## 仓库结构（摘要）
 
@@ -63,3 +63,11 @@ package.json
 ```
 
 首页按 **topic / tag** 列出笔记；详情页渲染 Markdown，并对 `cpp` / `glsl` / `hlsl` 等做代码高亮。示例笔记仅为通用技术占位，不含个人事务内容。
+
+站点另提供 **Interactive Moon** 展台（Three.js）：首页有压缩预览，完整页路由为 `#/moon`。拖拽旋转、滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。
+
+## 月球纹理
+
+本地资源：[`public/textures/moon.jpg`](./public/textures/moon.jpg)（1024×512）。
+
+来源为 [three.js 示例行星贴图](https://github.com/mrdoob/three.js/blob/r170/examples/textures/planets/moon_1024.jpg) 所用的公开月球影像（源自 NASA 月球探测数据，如 Clementine / LRO 公开产品）。NASA 影像一般可按 NASA 媒体使用政策用于非商业/教育展示；仓库仅做浏览展台，未宣称对原始数据拥有版权。
