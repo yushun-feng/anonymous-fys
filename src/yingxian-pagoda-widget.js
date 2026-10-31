@@ -61,34 +61,41 @@ function makeStarfieldTexture(width = 2048, height = 1024) {
   ctx.fillRect(-width * 0.7, -height * 0.14, width * 1.4, height * 0.28);
   ctx.restore();
 
-  // Dense star field
-  for (let i = 0; i < 2800; i += 1) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const r = Math.random() < 0.08 ? 1.4 + Math.random() * 1.6 : 0.4 + Math.random() * 0.9;
-    const a = 0.35 + Math.random() * 0.65;
+  // Dense sharp star field (mostly 1px points so the sphere reads crisp).
+  for (let i = 0; i < 6500; i += 1) {
+    const x = (Math.random() * width) | 0;
+    const y = (Math.random() * height) | 0;
+    const bright = Math.random();
+    const a = 0.45 + bright * 0.55;
     const tint = Math.random();
     ctx.fillStyle =
-      tint > 0.92
-        ? `rgba(180,210,255,${a})`
-        : tint > 0.8
-          ? `rgba(255,230,190,${a})`
-          : `rgba(235,240,255,${a})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+      tint > 0.93
+        ? `rgba(170,205,255,${a})`
+        : tint > 0.82
+          ? `rgba(255,228,185,${a})`
+          : `rgba(240,245,255,${a})`;
+    if (bright > 0.97) {
+      ctx.fillRect(x - 1, y, 3, 1);
+      ctx.fillRect(x, y - 1, 1, 3);
+    } else if (bright > 0.88) {
+      ctx.fillRect(x, y, 2, 2);
+    } else {
+      ctx.fillRect(x, y, 1, 1);
+    }
   }
 
-  // A few brighter “guide” stars with soft glow
-  for (let i = 0; i < 40; i += 1) {
+  // Sparse brighter stars with tight cross + tiny halo (not large bokeh discs).
+  for (let i = 0; i < 55; i += 1) {
     const x = Math.random() * width;
-    const y = Math.random() * height * 0.85;
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, 6 + Math.random() * 8);
-    glow.addColorStop(0, 'rgba(255,255,255,0.9)');
-    glow.addColorStop(0.25, 'rgba(200,220,255,0.35)');
+    const y = Math.random() * height * 0.88;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 2.2);
+    glow.addColorStop(0, 'rgba(255,255,255,0.95)');
     glow.addColorStop(1, 'rgba(200,220,255,0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x - 14, y - 14, 28, 28);
+    ctx.fillRect(x - 3, y - 3, 6, 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillRect(x - 2, y, 5, 1);
+    ctx.fillRect(x, y - 2, 1, 5);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
