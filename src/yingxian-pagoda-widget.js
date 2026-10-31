@@ -186,7 +186,7 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.35;
   renderer.shadowMap.enabled = !compact;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   stage.appendChild(renderer.domElement);
@@ -204,9 +204,10 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.35;
 
-  scene.add(new THREE.AmbientLight(0x8a96b8, 0.35));
-  scene.add(new THREE.HemisphereLight(0x6a7aaa, 0x1a1820, 0.4));
-  const sun = new THREE.DirectionalLight(0xffd7a8, 1.85);
+  // Keep starfield, but light the timber brightly so details stay readable.
+  scene.add(new THREE.AmbientLight(0xd8e0f0, 0.75));
+  scene.add(new THREE.HemisphereLight(0xc8d6ff, 0x3a3a48, 0.85));
+  const sun = new THREE.DirectionalLight(0xffe6c4, 3.1);
   sun.position.set(55, 90, 40);
   sun.castShadow = !compact;
   if (sun.castShadow) {
@@ -222,12 +223,15 @@ export function mountYingxianPagodaWidget(container, { compact = false } = {}) {
     sun.shadow.camera.far = 260;
   }
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x7a9cff, 0.45);
+  const fill = new THREE.DirectionalLight(0xa8c0ff, 1.15);
   fill.position.set(-50, 40, -30);
   scene.add(fill);
-  const moon = new THREE.DirectionalLight(0xb8c8ff, 0.35);
+  const moon = new THREE.DirectionalLight(0xd0dcff, 0.7);
   moon.position.set(-30, 50, 70);
   scene.add(moon);
+  const rim = new THREE.DirectionalLight(0xfff0d8, 0.55);
+  rim.position.set(20, 25, -60);
+  scene.add(rim);
 
   const sky = makeStarSkySphere(520);
   scene.add(sky.mesh);
