@@ -30,10 +30,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Soft browse gate only (password ships in the client bundle — not real secrets).
-      # Repo Settings → Secrets and variables → Actions → New repository secret:
-      #   Name: VITE_SITE_PASSWORD
-      # If unset, the app falls back to the documented default `notes`.
+      # Optional: Settings → Secrets and variables → Actions → VITE_SITE_PASSWORD
+      # (falls back to default `notes` when unset).
       - name: Build
         env:
           VITE_SITE_PASSWORD: ${{ secrets.VITE_SITE_PASSWORD }}

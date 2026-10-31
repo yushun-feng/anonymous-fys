@@ -338,7 +338,6 @@ code {
   color: var(--muted);
 }
 
-/* Soft access gate — cosmetic only; see src/gate.js */
 .gate {
   flex: 1;
   display: flex;
