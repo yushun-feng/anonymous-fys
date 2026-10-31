@@ -23,7 +23,7 @@ function layout(content) {
   return `
     <header class="site-header">
       <a class="brand" href="#/">anonymous-fys</a>
-      <p class="tagline">C++ · Graphics · GPU — Markdown 知识库浏览</p>
+      <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
     <footer class="site-footer">
