@@ -49,7 +49,7 @@ GitHub Pages **不会**向仓库所有者提供可查询的访问者真实 IP �
 1. **JSON beacon（细字段，含设备 + 近似 geo）**  
    - 本地 / Secret：`VITE_VISIT_LOG_ENDPOINT=https://你的接收地址`  
    - 页面加载与 hash 路由变化时 `POST` 正文为 JSON 字符串（`Content-Type: text/plain`，避免 CORS 预检；接收端按 JSON 解析 body）。  
-   - 接收端示例：Cloudflare Worker 写入 KV/D1、Pipedream / Make / n8n、自建 webhook。测试可用 [webhook.site](https://webhook.site)。  
+   - **推荐接收端**：本仓库 [`workers/visit-log/`](./workers/visit-log/)（Cloudflare Worker：CORS POST、可选 KV、`GET /recent`；步骤见该目录 README：`npx wrangler deploy` → 把 Worker URL 设为 Pages Secret `VITE_VISIT_LOG_ENDPOINT` → 重新部署 Pages）。也可 Pipedream / Make / n8n / [webhook.site](https://webhook.site)。  
    - 关闭近似 IP：`VITE_VISIT_LOG_GEO=0`。
 
 2. **隐私向仪表盘（汇总 PV，不自带「逐条 IP」）**  
@@ -93,6 +93,7 @@ notes/           # 知识正文（source of truth）
   gpu/
   CONVENTIONS.md
 src/             # 浏览站点源码
+workers/visit-log/  # 可选：Cloudflare Worker 接收访客 JSON beacon
 .github/workflows/deploy-pages.yml
 index.html
 package.json

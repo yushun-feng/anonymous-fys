@@ -1,0 +1,24 @@
+# Cloudflare Worker: visit-log receiver for anonymous-fys Pages beacons.
+# Deploy: npx wrangler deploy  (from this directory)
+#
+# Optional KV (persist + GET recent):
+#   npx wrangler kv namespace create VISIT_LOG
+# then paste the id below and uncomment the [[kv_namespaces]] block.
+
+name = "anonymous-fys-visit-log"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+workers_dev = true
+
+# Max body size we accept (JSON beacon is small).
+[vars]
+MAX_RECENT = "100"
+
+# Uncomment after creating a KV namespace:
+# [[kv_namespaces]]
+# binding = "VISIT_LOG"
+# id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Optional: protect GET /recent (set via `npx wrangler secret put READ_TOKEN`)
+# Without READ_TOKEN, GET returns 404 when you want privacy-by-default after first deploy
+# with KV — leave unset to allow open GET for personal use, or set a token.
