@@ -1,7 +1,23 @@
 /**
- * Right-side code playground: in-browser JS/TS runner + Compiler Explorer embed for C++.
+ * Right-side code playground: in-browser JS/TS runner + simple C++ copy/open helpers.
  * Mount once after unlock so hash navigations do not wipe editor state.
  */
+
+import { EditorState, Compartment } from '@codemirror/state';
+import {
+  EditorView,
+  keymap,
+  lineNumbers,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  drawSelection,
+  placeholder,
+} from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { bracketMatching, foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { javascript } from '@codemirror/lang-javascript';
+import { cpp } from '@codemirror/lang-cpp';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 const WIDTH_KEY = 'anonymous-fys-playground-width';
 const COLLAPSED_KEY = 'anonymous-fys-playground-collapsed';
@@ -11,6 +27,9 @@ const CODE_KEY_PREFIX = 'anonymous-fys-playground-code:';
 const MIN_WIDTH = 280;
 const MAX_WIDTH_RATIO = 0.62;
 const DEFAULT_WIDTH = 400;
+
+/** Simple browser C++ runner (paste after copy). */
+const ONLINE_CPP_RUNNER = 'https://www.onlinegdb.com/online_c++_compiler';
 
 const SAMPLES = {
   js: `// 浏览器内运行（沙箱 iframe）
@@ -34,7 +53,7 @@ int main() {
 }`,
 };
 
-/** @type {{ root: HTMLElement, editor: HTMLTextAreaElement, output: HTMLElement, frameHost: HTMLElement, lang: string } | null} */
+/** @type {{ root: HTMLElement, view: EditorView, output: HTMLElement, lang: string, langCompartment: Compartment } | null} */
 let state = null;
 
 function readStoredWidth() {
@@ -108,7 +127,15 @@ function writeCode(lang, code) {
 }
 
 /**
- * Build a Compiler Explorer clientstate URL for C++ source.
+ * @param {string} lang
+ */
+function languageSupport(lang) {
+  if (lang === 'cpp') return cpp();
+  return javascript({ typescript: lang === 'ts' });
+}
+
+/**
+ * Prefill Compiler Explorer in a new tab (no embed). Optional advanced path.
  * @param {string} source
  */
 function godboltClientStateUrl(source) {
@@ -226,7 +253,6 @@ function runInSandbox(code, onLog) {
     iframe.srcdoc = srcdoc;
     document.body.appendChild(iframe);
 
-    // Safety timeout for runaway sync work
     setTimeout(() => {
       if (!settled) {
         onLog({ level: 'warn', text: '运行超时（同步代码过久或未结束）。' });
@@ -248,30 +274,143 @@ function clearOutput(outputEl) {
   outputEl.innerHTML = '';
 }
 
+function getEditorCode() {
+  return state?.view.state.doc.toString() ?? '';
+}
+
+/**
+ * @param {string} code
+ */
+function setEditorCode(code) {
+  if (!state) return;
+  state.view.dispatch({
+    changes: { from: 0, to: state.view.state.doc.length, insert: code },
+  });
+}
+
+/**
+ * @param {string} lang
+ */
+function setEditorLanguage(lang) {
+  if (!state) return;
+  state.view.dispatch({
+    effects: state.langCompartment.reconfigure(languageSupport(lang)),
+  });
+}
+
+/**
+ * @param {string} text
+ * @returns {Promise<boolean>}
+ */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 function setModeUi(root, lang) {
   root.querySelectorAll('[data-pg-lang]').forEach((btn) => {
     btn.classList.toggle('is-active', btn.getAttribute('data-pg-lang') === lang);
+    btn.setAttribute('aria-selected', btn.getAttribute('data-pg-lang') === lang ? 'true' : 'false');
   });
   const runBtn = root.querySelector('[data-pg-run]');
-  const openBtn = root.querySelector('[data-pg-godbolt-open]');
-  const reloadBtn = root.querySelector('[data-pg-godbolt-embed]');
+  const copyBtn = root.querySelector('[data-pg-copy]');
+  const openRunnerBtn = root.querySelector('[data-pg-open-runner]');
+  const openGodboltBtn = root.querySelector('[data-pg-open-godbolt]');
   const hint = root.querySelector('[data-pg-hint]');
-  const frameHost = root.querySelector('[data-pg-frame]');
-  const output = root.querySelector('[data-pg-output]');
 
   const isCpp = lang === 'cpp';
   if (runBtn) runBtn.hidden = isCpp;
-  if (openBtn) openBtn.hidden = !isCpp;
-  if (reloadBtn) reloadBtn.hidden = !isCpp;
-  if (frameHost) frameHost.hidden = !isCpp;
-  if (output) output.hidden = isCpp;
+  if (copyBtn) copyBtn.hidden = !isCpp;
+  if (openRunnerBtn) openRunnerBtn.hidden = !isCpp;
+  if (openGodboltBtn) openGodboltBtn.hidden = !isCpp;
   if (hint) {
     hint.textContent = isCpp
-      ? 'C++ 通过外部 Compiler Explorer（Godbolt）运行，本站无本地 C++ 后端。'
+      ? '本站不编译 C++。可复制代码，到简易在线运行器粘贴运行；或一键打开 Compiler Explorer（带源码）。'
       : lang === 'ts'
         ? 'TypeScript 由 Sucrase 在浏览器内转译后于沙箱 iframe 执行。'
         : 'JavaScript 在沙箱 iframe 中执行（无 DOM / 无网络）。';
   }
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {string} lang
+ * @param {string} doc
+ * @param {(code: string) => void} onDocChange
+ */
+function createEditor(host, lang, doc, onDocChange) {
+  const langCompartment = new Compartment();
+  const view = new EditorView({
+    parent: host,
+    state: EditorState.create({
+      doc,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        drawSelection(),
+        indentOnInput(),
+        bracketMatching(),
+        foldGutter(),
+        history(),
+        keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        oneDark,
+        langCompartment.of(languageSupport(lang)),
+        placeholder('在此编辑代码…'),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) onDocChange(update.state.doc.toString());
+        }),
+        EditorView.theme({
+          '&': {
+            height: '100%',
+            fontSize: '0.8rem',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+          },
+          '.cm-scroller': {
+            fontFamily: 'var(--font-mono)',
+            lineHeight: '1.5',
+            overflow: 'auto',
+          },
+          '&.cm-focused': {
+            outline: '2px solid var(--accent-soft)',
+            outlineOffset: '0',
+            borderColor: 'var(--accent)',
+          },
+          '.cm-content': {
+            padding: '0.55rem 0',
+            caretColor: 'var(--accent)',
+          },
+          '.cm-gutters': {
+            backgroundColor: '#0a0e13',
+            borderRight: '1px solid var(--border)',
+            color: 'var(--muted)',
+          },
+        }),
+      ],
+    }),
+  });
+  return { view, langCompartment };
 }
 
 /**
@@ -289,73 +428,57 @@ export function mountPlayground(pane) {
           <button type="button" class="playground-icon-btn" data-pg-collapse title="收起面板" aria-label="收起面板">⟨</button>
         </div>
         <div class="playground-tabs" role="tablist" aria-label="语言">
-          <button type="button" class="playground-tab" role="tab" data-pg-lang="js">JS</button>
-          <button type="button" class="playground-tab" role="tab" data-pg-lang="ts">TS</button>
-          <button type="button" class="playground-tab" role="tab" data-pg-lang="cpp">C++</button>
+          <button type="button" class="playground-tab" role="tab" data-pg-lang="js" aria-selected="false">JS</button>
+          <button type="button" class="playground-tab" role="tab" data-pg-lang="ts" aria-selected="false">TS</button>
+          <button type="button" class="playground-tab" role="tab" data-pg-lang="cpp" aria-selected="false">C++</button>
         </div>
       </header>
       <p class="playground-hint" data-pg-hint></p>
-      <label class="playground-editor-label" for="playground-editor">代码</label>
-      <textarea id="playground-editor" class="playground-editor" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+      <label class="playground-editor-label" for="playground-editor-host">代码</label>
+      <div id="playground-editor-host" class="playground-editor-host" data-pg-editor role="textbox" aria-label="代码编辑器" aria-multiline="true"></div>
       <div class="playground-actions">
         <button type="button" class="playground-btn playground-btn--primary" data-pg-run>运行</button>
-        <button type="button" class="playground-btn playground-btn--primary" data-pg-godbolt-embed hidden>在嵌入区运行</button>
-        <button type="button" class="playground-btn" data-pg-godbolt-open hidden>新标签打开 Godbolt</button>
+        <button type="button" class="playground-btn playground-btn--primary" data-pg-copy hidden>复制代码</button>
+        <button type="button" class="playground-btn" data-pg-open-runner hidden>打开简易运行器</button>
+        <button type="button" class="playground-btn" data-pg-open-godbolt hidden>Compiler Explorer</button>
         <button type="button" class="playground-btn" data-pg-reset>重置示例</button>
         <button type="button" class="playground-btn" data-pg-clear>清空输出</button>
       </div>
       <div class="playground-output" data-pg-output aria-live="polite"></div>
-      <div class="playground-frame-host" data-pg-frame hidden>
-        <p class="playground-frame-note">下方 iframe 加载 godbolt.org；首次可能需允许第三方内容。</p>
-        <iframe class="playground-frame" title="Compiler Explorer" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-      </div>
     </div>
   `;
 
-  const editor = /** @type {HTMLTextAreaElement} */ (pane.querySelector('#playground-editor'));
+  const editorHost = /** @type {HTMLElement} */ (pane.querySelector('[data-pg-editor]'));
   const output = /** @type {HTMLElement} */ (pane.querySelector('[data-pg-output]'));
-  const frameHost = /** @type {HTMLElement} */ (pane.querySelector('[data-pg-frame]'));
+  const initialCode = readCode(lang);
 
-  editor.value = readCode(lang);
+  const { view, langCompartment } = createEditor(editorHost, lang, initialCode, (code) => {
+    if (!state) return;
+    writeCode(state.lang, code);
+  });
+
+  state = { root: pane, view, output, lang, langCompartment };
   setModeUi(pane, lang);
-
-  state = { root: pane, editor, output, frameHost, lang };
 
   pane.querySelectorAll('[data-pg-lang]').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (!state) return;
-      writeCode(state.lang, state.editor.value);
+      writeCode(state.lang, getEditorCode());
       const next = btn.getAttribute('data-pg-lang') || 'js';
       state.lang = next;
       writeLang(next);
-      state.editor.value = readCode(next);
+      setEditorLanguage(next);
+      setEditorCode(readCode(next));
       setModeUi(pane, next);
       clearOutput(state.output);
     });
-  });
-
-  editor.addEventListener('input', () => {
-    if (!state) return;
-    writeCode(state.lang, state.editor.value);
-  });
-
-  // Tab inserts spaces in the editor
-  editor.addEventListener('keydown', (event) => {
-    if (event.key !== 'Tab') return;
-    event.preventDefault();
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const insert = '  ';
-    editor.value = editor.value.slice(0, start) + insert + editor.value.slice(end);
-    editor.selectionStart = editor.selectionEnd = start + insert.length;
-    writeCode(state?.lang || 'js', editor.value);
   });
 
   pane.querySelector('[data-pg-run]')?.addEventListener('click', async () => {
     if (!state || state.lang === 'cpp') return;
     clearOutput(state.output);
     appendOutputLine(state.output, 'info', `▶ 运行 ${state.lang.toUpperCase()}…`);
-    let code = state.editor.value;
+    let code = getEditorCode();
     writeCode(state.lang, code);
     if (state.lang === 'ts') {
       try {
@@ -372,33 +495,51 @@ export function mountPlayground(pane) {
     await runInSandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
   });
 
-  pane.querySelector('[data-pg-godbolt-embed]')?.addEventListener('click', () => {
-    if (!state) return;
-    const source = state.editor.value;
+  pane.querySelector('[data-pg-copy]')?.addEventListener('click', async () => {
+    if (!state || state.lang !== 'cpp') return;
+    const source = getEditorCode();
     writeCode('cpp', source);
-    const url = godboltClientStateUrl(source);
-    const iframe = /** @type {HTMLIFrameElement | null} */ (frameHost.querySelector('iframe'));
-    if (iframe) {
-      iframe.src = url;
-    }
-    appendOutputLine(state.output, 'info', '已请求嵌入 Godbolt（见下方 iframe）。');
+    const ok = await copyText(source);
+    clearOutput(state.output);
+    appendOutputLine(
+      state.output,
+      ok ? 'info' : 'error',
+      ok ? '已复制到剪贴板。可点「打开简易运行器」粘贴运行。' : '复制失败，请手动选中编辑器内容复制。',
+    );
   });
 
-  pane.querySelector('[data-pg-godbolt-open]')?.addEventListener('click', () => {
-    if (!state) return;
-    const source = state.editor.value;
+  pane.querySelector('[data-pg-open-runner]')?.addEventListener('click', async () => {
+    if (!state || state.lang !== 'cpp') return;
+    const source = getEditorCode();
+    writeCode('cpp', source);
+    const ok = await copyText(source);
+    window.open(ONLINE_CPP_RUNNER, '_blank', 'noopener,noreferrer');
+    clearOutput(state.output);
+    appendOutputLine(
+      state.output,
+      'info',
+      ok
+        ? '已复制代码并打开 OnlineGDB。在对方编辑器中粘贴后运行即可。'
+        : '已打开 OnlineGDB。请手动复制左侧代码后粘贴运行。',
+    );
+  });
+
+  pane.querySelector('[data-pg-open-godbolt]')?.addEventListener('click', () => {
+    if (!state || state.lang !== 'cpp') return;
+    const source = getEditorCode();
     writeCode('cpp', source);
     const url = godboltClientStateUrl(source);
     window.open(url, '_blank', 'noopener,noreferrer');
+    clearOutput(state.output);
+    appendOutputLine(state.output, 'info', '已在新标签打开 Compiler Explorer（源码已预填）。');
   });
 
   pane.querySelector('[data-pg-reset]')?.addEventListener('click', () => {
     if (!state) return;
-    state.editor.value = SAMPLES[state.lang] || '';
-    writeCode(state.lang, state.editor.value);
+    const sample = SAMPLES[state.lang] || '';
+    setEditorCode(sample);
+    writeCode(state.lang, sample);
     clearOutput(state.output);
-    const iframe = /** @type {HTMLIFrameElement | null} */ (frameHost.querySelector('iframe'));
-    if (iframe) iframe.src = 'about:blank';
   });
 
   pane.querySelector('[data-pg-clear]')?.addEventListener('click', () => {
@@ -429,10 +570,11 @@ export function loadIntoPlayground(code, lang) {
   else if (key === 'js' || key === 'javascript' || key === 'mjs') next = 'js';
   else if (key === 'tsx') next = 'ts';
 
-  writeCode(state.lang, state.editor.value);
+  writeCode(state.lang, getEditorCode());
   state.lang = next;
   writeLang(next);
-  state.editor.value = code;
+  setEditorLanguage(next);
+  setEditorCode(code);
   writeCode(next, code);
   setModeUi(state.root, next);
   clearOutput(state.output);
@@ -569,7 +711,6 @@ export function bindPlaygroundChrome(shell, splitter, pane) {
     }
   });
 
-  // Mobile: start collapsed on narrow viewports if never toggled this session
   try {
     if (!sessionStorage.getItem(COLLAPSED_KEY) && window.matchMedia('(max-width: 860px)').matches) {
       shell.classList.add('is-playground-collapsed');
@@ -580,6 +721,5 @@ export function bindPlaygroundChrome(shell, splitter, pane) {
     /* ignore */
   }
 
-  // Keep pane reference warm
   void pane;
 }
