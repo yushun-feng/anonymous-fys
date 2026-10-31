@@ -1,14 +1,7 @@
-/**
- * Soft front-end access gate (obfuscation only).
- *
- * This is NOT real security. The password is embedded in the client bundle
- * (via Vite `import.meta.env`) and is trivial to recover from source / DevTools.
- * It only deters casual visitors from seeing the note list immediately.
- */
+/** Front-end browse password gate. Password from `VITE_SITE_PASSWORD` (default `notes`). */
 
 const STORAGE_KEY = 'anonymous-fys-gate-unlocked';
 
-/** Build-time password; falls back to a documented default for local/dev. */
 export const SITE_PASSWORD = import.meta.env.VITE_SITE_PASSWORD || 'notes';
 
 export function isUnlocked() {
@@ -40,7 +33,7 @@ export function renderGate(root, { onSuccess }) {
     <div class="gate" role="dialog" aria-labelledby="gate-title" aria-modal="true">
       <form class="gate-form" id="gate-form" autocomplete="off">
         <h1 id="gate-title" class="gate-title">访问确认</h1>
-        <p class="gate-hint">输入站点口令以继续浏览笔记（仅前端软门禁，非真实鉴权）。</p>
+        <p class="gate-hint">输入站点口令以继续浏览笔记。</p>
         <label class="gate-label" for="gate-password">口令</label>
         <input
           id="gate-password"

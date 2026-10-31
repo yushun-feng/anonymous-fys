@@ -170,10 +170,6 @@ function mountContent() {
   }
 }
 
-/**
- * Soft gate first; hash routing only runs after unlock.
- * Password / unlock state: see `./gate.js` (obfuscation only — not real auth).
- */
 function mount() {
   const app = document.querySelector('#app');
   if (!app) return;
@@ -187,7 +183,6 @@ function mount() {
 }
 
 window.addEventListener('hashchange', () => {
-  // Ignore hash changes while the soft gate is still showing.
   if (!isUnlocked()) return;
   mountContent();
 });
