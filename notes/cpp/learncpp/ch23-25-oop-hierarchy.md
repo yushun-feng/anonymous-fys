@@ -8,7 +8,8 @@ source: https://learncpp.cn/
 
 # 第 23–25 章：对象关系、继承与虚函数
 
-> 来源：[learncpp.cn](https://learncpp.cn/) 第 23–25 章
+> 学习材料：[learncpp.cn](https://learncpp.cn/) 第 23–25 章
+> 对照笔记：[Cherno 继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。
 
 ## 小节地图
 
@@ -16,17 +17,24 @@ source: https://learncpp.cn/
 **24**：继承基础、构造顺序、访问说明符、扩展与隐藏、多重继承。  
 **25**：基类指针/引用、虚函数与多态、`override`/`final`、虚析构、绑定与虚表、纯虚与接口、虚基类、切片、`dynamic_cast`、继承体系输出。
 
-## 要点
+## 概念
 
-- 先组合后继承；继承表达 **is-a** 且基类有抽象意义时再上。
-- 多态删除必须**虚析构**。
-- 一律用 `override` 标注重写，防止签名漂移。
-- 按值传基类会**切片**；多态用指针/引用（或智能指针）。
+<!-- 用自己的话写下关键定义与关系 -->
 
-## 易错点
+- 
 
-- 非虚函数“以为多态”。
-- 多重继承菱形未用虚基类导致重复子对象。
-- `dynamic_cast` 滥用代替良好设计。
+## 例子
 
-视频向对照：[Cherno 继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。
+```cpp
+
+```
+
+## 易错
+
+<!-- 自己踩过或书上强调的坑 -->
+
+- 
+
+## 我的补充
+
+-

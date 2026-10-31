@@ -8,7 +8,9 @@ source: https://learncpp.cn/
 
 # LearnCpp 学习路线与章节地图
 
-精炼笔记，对应 [learncpp.cn](https://learncpp.cn/)（LearnCpp 中文镜像；结构与 [learncpp.com](https://www.learncpp.com/) 一致）。**只做提纲与要点，不复制课文原文。** 详细讲解请回源站对应章节。
+按 [learncpp.cn](https://learncpp.cn/)（结构与 [learncpp.com](https://www.learncpp.com/) 一致）排好的**学习壳索引**：边学边往各章笔记里填「概念 / 例子 / 易错 / 我的补充」。
+
+相关：[`../raii-and-ownership.md`](../raii-and-ownership.md) · [Cherno C++ 路线](../cherno/00-roadmap.md)
 
 ## 建议路径
 
@@ -21,12 +23,10 @@ source: https://learncpp.cn/
 7. **对象模型**：第 23–25 章（关系、继承、虚函数）
 8. **泛型、异常、I/O**：第 26–28 章；附录 A/B 按需
 
-已有相关笔记：[`../raii-and-ownership.md`](../raii-and-ownership.md)。演示驱动补充路线：[Cherno C++ 路线](../cherno/00-roadmap.md)。
+## 章节地图
 
-## 章节地图（节选标题）
-
-| 章 | 主题 | 本库笔记 |
-|----|------|----------|
+| 章 | 主题 | 本库笔记壳 |
+|----|------|------------|
 | 0 | 简介 / 入门 | [ch00](./ch00-getting-started.md) |
 | 1 | C++ 基础 | [ch01](./ch01-basics.md) |
 | 2 | 函数与文件 | [ch02](./ch02-functions-files.md) |
@@ -53,7 +53,7 @@ source: https://learncpp.cn/
 | 26–28 | 模板类 / 异常 / I/O | [ch26-28](./ch26-28-templates-exceptions-io.md) |
 | A–B | 库与语言版本速览 | [appendix](./appendix-misc-updates.md) |
 
-## 节号速查（各大章主要小节）
+## 节号速查
 
 - **0.x**：教程介绍、编译链接、IDE、语言标准与警告级别
 - **1.x**：语句、变量初始化、iostream、未定义行为、字面量与表达式
@@ -75,7 +75,3 @@ source: https://learncpp.cn/
 - **20–22.x**：函数指针、递归、lambda；运算符重载；`unique_ptr`/`shared_ptr`
 - **23–25.x**：组合/聚合/关联；继承；虚函数与切片
 - **26–28.x**：类模板特化；异常与 `noexcept`；流与文件 I/O
-
-## 版权与用法
-
-笔记为自学提纲（复述/归纳），**非**源站镜像。完整课文、测验与更新以 [learncpp.cn](https://learncpp.cn/) 为准。
