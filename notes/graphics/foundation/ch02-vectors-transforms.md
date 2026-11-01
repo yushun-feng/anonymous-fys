@@ -24,6 +24,7 @@ order: 2
 | 模型 / 视图 / 投影 | MVP 链与空间名称 |
 | 约定与坑 | 列/行向量、度/弧度、左手/右手 |
 | GLM 风格示意 | 与 LearnOpenGL 一致的用法 |
+| 流程结构图 | MVP / 坐标空间链；复合变换顺序 |
 
 相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md) · [路线图](./00-roadmap.md)
 
@@ -80,6 +81,14 @@ P * V * M * pLocal
 
 即 **MVP** 写成 `projection * view * model`（GLM / LearnOpenGL）。若教材使用**行向量右乘** \(\mathbf{p}^T M\)，矩阵需转置、乘法顺序整体反转——同一几何，不同书包装。
 
+```mermaid
+flowchart LR
+  p[pLocal] --> M["× Model"]
+  M --> V["× View"]
+  V --> P["× Projection"]
+  P --> clip["gl_Position 裁剪空间"]
+```
+
 矩阵乘法**不满足交换律**：先旋转再平移 ≠ 先平移再旋转。满足结合律，故可先把多枚矩阵乘成一枚再变换大量顶点（VS 里每顶点仍乘一次 UBO/uniform 里的结果）。
 
 ### 基本变换（3D 直觉）
@@ -115,6 +124,15 @@ T\begin{pmatrix}x\\y\\z\\1\end{pmatrix}
 | **Model** \(M\) | 局部 → 世界：物体摆放（缩放/旋转/平移复合） |
 | **View** \(V\) | 世界 → 观察：等价于「相机外参的逆」；`lookAt` 构造常见 |
 | **Projection** \(P\) | 观察 → 裁剪：透视或正交；引入透视时 \(w\) 参与除法 |
+
+```mermaid
+flowchart LR
+  Local[局部空间] -->|M| World[世界空间]
+  World -->|V| View[观察空间]
+  View -->|P| Clip[裁剪空间]
+  Clip -->|÷w| NDC[NDC]
+  NDC --> Screen[窗口坐标]
+```
 
 顶点着色器中经典写法：
 

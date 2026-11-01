@@ -1,6 +1,7 @@
 import 'highlight.js/styles/github-dark.min.css';
+import 'katex/dist/katex.min.css';
 import { loadNotes, getNoteById } from './notes.js';
-import { renderMarkdown, escapeHtml } from './render.js';
+import { renderMarkdown, escapeHtml, runMermaidIn } from './render.js';
 import { isUnlocked, renderGate } from './gate.js';
 import {
   mountPlayground,
@@ -322,6 +323,7 @@ function mountContent() {
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
+    void runMermaidIn(browse);
     const note = getNoteById(route.id);
     const slot = browse.querySelector('[data-personal-notes-mount]');
     if (note && slot) {

@@ -25,6 +25,7 @@ order: 3
 | Uniform 与 CPU 通信 | location、`glUniform*`、UBO 预告 |
 | 最小完整路径 | 从缓冲到像素的清单式步骤 |
 | 调试黑屏 | 系统化排查顺序 |
+| 流程结构图 | 着色器编译链接；对象关系；渲染循环 |
 
 相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 2 章 变换](./ch02-vectors-transforms.md) · [路线图](./00-roadmap.md) · [PBR 速览](../pbr-brdf-overview.md)
 
@@ -39,6 +40,14 @@ order: 3
 3. 自己写 VS/FS，编译链接成 **program**。
 4. 用缓冲对象提供顶点，用 VAO 记录属性配置。
 5. 在渲染循环中清屏、绑定、更新 uniform、draw、交换缓冲。
+
+```mermaid
+flowchart TB
+  Win[窗口 + 上下文] --> Load[加载 GL 入口]
+  Load --> Shaders[编译链接 VS/FS]
+  Shaders --> Geom[VAO / VBO / EBO]
+  Geom --> Loop[渲染循环]
+```
 
 FoCG 把着色器描述为管线上的**可编程钩子**：硬件仍负责光栅与测试，算法的外观与变形由你写的程序决定。LearnOpenGL 则把钩子变成一行行可粘贴的 GLSL——两者合读：理论知边界，实践知 API。
 
@@ -56,6 +65,13 @@ OpenGL 是**状态机**：`glBind*`、`glUseProgram`、`glEnable` 改变「当�
 | **VBO**（Vertex Buffer Object） | GPU 上的顶点属性数组（位置、法线、UV…） |
 | **EBO/IBO**（Element / Index Buffer） | 索引，复用顶点，组成三角形 |
 | **VAO**（Vertex Array Object） | 记住「如何解释 VBO」：属性 location、格式、stride、是否带 EBO |
+
+```mermaid
+flowchart LR
+  VAO[VAO] -->|记录布局| VBO[VBO 顶点数据]
+  VAO -->|可选绑定| EBO[EBO 索引]
+  Prog[Program] -->|Draw 时使用| VAO
+```
 
 Core profile 下，**绘制前绑定 VAO 几乎是必需习惯**。配置属性时：先绑 VAO，再绑 VBO，再 `glVertexAttribPointer` + `glEnableVertexAttribArray`；若有索引，在 VAO 仍绑定时装好 EBO。
 
@@ -85,6 +101,19 @@ glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float
 4. 检查 `GL_LINK_STATUS`
 5. 链接成功后可 `glDeleteShader`（已编进 program）
 6. 渲染时 `glUseProgram(program)`
+
+```mermaid
+flowchart TB
+  SrcV[VS 源码] --> CompV[编译 VS]
+  SrcF[FS 源码] --> CompF[编译 FS]
+  CompV --> Att[Attach 到 Program]
+  CompF --> Att
+  Att --> Link[Link Program]
+  Link --> Ok{链接成功?}
+  Ok -->|是| Use[glUseProgram]
+  Ok -->|否| Log[读 Info Log 并修复]
+  Log --> CompV
+```
 
 两个阶段都要查错误：只查编译或只查链接都会漏问题。链接阶段还会做 VS/FS 之间 `in`/`out` 名字与类型的匹配（location 显式更稳妥）。
 
@@ -146,6 +175,23 @@ glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mvp));
 纹理是独立对象：上传图像、设过滤/环绕、绑到纹理单元、`sampler2D` uniform 指定单元编号。细节留给「纹理」专章；本章只需知道：**FS 采样纹理是片元着色器最常见的工作之一**，而 UV 通常来自顶点属性插值。
 
 ## 最小完整渲染循环（清单）
+
+```mermaid
+flowchart TB
+  subgraph init [初始化一次]
+    I1[窗口/上下文/GLAD] --> I2[编译链接 program]
+    I2 --> I3[VAO/VBO/EBO]
+    I3 --> I4[深度测试等状态]
+  end
+  subgraph frame [每帧]
+    F1[glClear] --> F2[useProgram + uniforms]
+    F2 --> F3[bind VAO]
+    F3 --> F4[Draw]
+    F4 --> F5[SwapBuffers / Poll]
+    F5 --> F1
+  end
+  init --> frame
+```
 
 ```text
 初始化：

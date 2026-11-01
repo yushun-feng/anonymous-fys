@@ -11,7 +11,7 @@ order: 1
 
 > 学习材料：*Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）中数字图像、光栅化、可见性与管线总览相关章节；[LearnOpenGL — OpenGL](https://learnopengl.com/Getting-started/OpenGL)、[Hello Triangle](https://learnopengl.com/Getting-started/Hello-Triangle) 的实践背景。
 > 本章回答：**屏幕上的一张图，从几何描述到像素颜色经历了哪些阶段？每一步在算什么、哪些可编程、哪些由硬件/API 固定？**
-> 第 2 章补齐向量与变换工具；第 3 章把可编程阶段落到 OpenGL/GLSL 对象模型。本章只建立**管线心智模型**，不要求一次写完完整工程脚手架。
+> 第 2 章补齐向量与变换工具；第 3 章把可编程阶段落到 OpenGL/GLSL 对象模型。本章只建立**管线心智模型**，不要求一次写完完整工程脚手架。正文穿插 **Mermaid 流程/结构图**（浏览页渲染）。
 
 ## 小节地图
 
@@ -33,6 +33,7 @@ order: 1
 | Hello Triangle 对照 | 最小闭环如何占满管线骨架 |
 | 坐标空间名词表 | 为第 2 章 MVP 铺路 |
 | 易错、练习、小结 | 可操作的验证与记忆点 |
+| 流程结构图 | 管线总览、CPU→GPU、双缓冲、光栅/深度判定、坐标链 |
 
 相关：[路线图](./00-roadmap.md) · [第 2 章 变换](./ch02-vectors-transforms.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md)
 
@@ -48,6 +49,20 @@ FoCG 开篇把计算机图形学定位为：**用计算生成或处理图像**�
 |------|----------|----------|
 | **光栅化（rasterization）** | 这些三角形覆盖了哪些像素？属性如何插值？ | 游戏、UI、大多数实时引擎 |
 | **光线追踪（ray tracing）** | 这条（或这批）光线碰到了什么？ | 离线电影、烘焙、实时混合渲染 |
+
+```mermaid
+flowchart LR
+  subgraph rast [光栅化主路径]
+    G[几何/图元] --> Cov[覆盖哪些像素]
+    Cov --> Sh[插值并着色]
+    Sh --> Img[图像]
+  end
+  subgraph rt [光线追踪主路径]
+    Pix[像素/光线] --> Hit[求交可见点]
+    Hit --> Sh2[着色]
+    Sh2 --> Img2[图像]
+  end
+```
 
 本章与 LearnOpenGL 入门路径一致，先把**光栅化实时管线**走通。光线追踪只作对比定位，避免概念搅在一起。
 
@@ -67,8 +82,11 @@ FoCG 反复强调：真实世界的光场与几何是**连续**的；进入帧�
 - **过滤（filtering）**：放大/缩小时如何从邻域估计颜色（纹理章再详谈）。
 - **色彩管理 / gamma**：人眼与显示对亮度非线性敏感；「在线性空间里算光，再编码到 sRGB 显示」是现代管线的常见纪律——本章先建立「数字颜色 ≠ 物理辐射照度的直接读数」的警惕即可。
 
-```text
-连续几何 / 着色函数  →  采样（覆盖测试、纹理采样）  →  量化写入缓冲  →  显示
+```mermaid
+flowchart LR
+  Cont[连续几何/着色] --> Samp[采样]
+  Samp --> Quant[量化写入缓冲]
+  Quant --> Disp[显示]
 ```
 
 ### 帧缓冲：GPU 眼里的「画布」
@@ -85,6 +103,13 @@ FoCG 反复强调：真实世界的光场与几何是**连续**的；进入帧�
 一组绑定在一起的附件常统称**帧缓冲（framebuffer）**。窗口系统通常提供一份**默认帧缓冲**；LearnOpenGL 后续的 Framebuffers 章节会教你自建 FBO 画到纹理——概念上仍是「同一套管线，换了输出目标」。
 
 **双缓冲**：绘制在**后缓冲**进行，完成后与**前缓冲**交换，避免用户看到半截帧（撕裂/闪烁）。`glfwSwapBuffers` 一类调用就是在推进这一交换。垂直同步（VSync）会限制交换节奏以对齐显示器刷新；关掉则可能更高帧率但更容易撕裂——这是显示侧问题，不是光栅化数学本身。
+
+```mermaid
+flowchart LR
+  App[应用绘制] --> Back[后缓冲]
+  Back -->|SwapBuffers| Front[前缓冲]
+  Front --> Screen[显示器]
+```
 
 清屏很重要：每帧通常 `glClear` 颜色（及深度）。只清颜色却开启深度测试，是「第二帧开始什么都看不见」的经典坑。
 
@@ -108,6 +133,16 @@ LearnOpenGL 强调现代 OpenGL 是**可编程管线（programmable pipeline）*
 4. **配置绘制状态**：当前 program、纹理绑定、混合/深度/剔除开关、视口矩形等。
 5. **发出 Draw Call**：`glDrawArrays` / `glDrawElements`（以及实例化等变体）。
 
+```mermaid
+flowchart TB
+  Prep[准备顶点/索引] --> Upload[上传 VBO/EBO]
+  Upload --> Layout[配置 VAO 属性布局]
+  Layout --> State[绑定 program / 纹理 / 状态]
+  State --> Draw[Draw Call]
+  Draw --> GPU[GPU 管线执行]
+  GPU --> FB[写入帧缓冲]
+```
+
 Draw Call 之后，主力计算在 GPU：按阶段消耗顶点与图元，最终可能改写帧缓冲。CPU 与 GPU 之间还有命令队列与同步问题（栅栏、等待下一帧）；入门阶段先记住——**「调用返回」不等于「像素已经画完」**，但教程代码往往在帧末交换缓冲时自然同步。
 
 索引的意义：共享顶点（位置相同且属性相同）可降内存与 VS 调用次数；立方体若每角法线/UV 不同，则不能盲目共享，需在「拓扑共享」与「属性唯一性」之间权衡。
@@ -115,6 +150,25 @@ Draw Call 之后，主力计算在 GPU：按阶段消耗顶点与图元，最终
 ## 阶段全景
 
 下面按**教学逻辑顺序**列出。真实硬件可能合并阶段、重排工作、或做早期深度测试（Early-Z）等优化；概念学习时仍建议按此表建立顺序感。
+
+```mermaid
+flowchart TB
+  In[顶点属性输入] --> VS["顶点着色器 VS ★"]
+  VS --> Asm[图元装配]
+  Asm --> Opt["可选：细分 / 几何着色器"]
+  Opt --> Clip[裁剪]
+  Clip --> Div[透视除法 → NDC]
+  Div --> View[视口变换]
+  View --> Rast[光栅化：覆盖 + 插值]
+  Rast --> FS["片元着色器 FS ★"]
+  FS --> Test[深度 / 模板 / 混合]
+  Test --> Out[帧缓冲]
+
+  classDef prog fill:#1f6feb,stroke:#58a6ff,color:#fff;
+  class VS,FS prog;
+```
+
+图中 ★ / 蓝色节点为入门必写的**可编程**阶段；其余多为固定功能（加状态开关）。
 
 | 阶段 | 输入 → 输出（直觉） | 可编程？ | 入门时必须理解？ |
 |------|---------------------|----------|------------------|
@@ -169,6 +223,15 @@ FS **默认不知道**整三角的三个原始顶点（除非你显式传）；�
 1. **覆盖（coverage）**：哪些采样点落在图元内部？
 2. **插值（interpolation）**：顶点属性如何赋给内部片元？
 
+```mermaid
+flowchart LR
+  Tri[三角形] --> Cov{采样点在内部?}
+  Cov -->|否| Drop[无片元]
+  Cov -->|是| Bary[求重心坐标]
+  Bary --> Interp[透视校正插值属性]
+  Interp --> Frag[生成片元 → FS]
+```
+
 ### 覆盖测试
 
 对三角形，常用规则是：采样点（常取像素中心，MSAA 则为多个子采样点）是否在三边同一侧。边界情况需要**填充约定（fill rule）**，避免相邻三角形共享边时出现「双写」或「漏缝」——API/硬件有确定规则，入门只需知道：共边接缝闪烁有时来自深度精度，有时来自几何没共顶点。
@@ -216,6 +279,13 @@ LearnOpenGL 入门很少手写校正，因为插值由光栅化固定阶段完�
 1. 每像素保存当前最近深度值。
 2. 新片元深度与之比较（`GL_LESS` 等比较函数可配）。
 3. 若通过，更新颜色与深度；否则丢弃该片元。
+
+```mermaid
+flowchart TB
+  Frag[新片元深度 z] --> Cmp{与缓冲深度比较}
+  Cmp -->|更近 / 通过测试| Write[更新颜色 + 深度]
+  Cmp -->|更远 / 失败| Discard[丢弃片元]
+```
 
 不透明物体大致可**任意顺序**提交（仍有 Overdraw 性能问题）。半透明则通常需要额外策略：排序、加权 OIT、或先画不透明再画透明等——本章先掌握不透明路径。
 
@@ -280,6 +350,18 @@ MSAA 主要平滑**几何边缘**；对着色器内部高频（镜面高光闪�
 4. 渲染循环：清屏 → `glUseProgram` → 绑 VAO → `glDrawArrays(GL_TRIANGLES, 0, 3)` → 交换缓冲。
 5. VS 写 `gl_Position = vec4(aPos, 1.0)`；FS 输出常数色或 varying 色。
 
+```mermaid
+flowchart TB
+  Init[窗口 + 上下文 + GLAD] --> Prog[编译链接 VS/FS]
+  Prog --> Buf[VBO + VAO]
+  Buf --> Loop[渲染循环]
+  Loop --> Clear[清屏]
+  Clear --> Use[useProgram + bind VAO]
+  Use --> Draw[glDrawArrays]
+  Draw --> Swap[SwapBuffers]
+  Swap --> Loop
+```
+
 对照管线表：VS、装配、（几乎不做裁剪）、透视除法（\(w=1\) 时平凡）、视口、光栅、FS、写颜色缓冲——全部发生。你后面学的每一项（矩阵、纹理、光照、FBO）都是在**同一骨架上填数据与状态**，而不是另起炉灶。
 
 ```cpp
@@ -343,6 +425,15 @@ FoCG 习惯从**针孔相机与胶片**建立直觉：场景中的辐射经光�
 | 裁剪 | VS 输出的齐次坐标 | 投影矩阵 \(P\) 作用后 |
 | NDC | 透视除法后的规范化设备坐标 | 固定阶段 |
 | 屏幕 / 窗口 | 像素坐标 | 视口变换 |
+
+```mermaid
+flowchart LR
+  Local[局部] -->|Model M| World[世界]
+  World -->|View V| Eye[观察]
+  Eye -->|Projection P| Clip[裁剪]
+  Clip -->|÷w| NDC[NDC]
+  NDC -->|viewport| Win[窗口像素]
+```
 
 LearnOpenGL「Coordinate Systems」与 FoCG 的 viewing / projection 讲的是同一条链：前者给 GLM/API 用法，后者给几何含义。黑屏时用「物体是否还在 NDC 立方体里」作快速心理检查非常有效。
 

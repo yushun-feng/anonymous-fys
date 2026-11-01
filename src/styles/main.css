@@ -1082,6 +1082,42 @@ code {
   position: relative;
 }
 
+.markdown-body pre.mermaid {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.markdown-body pre.mermaid[data-processed] {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.markdown-body pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body .katex {
+  font-size: 1.05em;
+  color: var(--text);
+}
+
+.markdown-body .katex-display {
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.markdown-body .katex-error {
+  color: #ff8e8e;
+}
+
 .markdown-body pre code.hljs {
   background: transparent;
   padding: 0;

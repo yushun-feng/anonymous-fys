@@ -52,6 +52,8 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 - **图形学基础（`graphics/foundation/`）**：以 [LearnOpenGL](https://learnopengl.com/) 与 *Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）为主线的**完整中文学习笔记**——概念、坐标/矩阵约定、OpenGL/GLSL 要点、易错、练习指引；理论（FoCG）与实践（LearnOpenGL）在章内交织改写，**勿**整章照搬教材或教程原文。专题速览（如 PBR）可放在 `graphics/` 根下，并与 foundation 路线互链。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。
+- **流程图 / 结构图**：优先用 ` ```mermaid ` 代码块（浏览页会渲染）；若环境无法渲染，可辅以 ASCII。图形学笔记（尤其管线章）宜配阶段流程图。
+- **数学公式**：浏览页用 KaTeX 渲染。推荐 `$...$`（行内）与 `$$...$$`（独立成行）；亦兼容 LaTeX 风格 `\(...\)` / `\[...\]`（站点会规范化后再渲染）。
 - 可在正文中互链其他笔记（相对路径），但站点路由以 frontmatter 为准。
 
 ## 公开仓库与隐私
