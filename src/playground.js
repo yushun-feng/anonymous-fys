@@ -466,6 +466,23 @@ function createEditor(host, lang, doc, onDocChange) {
   return { view, langCompartment };
 }
 
+/** Tear down editor + DOM so another side panel can reuse the pane. */
+export function unmountPlayground() {
+  if (!state) return;
+  try {
+    state.view.destroy();
+  } catch {
+    /* ignore */
+  }
+  if (state.root) state.root.innerHTML = '';
+  state = null;
+}
+
+/** @returns {boolean} */
+export function isPlaygroundMounted() {
+  return !!state;
+}
+
 /**
  * @param {HTMLElement} pane
  */
@@ -652,21 +669,32 @@ export function bindCodeBlockActions(browseRoot) {
   browseRoot.querySelectorAll('pre.hljs-pre').forEach((pre) => {
     if (pre.querySelector('.playground-send')) return;
     const lang = (pre.getAttribute('data-lang') || '').toLowerCase();
+    const glslLike = ['glsl', 'vert', 'frag', 'vs', 'fs', 'vertex', 'fragment'].includes(lang);
     const supported =
       !lang ||
+      glslLike ||
       ['js', 'javascript', 'mjs', 'ts', 'typescript', 'tsx', 'cpp', 'c++', 'cxx', 'c'].includes(lang);
     if (!supported) return;
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'playground-send';
-    btn.textContent = '→ Playground';
-    btn.title = '发送到右侧 Playground';
-    btn.addEventListener('click', (event) => {
+    const labPane = document.querySelector('[data-gw-lab]');
+    const toLab = !!labPane && (glslLike || lang === 'js' || lang === 'javascript' || !lang);
+    btn.textContent = toLab ? '→ WebGL 练习' : '→ Playground';
+    btn.title = toLab ? '发送到右侧 WebGL 练习面板' : '发送到右侧 Playground';
+    btn.addEventListener('click', async (event) => {
       event.preventDefault();
       event.stopPropagation();
       const codeEl = pre.querySelector('code');
       const code = codeEl?.textContent || '';
+      const pane = /** @type {HTMLElement | null} */ (
+        document.querySelector('[data-playground-pane]')
+      );
+      if (toLab && pane) {
+        const { loadIntoGraphicsLab } = await import('./graphics-webgl-lab.js');
+        if (loadIntoGraphicsLab(code, lang || 'glsl', pane)) return;
+      }
       loadIntoPlayground(code, lang || 'cpp');
     });
     pre.appendChild(btn);
