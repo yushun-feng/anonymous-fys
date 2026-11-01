@@ -1,14 +1,15 @@
 ---
 title: 第 2 章：函数与多文件
-tags: [cpp, learncpp, cherno, functions]
+tags: [cpp, learncpp, cherno, functions, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 2 章：函数与多文件
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 2 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -330,6 +331,36 @@ Cherno 常提醒：算完却不用返回值时，要么你在做副作用函数�
 ### 多文件不是仪式，是边界
 
 把「读配置 / 算分数 / 打日志」拆文件，是为了**编译防火墙**：改一处不必重编全世界。正文已有 `add.h`/`add.cpp` 示意；补充口径：公共 API 越窄，重构越便宜。命名空间用来分区，而不是堆全局符号。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `inline`、`extern`、`using`、`::` 篇。多文件工程里，这三个词决定的是**链接可见性与名字从哪来**。
+
+### `inline`：给实现看的提示
+
+- 类内定义的成员函数默认视为 inline 候选；类外定义要在**定义处**写 `inline`（声明处写了定义处没写，常常不起作用）。
+- 现代链接器对「同一定义出现在多个翻译单元」靠 ODR/`inline` 规则消化——头文件里的短函数要保证各 TU 定义一致。
+- 通过基类指针做虚调用时，**动态分派路径通常无法内联**；实体对象上的静态可见调用才可能被优化掉。
+
+### `extern "C"`：跨语言符号
+
+C++ 因重载会做名字修饰；要链上 C 目标文件，用 `extern "C"` 告诉链接器找 C 风格符号。头文件里常见：
+
+```cpp
+#ifdef __cplusplus
+extern "C" {
+#endif
+int add(int, int);
+#ifdef __cplusplus
+}
+#endif
+```
+
+### `using` 与作用域解析
+
+- `using ns::name;` 把单个名字引入当前作用域；`using namespace` 整包引入——头文件里慎用后者。
+- 派生类里 `using Base::f;` 可把基类重载集拉进派生类，避免「隐藏」基类同名函数。
+- `::f` 指全局；`ns::f` 指命名空间；与正文「前向声明 / 头文件守卫」一起看，形成完整的名字查找图。
 
 ## 练习指引
 

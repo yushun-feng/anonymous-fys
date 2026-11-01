@@ -1,16 +1,16 @@
 ---
 title: LearnCpp 学习路线与章节地图
-tags: [cpp, learncpp, roadmap]
+tags: [cpp, learncpp, roadmap, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # LearnCpp 学习路线与章节地图
 
-按 [learncpp.cn](https://learncpp.cn/)（结构与 [learncpp.com](https://www.learncpp.com/) 一致）排好的**完整学习笔记索引**：各章为可独立研读的专业中文笔记（概念、语法/API、示例、易错、练习指引），覆盖教程主干而非逐字摘抄。与 [The Cherno C++ 系列](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 重叠处，章内含「Cherno 视角补充」；视频导航见 [Cherno 路线（薄索引）](../cherno/00-roadmap.md)。
+按 [learncpp.cn](https://learncpp.cn/)（结构与 [learncpp.com](https://www.learncpp.com/) 一致）排好的**完整学习笔记索引**：各章为可独立研读的专业中文笔记（概念、语法/API、示例、易错、练习指引），覆盖教程主干而非逐字摘抄。与 [The Cherno C++ 系列](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 重叠处，章内含「Cherno 视角补充」；视频导航见 [Cherno 路线（薄索引）](../cherno/00-roadmap.md)。与 [《C++那些事》](https://github.com/Light-City/CPlusPlusThings)（[在线站](https://light-city.github.io/stories_things/)）重叠处，章内含「《C++那些事》视角补充」——要点改写织入，不另建目录树。
 
-相关：[`../raii-and-ownership.md`](../raii-and-ownership.md) · [Cherno C++ 路线](../cherno/00-roadmap.md)
+相关：[`../raii-and-ownership.md`](../raii-and-ownership.md) · [Cherno C++ 路线](../cherno/00-roadmap.md) · [CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)
 
 ## 建议路径
 

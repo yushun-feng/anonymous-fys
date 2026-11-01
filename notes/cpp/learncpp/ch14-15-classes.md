@@ -1,8 +1,8 @@
 ---
 title: 第 14–15 章：类
-tags: [cpp, learncpp, cherno, class, oop]
+tags: [cpp, learncpp, cherno, class, oop, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 14–15 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[类](../cherno/04-classes.md)、[继承与虚函数](../cherno/05-inheritance-virtual.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -383,6 +384,32 @@ private:
 ### 与正文分工
 
 日期封装、链式调用、`friend` 对称运算等示例不重复。读完正文后，用调试器看一个栈上对象的构造/析构顺序，再对同一个类型 `new`/`delete` 一次，把「寿命」刻进肌肉记忆。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `this` / `explicit` / `friend` / `sizeof`（类布局）篇。
+
+### `this`
+
+- 非静态成员函数的隐含参数；**不占对象 `sizeof`**。
+- 普通成员函数里可看作 `T* const`；`const` 成员函数里是 `const T*`。
+- 链式调用：`return *this;`；形参与成员同名时用 `this->x = x;`。
+
+### `explicit`
+
+- 修饰构造函数：禁止隐式转换与拷贝初始化坑（`f(1)` 偷偷构造临时）。
+- 修饰转换函数：禁止隐式用户定义转换（语境转换如 `if (obj)` 等规则另论）。
+- 单参或多参（含默认实参）都可能成为转换路径——该挡就 `explicit`。
+
+### `friend`
+
+- 授予外部函数或类访问私有/保护成员的特权；**不对称、不传递**。
+- 典型用途：对称运算符（`operator<<`）、紧密协作的工厂/测试钩子。
+- 成本是封装被开洞——能写成公有接口就不要扩散友元。
+
+### 布局与 `sizeof`（面试高频）
+
+空类 ≥1；有虚函数通常 +vptr；`static` 成员不进对象体积。虚继承/多继承下体积实现相关，用本机 `sizeof` + 文档口径，避免死记某编译器数字。
 
 ## 练习指引
 

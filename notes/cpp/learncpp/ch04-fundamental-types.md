@@ -1,14 +1,15 @@
 ---
 title: 第 4 章：基本数据类型
-tags: [cpp, learncpp, types]
+tags: [cpp, learncpp, types, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 4 章：基本数据类型
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 4 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -267,6 +268,32 @@ int main()
 7. **C 风格强制转换**藏在表达式里难以发现；优先 `static_cast`。
 8. **`sizeof` 数组 vs 指针**：数组名退化成指针后 `sizeof` 变指针大小（第 16–17 章）；现在先对类型使用 `sizeof(T)`。
 9. **布尔输出**：默认 `cout` 打印 `0/1`；`std::boolalpha` 打印 `true/false`。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `sizeof`、`union`、`volatile`、位域相关篇。基本类型之上，面试常追问的是**对象到底占几字节、联合如何省空间**。
+
+### 对象体积速记
+
+| 情形 | 常见结论 |
+|------|----------|
+| 空类 | 至少 1 字节（保证地址唯一） |
+| 普通成员函数 / `static` 数据 | 不增加每个对象的大小 |
+| 有虚函数 | 通常 +1 个 vptr |
+| 普通继承 | 基类子对象按对齐累加 |
+| 虚继承 | 实现相关；可能额外指针/偏移 |
+
+用 `sizeof` 在本机印一遍，比死记数字有用。
+
+### `union`：同一时刻只「活」一个成员
+
+- 默认访问 public；可有构造/析构，但**不能**有引用成员、虚函数，也不能当基类/派生。
+- 写入一个成员后再读另一个，通常是 UB（除非特殊常见初始序列等例外）；类型安全的现代替代是 `std::variant`。
+- 匿名 union 把成员直接抬到外层作用域，适合手工标签联合；全局匿名 union 须为 `static`。
+
+### 位域预习
+
+`unsigned flag : 1;` 这类字段可紧凑打包，但布局**依赖实现**、不能取地址——细节见 [可选：位运算](./optional-bit-constexpr.md) 中的《C++那些事》补充。
 
 ## 练习指引
 

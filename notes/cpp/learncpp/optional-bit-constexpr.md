@@ -1,14 +1,15 @@
 ---
 title: 选修：位运算与 constexpr 函数
-tags: [cpp, learncpp, bitset, constexpr]
+tags: [cpp, learncpp, bitset, constexpr, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 选修：位运算与 constexpr 函数
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 章 O（Bit Manipulation）、章 F（Constexpr functions）
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -116,6 +117,28 @@ int main() {
 4. **`~` 后赋给窄类型**：整型提升导致高位全 1，需再掩码。  
 5. **用移位做算术却遇到溢出**。  
 6. **`vector<bool>` 的 `operator[]` 返回代理**，不能当真正的 `bool&`。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 [位域那些事](https://github.com/Light-City/CPlusPlusThings/tree/master/basic_content/bit) 与 constexpr 相关现代特性对照。
+
+### 位域
+
+```cpp
+struct Flags {
+    unsigned ready : 1;
+    unsigned mode  : 3;
+    unsigned       : 4; // 未命名填充
+};
+```
+
+- 省空间、方便抽整型里的字段；**布局与符号位行为依赖实现**，跨 ABI 勿依赖。
+- 不能对位域取地址；指针/引用不能绑到位域。
+- 赋值勿超出宽度；需要可移植比特操作时，更常用掩码 + 移位（正文位运算节）。
+
+### `constexpr` 对照
+
+编译期可算的用 `constexpr` 函数/变量表达；`const` 只保证「不改」，不保证「编译期值」。需要常量表达式语境（数组长度、模板实参、`static_assert`）时认准 `constexpr`。
 
 ## 练习指引（O）
 

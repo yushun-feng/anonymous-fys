@@ -1,14 +1,15 @@
 ---
 title: 附录：杂项与语言版本速览
-tags: [cpp, learncpp, cherno, appendix, standards]
+tags: [cpp, learncpp, cherno, appendix, standards, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 附录：杂项与语言版本速览
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 附录 A/B（及文末 C）
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -246,6 +247,29 @@ std::optional<std::string> findTag(bool ok)
 1. 用附录确认自己编译器开到了目标标准。  
 2. 结合下文 Cherno 视角，把 `optional`/`variant`/结构化绑定接到已有笔记。  
 3. 需要并发/计时时再进线程篇；本附录不替代专题深潜。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 C++11 特性清单、惯用法与并发目录导读。附录用来**对照标准版本能力**；仓库则提供可运行的专题目录。
+
+### C++11 对照清单（与本库章节）
+
+| 特性 | 建议落点 |
+|------|----------|
+| `nullptr` / `auto` / 范围 for / 列表初始化 | 基础与容器章 |
+| `override` / `final` / 虚析构 | 第 23–25 章 |
+| 右值引用 / move / `unique_ptr` | 第 22 章 |
+| lambda / `decltype` / 别名模板 | 第 10/11/20 章 |
+| `noexcept` / 变参模板 | 第 26–28 章 |
+| `tuple` / 无序容器 / hash | 按需查标准库 |
+
+### 惯用法索引（不另建树）
+
+RAII、copy-and-swap、`enum class` 限域、成员初始化列表、pImpl——要点已分别织入类/移动/枚举等章；需要示例时回仓库 `codingStyleIdioms/`，改写进自己的笔记即可。
+
+### 并发
+
+`thread` / `mutex` / `join` vs `detach`、条件变量等见仓库 `concurrency/`；本附录只提醒：**`volatile` ≠ 原子性**，共享可变状态用标准并发原语。深入放到独立并发笔记，不在 LearnCpp 主干另镜像一份。
 
 ## 练习指引
 

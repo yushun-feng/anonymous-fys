@@ -1,14 +1,15 @@
 ---
 title: 第 0 章：入门与工具链
-tags: [cpp, learncpp, cherno, toolchain]
+tags: [cpp, learncpp, cherno, toolchain, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 0 章：入门与工具链
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 0 章（Introduction / Getting Started）
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -254,6 +255,25 @@ int main()
 ### 与正文的分工
 
 正文已覆盖 Hello World、警告开关、链接失败最小复现与 CMake 片段。本节不重复步骤清单，只补 **「编译器在干什么、为何要管内存与确定性」** 的动机层。装好手术台之后，后面每一章的 UB、优化、多文件链接才说得通。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 基础/工具篇；在线站：[https://light-city.github.io/stories_things/](https://light-city.github.io/stories_things/)。第 0 章把环境装好——这里补「怎么观察编译器在干什么」的进阶口径，不另开目录树。
+
+### 把编译过程看清楚
+
+- 构建不是黑盒：预处理 → 编译 → 链接。遇到 `undefined reference` 先查哪个翻译单元没进工程。
+- 观察模板/语法糖展开可用 [cppinsights.io](https://cppinsights.io/)：把「你以为写的」和「编译器看到的」对齐。
+- 学习仓库可对照 CPlusPlusThings 的 Bazel / Docker / g++ 三种跑法——目标是**可复现**，不必绑死某一套工具。
+
+### Debug 辅助（知道即可）
+
+- `assert` 是宏，可用 `NDEBUG` 关掉；日常 Debug 构建保留断言（详见第 9 章补充）。
+- Linux 上 `rr` 一类「可回放」调试、以及轻量 `dbg` 宏，属于工具箱扩展；入门阶段仍以 IDE 断点 + 干净警告级别为主。
+
+### 与正文分工
+
+正文已覆盖 Hello World、警告、链接失败最小复现。本节只加**观察与复现**视角；后续各章的 `const`/`static`/虚表等「那些事」会就近织入，不单独堆一份镜像笔记。
 
 ## 练习指引
 

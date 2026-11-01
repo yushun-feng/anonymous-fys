@@ -1,8 +1,8 @@
 ---
 title: 第 23–25 章：对象关系、继承与虚函数
-tags: [cpp, learncpp, cherno, inheritance, virtual]
+tags: [cpp, learncpp, cherno, inheritance, virtual, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 23–25 章  
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[继承与虚函数](../cherno/05-inheritance-virtual.md)、[转型](../cherno/14-casting.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -496,6 +497,38 @@ void ok(IAudioVoice& voice);
 拥有型多态集合常用 `vector<unique_ptr<Base>>`；共享再用 `shared_ptr`。组合/聚合的寿命规则正文已述：补一句 Cherno 习惯——**演示阶段可用裸指针讲清 vtable，产品代码立刻换成智能指针托管**。
 
 构造顺序「基类 → 成员 → 派生」、析构逆序，调试崩溃时先核对这一条，再查虚表。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `virtual` / `vptr_vtable` / 纯虚与抽象类 /「用 C 模拟多态」篇。这是面试深挖重灾区——只记结论不够，要能画调用路径。
+
+### 动态绑定
+
+- 虚调用看的是**对象动态类型**，不是指针/引用的静态类型。
+- **默认实参按静态类型绑定**；虚函数动态、默认参数静态——混用必踩坑。
+
+### vptr / vtable（实现模型）
+
+- 含虚函数的类（及派生）有一张虚表；对象里藏 vptr 指向它。
+- 调用：取 vptr → 查表项 → 间接跳转。代价是间接与更难内联。
+- 构造期间虚调用不会「落到派生最终覆盖」（对象还在长成中）——故**构造函数不能是虚函数**；需要多态删除时**析构应当是虚函数**。
+
+### 纯虚与抽象类
+
+```cpp
+struct Shape {
+    virtual ~Shape() = default;
+    virtual void draw() const = 0; // 纯虚 → 抽象类，不能实例化
+};
+```
+
+派生类必须实现全部纯虚才能实例化；抽象类指针/引用可绑定到具体派生对象。抽象类里普通成员可调纯虚，但**构造/析构期间**不要指望完整动态派发。
+
+### 其它常问
+
+- `static` 成员不能是虚函数（无 `this`/vptr）。
+- 虚函数可以是 `private`（访问权限按静态类型检查，覆盖仍可发生）——可读性差，慎用。
+- 「C 用函数指针表模拟虚表」帮助理解机制；产品 C++ 代码直接用 `virtual`/`override`/`final`。
 
 ## 练习指引
 

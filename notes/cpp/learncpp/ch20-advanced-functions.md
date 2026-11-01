@@ -1,8 +1,8 @@
 ---
 title: 第 20 章：函数进阶
-tags: [cpp, learncpp, cherno, lambda, functions]
+tags: [cpp, learncpp, cherno, lambda, functions, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 20 章  
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[auto/函数指针/lambda](../cherno/12-fp-lambdas-namespaces.md)、[栈堆](../cherno/07-const-objects-memory.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -270,6 +271,34 @@ void retainPositive(std::vector<int>& xs)
 ### 与栈/堆章节的交接
 
 大对象默认别按值塞进频繁回调；`const&` 或视图类型更合适。正文对照 Cherno 的 `auto`/lambda 笔记即可——补充口径：**回调接口先问频率与是否在热路径**，再选函数指针 / lambda / `function`。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的函数指针示例与 C++11 lambda 条目。
+
+### 函数指针
+
+```cpp
+using Handler = void (*)(int);
+
+void on_click(int id) { /* ... */ }
+
+void fire(Handler h, int id)
+{
+    if (h) h(id);
+}
+
+int main() { fire(on_click, 1); }
+```
+
+- `typedef`/`using` 给函数指针类型起名，避免声明里星号迷宫。
+- 适合 C API 回调；需要捕获状态时改用 lambda（可转函数指针的仅限无捕获）。
+
+### lambda 与 `std::function`
+
+- 短小内联、局部算法：lambda。
+- 要存异质可调用、做类型擦除：`std::function`（可能有分配与间接调用成本）。
+- 热路径上先问频率，再选函数指针 / 模板参数 / `function`。
 
 ## 练习指引
 

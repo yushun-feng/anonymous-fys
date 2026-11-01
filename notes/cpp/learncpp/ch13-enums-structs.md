@@ -1,14 +1,15 @@
 ---
 title: 第 13 章：枚举与结构体
-tags: [cpp, learncpp, cherno, enum, struct]
+tags: [cpp, learncpp, cherno, enum, struct, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 13 章：枚举与结构体
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 13 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -302,6 +303,28 @@ Cherno 常先用 `struct` 攒字段，需要不变量（如分母非 0）再引�
 ### `struct` vs `class` 的团队约定
 
 语言上几乎等价；团队可约定：纯数据 / POD 风格用 `struct`，带行为与不变量用 `class`。比纠结关键字更重要的是：**公共数据能否被任意写入而不破坏含义**。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `enum` / `struct` / `struct` vs `class` / `union` 篇。
+
+### 传统 `enum` 的三坑
+
+1. 枚举项泄漏到外围作用域 → 易名冲突（两个 `BLUE`）。
+2. 隐式转成整型 → 类型约束弱。
+3. 底层类型不明确 → 前向声明麻烦。
+
+过渡写法：塞进 `namespace` 或 `struct` 里限域；现代写法：`enum class`（作用域 + 不强转）。
+
+### `struct` vs `class`
+
+- **默认访问**：`struct` 成员/继承默认 `public`，`class` 默认 `private`——语言上几乎只差这一处。
+- 习惯：纯数据聚合用 `struct`；要守不变量、藏实现用 `class`。
+- C 的 `struct` 不能有成员函数/访问控制/继承；C++ 的 `struct` 已是完整的类键。
+
+### `union` 一句话
+
+同址复用、同时只活一个成员；需要类型安全标签联合时优先 `std::variant`（见第 4 章补充）。
 
 ## 练习指引
 

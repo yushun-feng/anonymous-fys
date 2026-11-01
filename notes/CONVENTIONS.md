@@ -46,7 +46,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 
 ## 正文建议
 
-- **LearnCpp（`cpp/learncpp/`）**：写**完整、专业的中文学习笔记**，覆盖对应教程章节——概念讲解、关键语法/API、可运行示例、易错点、练习指引。允许较长的教材式篇幅；用自己的话组织，勿逐字照搬源站。与 The Cherno C++ 视频重叠的主题，在章内用「**Cherno 视角补充**」融入工程直觉（改写，不照抄公开笔记仓库）。
+- **LearnCpp（`cpp/learncpp/`）**：写**完整、专业的中文学习笔记**，覆盖对应教程章节——概念讲解、关键语法/API、可运行示例、易错点、练习指引。允许较长的教材式篇幅；用自己的话组织，勿逐字照搬源站。与 The Cherno C++ 视频重叠的主题，在章内用「**Cherno 视角补充**」融入工程直觉（改写，不照抄公开笔记仓库）。与《C++那些事》（[Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) / [在线站](https://light-city.github.io/stories_things/)）重叠的主题，在章内用「**《C++那些事》视角补充**」融入面试/深挖口径（改写织入，**不**另建镜像目录树、不整篇搬迁）。
 - **Cherno（`cpp/cherno/`）**：**剧集索引 / 薄交叉链接**——指向播放列表与 LearnCpp 落点章，避免与 LearnCpp 长文重复；详细讲解以 LearnCpp 为准。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。

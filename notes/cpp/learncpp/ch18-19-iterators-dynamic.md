@@ -1,14 +1,15 @@
 ---
 title: 第 18–19 章：迭代器、算法与动态分配
-tags: [cpp, learncpp, cherno, iterators, memory]
+tags: [cpp, learncpp, cherno, iterators, memory, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 18–19 章：迭代器、算法与动态分配
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 18–19 章（源站标注建设中，要点仍有用）
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -379,6 +380,20 @@ bins[0] = 1; // 离开作用域自动释放
 - 两者交叉时（持有指向 vector 元素的迭代器跨过 `push_back`）最容易炸。
 
 调试建议：对可疑堆代码开 AddressSanitizer；对迭代器失效，优先把「容器操作」和「持有迭代器的窗口」画在时间线上。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的迭代器/traits 导读与动态分配相关练习。迭代器把「位置」从具体容器解耦；动态分配把寿命从作用域解开——两者都要回答所有权。
+
+### 迭代器分层直觉
+
+- 输入/输出、前向、双向、随机访问：能力递增，算法按**最低需要**约束迭代器类别。
+- `begin`/`end` 表示半开区间 `[begin, end)`；`end` 不可解引用。
+- 容器修改（插入、重分配）后，哪些迭代器失效取决于容器——`vector` 最严，`list` 更宽。
+
+### 动态分配
+
+裸 `new`/`delete` 仅作机制理解；产品路径用 `unique_ptr`/`vector`/`string`（第 22 章）。漏删、重复删、用错 `delete[]` 都是 UB——《那些事》实战里的「动态数组」题正是为练这个。
 
 ## 练习指引
 

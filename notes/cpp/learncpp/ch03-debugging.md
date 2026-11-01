@@ -1,14 +1,15 @@
 ---
 title: 第 3 章：调试
-tags: [cpp, learncpp, cherno, debugging]
+tags: [cpp, learncpp, cherno, debugging, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 3 章：调试
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 3 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -246,6 +247,35 @@ int main()
 ### 与正文分工
 
 易错清单（优化下单步、Heisenbug、一次改太多）正文已列全。本节强调 Cherno 式节奏：**Debug 构建 + 断点优先，打印作辅助，修复后立刻删噪声日志**。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `assert`、`volatile` 与工具篇。调试不只是断点——还有**契约检查**和**别被优化骗到**。
+
+### `assert`：逻辑不可能，不是用户错误
+
+```cpp
+#include <cassert>
+
+int at(const int* p, int n, int i)
+{
+    assert(p != nullptr);
+    assert(i >= 0 && i < n); // 违反 = 程序员 bug；Release 可被 NDEBUG 摘掉
+    return p[i];
+}
+```
+
+- 断言检查的是「按设计不该发生」的状态；可预期的输入错误走返回码/`optional`/异常。
+- 定义 `NDEBUG` **必须在包含 `<cassert>` 之前**；只在某个 `.cpp` 中间 `#define` 往往无效或行为混乱。
+
+### `volatile`：对「会被外界改」的存储
+
+- `volatile` 告诉编译器：读写作副作用，不要随便合并或删掉访问——典型场景是内存映射寄存器、信号处理里的标志。
+- 它**不是**多线程同步原语；线程间共享可变状态用 `std::atomic` / mutex，不要指望 `volatile` 给happens-before。
+
+### 工具箱
+
+断点优先；需要打印中间值时可考虑轻量调试宏；Linux 上可回放的 `rr` 适合「偶现」bug。先把 Debug 构建与警告开全，再上花哨工具。
 
 ## 练习指引
 
