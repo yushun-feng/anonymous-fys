@@ -2,6 +2,7 @@
 const SERIES_RANK = {
   learncpp: 0,
   cherno: 1,
+  foundation: 0,
 };
 
 /**
