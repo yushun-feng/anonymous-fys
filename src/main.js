@@ -16,10 +16,10 @@ const TOPIC_LABELS = {
   gpu: 'GPU',
 };
 
-/** Active Three.js solar-system instance; disposed on every remount. */
-let solarHandle = null;
+/** Active Three.js Yingxian pagoda instance; disposed on every remount. */
+let pagodaHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
-let solarMountGen = 0;
+let pagodaMountGen = 0;
 /** Active WebGL shader-toy instance; disposed on every remount. */
 let shaderHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
@@ -27,10 +27,10 @@ let shaderMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 
-function disposeSolar() {
-  solarMountGen += 1;
-  solarHandle?.dispose();
-  solarHandle = null;
+function disposePagoda() {
+  pagodaMountGen += 1;
+  pagodaHandle?.dispose();
+  pagodaHandle = null;
 }
 
 function disposeShader() {
@@ -43,8 +43,15 @@ function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
   if (!pathPart || pathPart === 'home') return { name: 'home' };
-  // Prefer #/solar; keep #/moon as a redirect alias.
-  if (pathPart === 'solar' || pathPart === 'moon') return { name: 'solar' };
+  // Prefer #/pagoda; keep #/portal, #/solar, #/moon as redirect aliases.
+  if (
+    pathPart === 'pagoda' ||
+    pathPart === 'portal' ||
+    pathPart === 'solar' ||
+    pathPart === 'moon'
+  ) {
+    return { name: 'pagoda' };
+  }
   if (pathPart === 'shader') return { name: 'shader' };
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
@@ -58,7 +65,7 @@ function layout(content) {
       <a class="brand" href="#/">anonymous-fys</a>
       <nav class="site-nav" aria-label="站点导航">
         <a href="#/">笔记</a>
-        <a href="#/solar">太阳系</a>
+        <a href="#/pagoda">木塔</a>
         <a href="#/shader">Shader</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
@@ -120,8 +127,8 @@ function renderHome() {
   }).join('');
 
   return layout(`
-    <div class="solar-home-slot" data-solar-mount data-solar-compact></div>
-    <p class="solar-home-link"><a href="#/solar">打开完整太阳系展台 →</a></p>
+    <div class="pagoda-home-slot" data-pagoda-mount data-pagoda-compact></div>
+    <p class="pagoda-home-link"><a href="#/pagoda">打开完整应县木塔展台 →</a></p>
     <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
     <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
     <section class="filters">
@@ -141,11 +148,11 @@ function renderHome() {
   `);
 }
 
-function renderSolarPage() {
+function renderPagodaPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>太阳系</span></nav>
-    <div class="solar-page-slot" data-solar-mount></div>
-    <p class="solar-credit">纹理来源见仓库 README「太阳系纹理」一节。轨道与尺寸为可读性示意，非真实比例。</p>
+    <nav class="crumb"><a href="#/">首页</a> / <span>应县木塔</span></nav>
+    <div class="pagoda-page-slot" data-pagoda-mount></div>
+    <p class="pagoda-credit">佛宫寺释迦塔（应县木塔）三维模型来自 <a href="https://github.com/huangbai-AI/yingxian-pagoda" rel="noopener noreferrer" target="_blank">huangbai-AI/yingxian-pagoda</a>（yingxian-v20，本站二次压缩以加快加载）；科普展示性重建，非文物测绘。木纹素材见上游说明（Poly Haven CC0）。</p>
   `);
 }
 
@@ -214,19 +221,19 @@ function bindHomeFilters(root) {
   });
 }
 
-async function mountSolarIfPresent(root) {
-  const slot = root.querySelector('[data-solar-mount]');
+async function mountPagodaIfPresent(root) {
+  const slot = root.querySelector('[data-pagoda-mount]');
   if (!slot) return;
-  const compact = slot.hasAttribute('data-solar-compact');
-  const gen = solarMountGen;
+  const compact = slot.hasAttribute('data-pagoda-compact');
+  const gen = pagodaMountGen;
   try {
-    const { mountSolarSystemWidget } = await import('./solar-system-widget.js');
-    if (gen !== solarMountGen || !slot.isConnected) return;
-    solarHandle = mountSolarSystemWidget(slot, { compact });
+    const { mountYingxianPagodaWidget } = await import('./yingxian-pagoda-widget.js');
+    if (gen !== pagodaMountGen || !slot.isConnected) return;
+    pagodaHandle = mountYingxianPagodaWidget(slot, { compact });
   } catch {
-    if (gen !== solarMountGen || !slot.isConnected) return;
+    if (gen !== pagodaMountGen || !slot.isConnected) return;
     slot.innerHTML =
-      '<p class="solar-widget__fallback">三维太阳系模块加载失败，笔记浏览不受影响。</p>';
+      '<p class="pagoda-widget__fallback">三维木塔展台加载失败，笔记浏览不受影响。</p>';
   }
 }
 
@@ -291,30 +298,30 @@ function mountContent() {
   const browse = ensureShell();
   if (!browse) return;
 
-  disposeSolar();
+  disposePagoda();
   disposeShader();
 
   const route = parseRoute();
-  // Normalize legacy #/moon → #/solar without breaking history mid-render.
+  // Normalize legacy showcase hashes → #/pagoda.
   const rawPath = window.location.hash.replace(/^#/, '').split('?')[0].replace(/^\//, '');
-  if (rawPath === 'moon') {
-    window.location.replace(`${window.location.pathname}${window.location.search}#/solar`);
+  if (rawPath === 'portal' || rawPath === 'solar' || rawPath === 'moon') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/pagoda`);
     return;
   }
 
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
-  } else if (route.name === 'solar') {
-    browse.innerHTML = renderSolarPage();
-    mountSolarIfPresent(browse);
+  } else if (route.name === 'pagoda') {
+    browse.innerHTML = renderPagodaPage();
+    mountPagodaIfPresent(browse);
   } else if (route.name === 'shader') {
     browse.innerHTML = renderShaderPage();
     mountShaderIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     bindHomeFilters(browse);
-    mountSolarIfPresent(browse);
+    mountPagodaIfPresent(browse);
     mountShaderIfPresent(browse);
   }
 }
