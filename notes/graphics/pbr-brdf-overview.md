@@ -2,10 +2,12 @@
 title: PBR BRDF 速览
 tags: [graphics, pbr, brdf]
 topic: graphics
-updated: 2026-10-31
+updated: 2026-11-01
 ---
 
 # PBR BRDF 速览
+
+> 进阶专题短文。入门路径见 [图形学基础路线图](./foundation/00-roadmap.md)；管线 / 变换 / 着色器见 foundation 第 1–3 章。
 
 物理基础渲染常用 Cook-Torrance 形式拆成漫反射与镜面项：
 

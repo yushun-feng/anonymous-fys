@@ -7,13 +7,14 @@
 ```
 notes/
 ├── CONVENTIONS.md          # 本约定
-├── cpp/                    # C++ 语言与工程
-├── graphics/               # 图形学（渲染、几何、着色等）
+├── cpp/                    # C++ 语言与工程（learncpp/、cherno/ 等系列）
+├── graphics/               # 图形学（foundation/ 课程向 + 根目录专题短文）
 └── gpu/                    # GPU / 并行计算 / API
 ```
 
 - 每个主题一个文件夹：`cpp/`、`graphics/`、`gpu/`。
 - 笔记为 Markdown 文件（`.md`），文件名使用短横线小写，例如 `raii-basics.md`。
+- 系列课程可再建子目录（如 `cpp/learncpp/`、`graphics/foundation/`）；浏览页按系列排序。
 - 不要把生成物、截图缓存或站点构建产物放进 `notes/`。
 
 ## Frontmatter
@@ -48,6 +49,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 
 - **LearnCpp（`cpp/learncpp/`）**：写**完整、专业的中文学习笔记**，覆盖对应教程章节——概念讲解、关键语法/API、可运行示例、易错点、练习指引。允许较长的教材式篇幅；用自己的话组织，勿逐字照搬源站。与 The Cherno C++ 视频重叠的主题，在章内用「**Cherno 视角补充**」融入工程直觉（改写，不照抄公开笔记仓库）。与《C++那些事》（[Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) / [在线站](https://light-city.github.io/stories_things/)）重叠的主题，在章内用「**《C++那些事》视角补充**」融入面试/深挖口径（改写织入，**不**另建镜像目录树、不整篇搬迁）。
 - **Cherno（`cpp/cherno/`）**：**剧集索引 / 薄交叉链接**——指向播放列表与 LearnCpp 落点章，避免与 LearnCpp 长文重复；详细讲解以 LearnCpp 为准。
+- **图形学基础（`graphics/foundation/`）**：以 [LearnOpenGL](https://learnopengl.com/) 与 *Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）为主线的**完整中文学习笔记**——概念、坐标/矩阵约定、OpenGL/GLSL 要点、易错、练习指引；理论（FoCG）与实践（LearnOpenGL）在章内交织改写，**勿**整章照搬教材或教程原文。专题速览（如 PBR）可放在 `graphics/` 根下，并与 foundation 路线互链。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。
 - 可在正文中互链其他笔记（相对路径），但站点路由以 frontmatter 为准。
