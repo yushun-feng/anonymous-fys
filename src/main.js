@@ -5,11 +5,17 @@ import { renderMarkdown, escapeHtml, runMermaidIn } from './render.js';
 import { isUnlocked, renderGate } from './gate.js';
 import {
   mountPlayground,
+  unmountPlayground,
   bindPlaygroundChrome,
   bindCodeBlockActions,
 } from './playground.js';
 import { mountPersonalNotes } from './personal-notes.js';
 import { startVisitLogging } from './visit-log.js';
+
+/** @type {{ dispose: () => void } | null} */
+let graphicsLabHandle = null;
+/** @type {'playground' | 'graphics-lab'} */
+let sidePanelMode = 'playground';
 
 const TOPICS = ['cpp', 'graphics', 'gpu'];
 const TOPIC_LABELS = {
@@ -286,7 +292,7 @@ function ensureShell() {
         data-playground-splitter
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整 Playground 宽度"
+        aria-label="调整侧栏宽度"
         tabindex="0"
       ></div>
       <aside class="playground-pane" data-playground-pane aria-label="代码 Playground"></aside>
@@ -299,9 +305,34 @@ function ensureShell() {
   const shell = /** @type {HTMLElement} */ (app.querySelector('.app-shell'));
 
   mountPlayground(pane);
+  sidePanelMode = 'playground';
+  graphicsLabHandle = null;
   bindPlaygroundChrome(shell, splitter, pane);
   shellReady = true;
   return browse;
+}
+
+/**
+ * Graphics notes use a WebGL practice lab in the side pane; other pages keep JS/TS/C++ playground.
+ * @param {{ topic?: string } | null | undefined} note
+ */
+async function syncSidePanel(note) {
+  const app = document.querySelector('#app');
+  const pane = /** @type {HTMLElement | null} */ (app?.querySelector('[data-playground-pane]'));
+  if (!pane) return;
+
+  const wantLab = note?.topic === 'graphics';
+  if (wantLab && sidePanelMode !== 'graphics-lab') {
+    unmountPlayground();
+    const { mountGraphicsWebglLab } = await import('./graphics-webgl-lab.js');
+    graphicsLabHandle = mountGraphicsWebglLab(pane);
+    sidePanelMode = 'graphics-lab';
+  } else if (!wantLab && sidePanelMode !== 'playground') {
+    graphicsLabHandle?.dispose();
+    graphicsLabHandle = null;
+    mountPlayground(pane);
+    sidePanelMode = 'playground';
+  }
 }
 
 function mountContent() {
@@ -325,18 +356,22 @@ function mountContent() {
     bindCodeBlockActions(browse);
     void runMermaidIn(browse);
     const note = getNoteById(route.id);
+    void syncSidePanel(note);
     const slot = browse.querySelector('[data-personal-notes-mount]');
     if (note && slot) {
       personalNotesHandle = mountPersonalNotes(/** @type {HTMLElement} */ (slot), note);
     }
   } else if (route.name === 'pagoda') {
     browse.innerHTML = renderPagodaPage();
+    void syncSidePanel(null);
     mountPagodaIfPresent(browse);
   } else if (route.name === 'shader') {
     browse.innerHTML = renderShaderPage();
+    void syncSidePanel(null);
     mountShaderIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
+    void syncSidePanel(null);
     bindHomeFilters(browse);
     mountPagodaIfPresent(browse);
     mountShaderIfPresent(browse);
@@ -352,6 +387,9 @@ function mount() {
 
   if (!isUnlocked()) {
     shellReady = false;
+    sidePanelMode = 'playground';
+    graphicsLabHandle?.dispose();
+    graphicsLabHandle = null;
     renderGate(app, {
       onSuccess: () => {
         mountContent();

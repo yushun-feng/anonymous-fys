@@ -350,6 +350,105 @@ code {
   color: var(--accent);
 }
 
+/* —— Graphics WebGL practice lab (side pane on graphics notes) —— */
+.app-shell.is-graphics-lab {
+  --playground-width: min(460px, 48vw);
+}
+
+.gw-lab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem 0.85rem;
+}
+
+.gw-lab__stage {
+  flex: 0 0 auto;
+  height: 168px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #070a0e;
+  overflow: hidden;
+}
+
+.gw-lab__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gw-lab__fallback {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.gw-lab__editor-tabs {
+  flex: 0 0 auto;
+}
+
+.gw-lab__editor-host {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.gw-lab__editor-host .cm-editor {
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 42vh;
+}
+
+.gw-lab__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  user-select: none;
+}
+
+.gw-lab__error {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, #ff6b6b 45%, var(--border));
+  background: color-mix(in srgb, #ff6b6b 12%, var(--bg-elevated));
+  color: #ffb4b4;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  max-height: 7rem;
+  overflow: auto;
+}
+
+.gw-lab__status {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.gw-lab__status[data-kind='ok'] {
+  color: #7dcea0;
+}
+
+.gw-lab__status[data-kind='error'] {
+  color: #ff8e8e;
+}
+
+.gw-lab__status[data-kind='pending'] {
+  color: #e6c07b;
+}
+
+@media (max-width: 860px) {
+  .gw-lab__stage {
+    height: 140px;
+  }
+}
+
 .site-header {
   padding: 2rem 1.25rem 1rem;
   max-width: var(--max);
