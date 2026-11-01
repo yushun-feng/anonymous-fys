@@ -1,14 +1,15 @@
 ---
 title: 第 1 章：C++ 基础
-tags: [cpp, learncpp, cherno, basics]
+tags: [cpp, learncpp, cherno, basics, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 1 章：C++ 基础
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 1 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -295,6 +296,36 @@ scratch = frameIndex + 1;
 ### I/O 与「真实程序」的距离
 
 `std::cin` / `std::cout` 适合测验与脚手架；游戏/工具里更多是文件、网络、UI。初学仍应练熟流式读写，但要知道：**控制台不是性能路径，也不是唯一输入面**。正文已覆盖花括号拒绝收窄与整数除法——此处不再展开语法表，只提醒：类型选择会在热点路径上变成真实成本。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `sizeof`、宏等篇。变量首先是**有大小的存储**；宏是预处理期的文本替换——两者常被初学者搅在一起。
+
+### `sizeof` 建立尺度感
+
+```cpp
+#include <iostream>
+
+struct Empty {};
+struct WithVPtr {
+    virtual void f() {}
+    char c;
+};
+
+int main()
+{
+    std::cout << sizeof(Empty) << ' '      // 通常 1：空类也要唯一地址
+              << sizeof(WithVPtr) << '\n'; // 含虚函数时往往多一个 vptr
+}
+```
+
+成员函数与 `static` 数据成员**不计入**每个对象的体积；虚函数再多，通常也只多一个 vptr（平台相关）。对象布局细节在类与继承章再展开。
+
+### 宏不是「类型安全的常量」
+
+- `#` 把实参字符串化，`##` 做记号粘贴；多行宏常用 `do { ... } while (0)` 包成单语句。
+- 需要有类型、可取址、参与重载决议时，优先 `const` / `constexpr` / 内联函数，而不是 `#define`。
+- 条件编译适合切平台与特性开关；业务逻辑尽量留在类型系统里。
 
 ## 练习指引
 

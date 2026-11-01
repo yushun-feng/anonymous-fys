@@ -1,8 +1,8 @@
 ---
 title: 第 11 章：函数重载与函数模板
-tags: [cpp, learncpp, cherno, overloading, templates]
+tags: [cpp, learncpp, cherno, overloading, templates, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 11 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[模板](../cherno/11-templates.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -341,6 +342,19 @@ struct FixedBag {
 ```
 
 `FixedBag<float, 16>` 与 `FixedBag<float, 32>` 是不同类型——利于静态检查，也避免运行时越界配置。过早特化一切通常不值；先清晰主模板，热点再动手。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 C++11 模板相关条目（变参、`>>`、别名模板等）。函数重载解决「同名不同参」；模板解决「同算法不同类型」——代价是编译期实例化。
+
+### 现代模板小抄
+
+- C++11 起 `vector<vector<int>>` 中的 `>>` 不再被误解析成右移。
+- 变参模板（variadic）把「任意个数实参」收成包，再递归/折叠展开——库作者工具，业务代码先会用再深挖。
+- 别名模板 `template<class T> using Vec = std::vector<T>;` 替代笨重的「模板 typedef」手法。
+- 函数模板可见性：定义通常放头文件，否则其它 TU 实例化失败（与 `inline`/ODR 同一家族问题）。
+
+正文已覆盖重载决议与函数模板入门；把上述点当作「那些事」仓库里对 Modern C++ 的对照清单即可。
 
 ## 练习指引
 

@@ -1,8 +1,8 @@
 ---
 title: 第 12 章：引用与指针
-tags: [cpp, learncpp, cherno, references, pointers]
+tags: [cpp, learncpp, cherno, references, pointers, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 12 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[指针与引用](../cherno/03-pointers-references.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -297,6 +298,36 @@ float lengthSq(const float& x, const float& y)
 ### 悬垂是本章最高刑
 
 返回局部变量的引用/指针、绑定已销毁临时、容器重分配后旧指针……任何「地址还在、对象已无」都是 UB。修复原则只有一条：**保证所指对象活得比使用者久**，或改成按值/拥有型返回。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 [引用与指针那些事](https://github.com/Light-City/CPlusPlusThings/tree/master/basic_content/pointer_refer) 与函数指针示例。与 Cherno 视角互补：这里更偏**对照表 + 右值引用动机**。
+
+### 对照表
+
+| | 引用 | 指针 |
+|--|------|------|
+| 初始化 | 必须 | 可延后（易成野指针） |
+| 可空 | 语义上不应为空 | 可以为空，用前要问 |
+| 改绑 | 不可 | 可以 |
+| 使用 | 无需 `*`/`->` 判空仪式 | 解引用前先保证有效 |
+
+```cpp
+void set_via_ptr(int* p)
+{
+    if (p) *p = 3; // 指针接口常带「可空」含义
+}
+void set_via_ref(int& r)
+{
+    r = 3;         // 引用接口表示「必有对象」
+}
+```
+
+### 右值引用在说什么
+
+- `T&&` 绑定将亡值，为**移动**与**完美转发**服务：少拷贝、把资源所有权转走。
+- 引用折叠：模板里 `T&&` 作转发引用时，`T&`/`T&&` 组合会折叠——细节落到第 22 章。
+- 函数指针是「把行为当值传」的 C 风格工具：`typedef void (*Fn)(int);` 或 `using Fn = void(*)(int);`；现代代码常优先 lambda / `std::function`（见第 20 章）。
 
 ## 练习指引
 

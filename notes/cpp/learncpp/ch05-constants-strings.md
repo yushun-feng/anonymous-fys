@@ -1,14 +1,15 @@
 ---
 title: 第 5 章：常量与字符串
-tags: [cpp, learncpp, cherno, const, string]
+tags: [cpp, learncpp, cherno, const, string, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 5 章：常量与字符串
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 5 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -352,6 +353,31 @@ std::size_t glyphCount(std::string_view slice)
 ```
 
 工程口径：函数参数「只读文本」默认考虑 `string_view`；返回新串或需要修改缓冲再返回 `string`。字面量与进制陷阱正文已覆盖，此处不重复。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 [`const` 那些事](https://github.com/Light-City/CPlusPlusThings/tree/master/basic_content/const)。`const` 既是类型系统工具，也影响**链接默认值**。
+
+### 四层用法（面试口径）
+
+1. **对象**：`const T` 不可改；必须初始化。
+2. **形参/引用**：`const T&` 承诺不改实参，并允许绑定临时。
+3. **指针**：分清 `const T*`（所指只读）与 `T* const`（指针本身不可改绑）。
+4. **成员函数**：`const` 成员函数承诺不修改对象的可观察状态（`mutable` 除外）。
+
+### 与 `#define`、跨文件
+
+- 有类型检查、可进调试器的「常量」优先 `const`/`constexpr`，少用宏。
+- 命名空间作用域的 `const` 对象默认**内部链接**；要跨翻译单元共享须显式 `extern const`，且**定义处初始化一次**。
+- 非 `const` 全局默认外部链接，其它文件 `extern` 声明即可——与 `const` 不对称，这是常考点。
+
+```cpp
+// a.cpp
+extern const int kScale = 12; // 定义 + 外部链接
+
+// b.cpp
+extern const int kScale;      // 声明
+```
 
 ## 练习指引
 

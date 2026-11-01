@@ -1,14 +1,15 @@
 ---
 title: 第 7 章：作用域、生命周期与链接
-tags: [cpp, learncpp, cherno, scope, linkage]
+tags: [cpp, learncpp, cherno, scope, linkage, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 7 章：作用域、生命周期与链接
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 7 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -296,6 +297,39 @@ inline constexpr int kMaxPlayers = 8;
 ### 与正文分工
 
 生命周期对比、`extern`、跨 TU 初始化顺序未指定等正文已详述。本节聚焦：**何时用私有链接、何时用类型级共享、何时把全局降级为参数**。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `static` / `extern` 篇。同一个关键字在不同位置讲的是**不同故事**——拆开记。
+
+### `static` 三义
+
+| 位置 | 含义 |
+|------|------|
+| 函数内局部 | 程序寿命；首次经过定义初始化，之后保持 |
+| 命名空间作用域 | 内部链接（现代更推荐匿名命名空间） |
+| 类成员 | 属于类型、对象间共享；数据成员类外定义（C++17 前） |
+
+```cpp
+void tick()
+{
+    static int n = 0; // 只初始化一次
+    ++n;
+}
+
+struct Counter {
+    static int total;     // 声明
+    static void bump() { ++total; }
+};
+int Counter::total = 0;   // 定义（C++17 起可用 inline static）
+```
+
+类内 `static` 数据**不能**靠构造函数给每个对象各初始化一份——因为它根本不属于单个对象。
+
+### `extern` 与语言链接
+
+- `extern` 声明「定义在别处」；与定义搭配完成跨文件共享。
+- `extern "C"` 切换到 C 语言链接（见第 2 章补充），解决名字修饰差异。
 
 ## 练习指引
 

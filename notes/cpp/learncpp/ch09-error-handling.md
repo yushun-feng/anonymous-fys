@@ -1,14 +1,15 @@
 ---
 title: 第 9 章：错误检测与处理
-tags: [cpp, learncpp, errors, testing]
+tags: [cpp, learncpp, errors, testing, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 9 章：错误检测与处理
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 9 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -215,6 +216,33 @@ int classify(int x) {
 8. **`static_assert` 用运行期才知的值**：必须是核心常量表达式。
 9. **异常与错误码混用无规范**：团队需约定边界；本章先建立「失败要显式」的意识，细节见后续异常章。
 10. **覆盖率驱动出无意义测试**：`EXPECT_TRUE(true)` 刷高行覆盖却零价值。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 [`assert` 那些事](https://github.com/Light-City/CPlusPlusThings/tree/master/basic_content/assert)。错误处理章要把**断言**和**可恢复错误**划清界。
+
+### 断言 vs 正常错误路径
+
+| | `assert` | 返回码 / 异常 / `optional` |
+|--|----------|------------------------------|
+| 触发条件 | 程序员认为不可能 | 调用方/环境可能合法地失败 |
+| Release | 常被 `NDEBUG` 去掉 | 必须保留 |
+| 失败后果 | 终止并报位置 | 由调用方决定 |
+
+```cpp
+#include <cassert>
+#include <optional>
+
+std::optional<int> parse_positive(const char* s); // 用户输入：可失败
+
+int divide_checked(int a, int b)
+{
+    assert(b != 0); // 不变量：调用前已保证
+    return a / b;
+}
+```
+
+`static_assert` 把能在编译期判定的契约再提前一档。工具侧：失败信息带文件名与行号——这正是宏展开的价值，也是「断言是宏不是函数」常被追问的原因。
 
 ## 练习指引
 

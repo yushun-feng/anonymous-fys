@@ -1,14 +1,15 @@
 ---
 title: 第 26–28 章：类模板、异常与 I/O
-tags: [cpp, learncpp, cherno, templates, exceptions, io]
+tags: [cpp, learncpp, cherno, templates, exceptions, io, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 26–28 章：类模板、异常与 I/O
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 26–28 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -531,6 +532,33 @@ bool slurpFile(const std::string& path, std::string& out)
 ### 三者交汇
 
 模板库若抛异常，文档写清；I/O 模板（如序列化）要把错误通道设计进接口，而不是只在快乐路径演示。读完合章后，用一次「读写配置失败」走通错误路径，比再抄一个成功案例更有价值。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 C++11 `noexcept`、变参模板概述，以及异常/文件流实战练习方向。
+
+### `noexcept`
+
+- 标记「不抛」有利于移动容器元素、优化路径选择；若实际抛出则调用 `terminate`。
+- 析构、`swap`、移动操作常见 `noexcept`；不确定就不要撒谎。
+
+### 变参模板（印象级）
+
+```cpp
+template<class... Ts>
+void log_all(const Ts&... xs)
+{
+    (std::cout << ... << xs); // C++17 折叠；C++11 则递归剥包
+}
+```
+
+库与转发层常用；业务代码优先现成设施。
+
+### 异常与 I/O
+
+- 异常是非局部退出；只对「调用方必须看见的失败」抛，或按项目规范统一错误类型。
+- 文件/流失败是常态：检查状态位，日志带路径；RAII 管句柄寿命。
+- 仓库 day9/day10 与 key_exercises 里的异常捕获、读写文件题可作对照练习素材。
 
 ## 练习指引
 

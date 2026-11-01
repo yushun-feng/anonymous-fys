@@ -1,14 +1,15 @@
 ---
 title: 第 21 章：运算符重载
-tags: [cpp, learncpp, cherno, operator-overloading]
+tags: [cpp, learncpp, cherno, operator-overloading, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
 # 第 21 章：运算符重载
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 21 章
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -287,6 +288,19 @@ bool operator==(PixelCoord a, PixelCoord b)
 ### `->` 与代理对象
 
 智能指针/迭代器重载 `->` 时，记得它是「找到下一个箭头」的链式规则——正文语法处已述。工程上先保证普通成员函数 API 清晰，再考虑是否值得提供运算符糖。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 实战练习中的运算符重载题（流、自增、强制转换、下标等）。语法学会之后，仓库强调的是**像内建一样用、像内建一样安全**。
+
+### 实战选型
+
+- `operator<<` / `>>` 常做成非成员（必要时 `friend`），左操作数是流。
+- 自增分前置/后置：后置多一个哑元 `int`，通常用前置实现后置并返回旧值副本。
+- 转换运算符考虑 `explicit`，避免一路隐式转换到不想要的类型。
+- `operator[]` 提供 `const` 与非 `const` 两份；代理对象可表达「只读/可写」视图。
+
+把 learncpp 规则练熟后，可挑仓库 `practical_exercises/key_exercises` 里相关题目做对照练习（改写到自己的例子，勿整文件搬进本库）。
 
 ## 练习指引
 

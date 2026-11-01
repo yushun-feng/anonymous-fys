@@ -1,8 +1,8 @@
 ---
 title: 第 22 章：移动语义与智能指针
-tags: [cpp, learncpp, cherno, move, smart-pointers]
+tags: [cpp, learncpp, cherno, move, smart-pointers, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -11,6 +11,7 @@ source: https://learncpp.cn/
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 22 章  
 > 相关：[RAII 与所有权](../raii-and-ownership.md)  
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[智能指针](../cherno/09-smart-pointers.md)、[现代工具与移动](../cherno/15-modern-utilities.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 章节地图
 
@@ -305,6 +306,38 @@ void bind(std::unique_ptr<TextureAtlas> atlas)
 ### 性能旁注
 
 移动不是免费魔法：指针级移动很便宜，但「移动」若仍触发深拷贝（实现拙劣或类型不可移动）就骗了自己。测热点时对比拷贝/移动/就地构造，不要只看关键词。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 RAII / copy-and-swap 惯用法与 C++11 右值/移动示例，以及现代 C++ 课程中的智能指针对照。
+
+### RAII
+
+资源获取即初始化：构造拿资源，析构释资源；栈展开（含异常）时自动清理。`string`/`vector`/`lock_guard`/`unique_ptr` 都是同一思想。
+
+### 移动在解决什么
+
+- 昂贵资源（缓冲、句柄）不该在传递时傻拷贝。
+- `T&&` / `std::move` 把「我不再需要这个源」说给编译器；移动后源处于有效但未指定状态。
+- 返回局部对象优先靠隐式移动/RVO，少手写多余的 `std::move` 回头坑。
+
+### copy-and-swap 赋值
+
+强异常安全的经典写法：按值接收（或局部拷贝）→ `swap` 与 `*this` → 临时带走旧资源。
+
+```cpp
+class Buf {
+public:
+    Buf& operator=(Buf other) noexcept
+    {
+        swap(other);
+        return *this;
+    }
+    void swap(Buf& o) noexcept { /* 交换指针/大小，不抛 */ }
+};
+```
+
+需要自赋值安全、且拷贝可能抛时，这一惯用法特别省心。智能指针选型仍遵循正文：默认 `unique_ptr`，明确共享再用 `shared_ptr`，环用 `weak_ptr` 掐断。
 
 ## 练习指引
 

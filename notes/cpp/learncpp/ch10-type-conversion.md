@@ -1,8 +1,8 @@
 ---
 title: 第 10 章：类型转换、别名与推断
-tags: [cpp, learncpp, cherno, conversion, auto]
+tags: [cpp, learncpp, cherno, conversion, auto, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 10 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[转型](../cherno/14-casting.md)、[`auto`/lambda](../cherno/12-fp-lambdas-namespaces.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -268,6 +269,34 @@ void demo()
 `auto` 减少重复类型名，但会剥掉引用与顶层 `const`。遍历要改元素写 `auto&`；只读写 `const auto&`。正文「auto 漂移」示例已说明 map 拷贝问题——补充口径：**公开 API 返回类型宜写明，模板内部可用 `auto` 减轻噪声**。
 
 类型别名（`using`）提升可读性，但不提供单位安全；真正要防混加，靠强类型包装（如上 `SampleRate`），而不是别名。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 的 `decltype`、`using`（别名）与 C++11 `auto` 相关示例。类型推断要分清：**`auto` 按初始化推导并会衰变；`decltype` 保表达式的精确类型类别**。
+
+### `decltype` 要点
+
+```cpp
+int i = 0;
+int& r = i;
+decltype(i) a = i;     // int
+decltype(r) b = i;     // int&
+decltype((i)) c = i;   // int& —— 额外括号变成左值表达式
+```
+
+- 只查询类型，**不求值**。
+- 常与 `using`/`typedef` 合用：`using Iter = decltype(v.begin());`
+- 可给匿名类型「起个别名再用」：`decltype(anon) other;`
+
+### 别名优先 `using`
+
+```cpp
+using IntVec = std::vector<int>;          // 清晰
+template<class T>
+using Ptr = T*;                           // 别名模板（typedef 做不到同样干净）
+```
+
+`auto` 适合「类型冗长但初始化已说清」；需要保留引用/顶层 cv 或依赖表达式类别时，上 `decltype` / `decltype(auto)`。
 
 ## 练习指引
 

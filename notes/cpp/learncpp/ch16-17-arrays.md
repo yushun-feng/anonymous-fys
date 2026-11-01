@@ -1,8 +1,8 @@
 ---
 title: 第 16–17 章：vector 与 array
-tags: [cpp, learncpp, cherno, vector, array]
+tags: [cpp, learncpp, cherno, vector, array, cpp-things]
 topic: cpp
-updated: 2026-10-31
+updated: 2026-11-01
 source: https://learncpp.cn/
 ---
 
@@ -10,6 +10,7 @@ source: https://learncpp.cn/
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 16–17 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[数组与字符串](../cherno/06-arrays-strings.md)、[拷贝与 vector](../cherno/10-copy-vector.md)。
+> 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 
 ## 小节地图
 
@@ -360,6 +361,18 @@ ids.push_back(4);              // 可能重分配
 `std::string` 可改、可拥有；字面量只读。与数组章节交叉处：不要假设「拿到 `data()` 就能永远当稳定 C 字符串缓冲」——容量变化可能搬家。深拷贝 vs 共享缓冲的直觉对照 Cherno 数组/拷贝笔记；LearnCpp 正文已有容器用法时，本节只强调**连续性与失效规则**。
 
 短字符串常走 SSO（小字符串优化），长串才堆分配——附录/性能视频可回看，但正确性优先于「避开堆」的臆测。
+
+## 《C++那些事》视角补充
+
+要点改写自 [https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) 实战与 STL 源码导读中的数组/`vector` 观察。正文已讲 `std::array`/`vector`/C 数组——这里补**连续性与容量**口径。
+
+### 连续内存意味着什么
+
+- 下标 `a[i]` 本质是起点 + 偏移；缓存友好，但也要求元素类型可平凡搬迁或正确移动。
+- `vector` 增长可能重分配 → 旧指针/迭代器/引用失效；先 `reserve` 再批量 `push_back` 是实战习惯。
+- C 数组传参会退化成指针，**丢掉长度**——接口优先 `span`/`array`/`vector`+大小。
+
+深入 `vector` 扩容策略可对照仓库 `src_analysis/stl/vector.md`（阅读源码剖析，不必拷进本库）。
 
 ## 练习指引
 
