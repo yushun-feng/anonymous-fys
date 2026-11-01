@@ -34,7 +34,7 @@ order: 0
 | 章 | 主题 | 本库笔记 | 主要对照 |
 |----|------|----------|----------|
 | — | 路线与地图 | [00-roadmap](./00-roadmap.md) | 全书导航 |
-| 1 | 图形管线与成像基础 | [ch01](./ch01-graphics-pipeline.md) | FoCG：成像/光栅化概览；LearnOpenGL：Getting started / Hello Triangle 背景 |
+| 1 | 图形管线与成像基础（已展开） | [ch01](./ch01-graphics-pipeline.md) | FoCG：成像/光栅化/可见性；LearnOpenGL：OpenGL / Hello Triangle |
 | 2 | 向量、矩阵与变换 | [ch02](./ch02-vectors-transforms.md) | FoCG：线性代数与变换；LearnOpenGL：Transformations |
 | 3 | 着色器与 OpenGL 基础 | [ch03](./ch03-shaders-opengl-basics.md) | LearnOpenGL：Shaders / Hello Triangle；FoCG：可编程阶段角色 |
 | ※ | PBR / BRDF 速览 | [pbr-brdf](../pbr-brdf-overview.md) | 进阶专题（独立短文） |
