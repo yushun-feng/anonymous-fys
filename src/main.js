@@ -7,6 +7,7 @@ import {
   bindPlaygroundChrome,
   bindCodeBlockActions,
 } from './playground.js';
+import { mountPersonalNotes } from './personal-notes.js';
 import { startVisitLogging } from './visit-log.js';
 
 const TOPICS = ['cpp', 'graphics', 'gpu'];
@@ -26,6 +27,8 @@ let shaderHandle = null;
 let shaderMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
+/** Active personal-notes panel; disposed on every remount / navigate-away. */
+let personalNotesHandle = null;
 
 function disposePagoda() {
   pagodaMountGen += 1;
@@ -37,6 +40,11 @@ function disposeShader() {
   shaderMountGen += 1;
   shaderHandle?.dispose();
   shaderHandle = null;
+}
+
+function disposePersonalNotes() {
+  personalNotesHandle?.dispose();
+  personalNotesHandle = null;
 }
 
 function parseRoute() {
@@ -186,6 +194,7 @@ function renderNote(id) {
         </p>
       </header>
       <div class="markdown-body">${html}</div>
+      <div class="personal-notes-slot" data-personal-notes-mount></div>
     </article>
   `);
 }
@@ -300,6 +309,7 @@ function mountContent() {
 
   disposePagoda();
   disposeShader();
+  disposePersonalNotes();
 
   const route = parseRoute();
   // Normalize legacy showcase hashes → #/pagoda.
@@ -312,6 +322,11 @@ function mountContent() {
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
+    const note = getNoteById(route.id);
+    const slot = browse.querySelector('[data-personal-notes-mount]');
+    if (note && slot) {
+      personalNotesHandle = mountPersonalNotes(/** @type {HTMLElement} */ (slot), note);
+    }
   } else if (route.name === 'pagoda') {
     browse.innerHTML = renderPagodaPage();
     mountPagodaIfPresent(browse);

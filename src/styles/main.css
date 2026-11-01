@@ -929,6 +929,113 @@ code {
   margin-top: 1.5rem;
 }
 
+.personal-notes-slot {
+  margin-top: 2.5rem;
+}
+
+.personal-notes {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.personal-notes__header {
+  margin-bottom: 0.85rem;
+}
+
+.personal-notes__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.personal-notes__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.personal-notes__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.personal-notes__btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.personal-notes__btn:hover {
+  border-color: var(--accent);
+  background: #1b2530;
+}
+
+.personal-notes__btn--ghost {
+  color: var(--muted);
+}
+
+.personal-notes__status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.personal-notes__status[data-kind='ok'] {
+  color: #7dcea0;
+}
+
+.personal-notes__status[data-kind='err'] {
+  color: #e07a7a;
+}
+
+.personal-notes__status[data-kind='pending'] {
+  color: var(--muted);
+}
+
+.personal-notes__label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.personal-notes__editor {
+  display: block;
+  width: 100%;
+  min-height: 12rem;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.personal-notes__editor:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.personal-notes__editor::placeholder {
+  color: #6b7785;
+}
+
 .markdown-body > *:first-child {
   margin-top: 0;
 }
