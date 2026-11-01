@@ -1154,6 +1154,15 @@ code {
   font-size: 1.3rem;
 }
 
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0 1.25rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .markdown-body p,
 .markdown-body ul,
 .markdown-body ol {
