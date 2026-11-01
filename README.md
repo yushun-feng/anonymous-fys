@@ -1,5 +1,8 @@
 # anonymous-fys
 
+<<<<<<< HEAD
+公开的 **C++ / 图形学 / GPU** 技术笔记仓库。笔记以 Markdown 写在 [`notes/`](./notes/)，静态站只负责浏览。
+=======
 公开的 **C++ / 图形学 / GPU** 技术笔记仓库（Markdown 为正文，静态站仅供浏览）。
 
 ## 原则
@@ -102,3 +105,4 @@ package.json
 首页按 **topic / tag** 列出笔记；详情页渲染 Markdown，并对 `cpp` / `glsl` / `hlsl` 等做代码高亮。示例笔记仅为通用技术占位，不含个人事务内容。
 
 站点另提供 **应县木塔** 三维展台（Three.js）：加载 [`huangbai-AI/yingxian-pagoda`](https://github.com/huangbai-AI/yingxian-pagoda) 的网页模型 `yingxian-v20.glb`（科普重建，非测绘），首页有压缩预览，完整页路由为 `#/pagoda`。支持拖拽旋转、自动缓转与滚轮/捏合缩放；无 WebGL 时显示降级提示而不影响笔记浏览。
+>>>>>>> origin/main
