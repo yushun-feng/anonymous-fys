@@ -9,10 +9,11 @@ notes/
 ├── CONVENTIONS.md          # 本约定
 ├── cpp/                    # C++ 语言与工程（learncpp/、cherno/ 等系列）
 ├── graphics/               # 图形学（foundation/ 课程向 + 根目录专题短文）
-└── gpu/                    # GPU / 并行计算 / API
+├── gpu/                    # GPU / 并行计算 / API
+└── linux/                  # Linux / 系统知识（内存布局、工具链与防护等）
 ```
 
-- 每个主题一个文件夹：`cpp/`、`graphics/`、`gpu/`。
+- 每个主题一个文件夹：`cpp/`、`graphics/`、`gpu/`、`linux/`。
 - 笔记为 Markdown 文件（`.md`），文件名使用短横线小写，例如 `raii-basics.md`。
 - 系列课程可再建子目录（如 `cpp/learncpp/`、`graphics/foundation/`）；浏览页按系列排序。
 - 不要把生成物、截图缓存或站点构建产物放进 `notes/`。
@@ -25,7 +26,7 @@ notes/
 ---
 title: 笔记标题
 tags: [tag-a, tag-b]
-topic: cpp          # 必须是 cpp | graphics | gpu，与所在文件夹一致
+topic: cpp          # 必须是 cpp | graphics | gpu | linux，与所在文件夹一致
 updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 ---
 ```
@@ -36,7 +37,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 |------|------|------|
 | `title` | 是 | 显示标题 |
 | `tags` | 是 | 字符串数组；浏览页按 tag 筛选 |
-| `topic` | 是 | `cpp` / `graphics` / `gpu`，须与父文件夹名一致 |
+| `topic` | 是 | `cpp` / `graphics` / `gpu` / `linux`，须与父文件夹名一致 |
 | `updated` | 是 | 最后更新日期 |
 | `source` | 否 | 外部来源 URL（教材章节、YouTube 视频等）；有明确出处时建议填写 |
 | `order` | 否 | 浏览列表中的数字排序键；省略时由文件名推断（`ch12-...`、`00-...` 等） |
@@ -50,6 +51,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 - **LearnCpp（`cpp/learncpp/`）**：写**完整、专业的中文学习笔记**，覆盖对应教程章节——概念讲解、关键语法/API、可运行示例、易错点、练习指引。允许较长的教材式篇幅；用自己的话组织，勿逐字照搬源站。与 The Cherno C++ 视频重叠的主题，在章内用「**Cherno 视角补充**」融入工程直觉（改写，不照抄公开笔记仓库）。与《C++那些事》（[Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings) / [在线站](https://light-city.github.io/stories_things/)）重叠的主题，在章内用「**《C++那些事》视角补充**」融入面试/深挖口径（改写织入，**不**另建镜像目录树、不整篇搬迁）。
 - **Cherno（`cpp/cherno/`）**：**剧集索引 / 薄交叉链接**——指向播放列表与 LearnCpp 落点章，避免与 LearnCpp 长文重复；详细讲解以 LearnCpp 为准。
 - **图形学基础（`graphics/foundation/`）**：以 [LearnOpenGL](https://learnopengl.com/) 与 *Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）为主线的**完整中文学习笔记**——概念、坐标/矩阵约定、OpenGL/GLSL 要点、易错、练习指引；理论（FoCG）与实践（LearnOpenGL）在章内交织改写，**勿**整章照搬教材或教程原文。专题速览（如 PBR）可放在 `graphics/` 根下，并与 foundation 路线互链。
+- **Linux / 系统（`linux/`）**：用户态与相关系统知识的**中文速查与心智模型**（进程虚存布局、栈帧、寄存器直觉、防护标志词典等）。安全相关只写结构与防护动机，**不**写可复现利用步骤。优先配 Mermaid 结构图；可与 `cpp/` 生命周期/堆笔记互链。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。
 - **流程图 / 结构图**：优先用 ` ```mermaid ` 代码块（浏览页会渲染）；若环境无法渲染，可辅以 ASCII。图形学笔记（尤其管线章）宜配阶段流程图。

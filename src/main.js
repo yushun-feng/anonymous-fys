@@ -17,11 +17,12 @@ let graphicsLabHandle = null;
 /** @type {'playground' | 'graphics-lab'} */
 let sidePanelMode = 'playground';
 
-const TOPICS = ['cpp', 'graphics', 'gpu'];
+const TOPICS = ['cpp', 'graphics', 'gpu', 'linux'];
 const TOPIC_LABELS = {
   cpp: 'C++',
   graphics: 'Graphics',
   gpu: 'GPU',
+  linux: 'Linux',
 };
 
 /** Active Three.js Yingxian pagoda instance; disposed on every remount. */
