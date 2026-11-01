@@ -12,6 +12,12 @@ order: 2
 > **默认模型**：常见 Linux 本地文件系统上的 **POSIX 权限**（owner / group / other）；ACL、SELinux、AppArmor、umask 细节另见扩展节。  
 > **相关**：[本主题路线图](./00-roadmap.md) · [进程内存分段速查](./memory-segmentation-cheatsheet.md)
 
+## 参考图
+
+![Linux 文件权限速查参考图](notes-assets/linux/file-permissions-cheatsheet.jpg)
+
+上图为手写/整理的权限 cheat sheet 原图（站点内嵌）；下文用表格与 Mermaid 做可检索的结构化对照。
+
 ## 一页总览
 
 ```mermaid
