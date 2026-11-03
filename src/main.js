@@ -37,6 +37,10 @@ let shaderMountGen = 0;
 let protocolHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let protocolMountGen = 0;
+/** Active Linux Systems Explorer instance; disposed on every remount. */
+let linuxSysHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let linuxSysMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -58,6 +62,12 @@ function disposeProtocol() {
   protocolMountGen += 1;
   protocolHandle?.dispose();
   protocolHandle = null;
+}
+
+function disposeLinuxSys() {
+  linuxSysMountGen += 1;
+  linuxSysHandle?.dispose();
+  linuxSysHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -82,6 +92,22 @@ function parseRoute() {
   if (pathPart === 'protocols' || pathPart === 'protocol') {
     return { name: 'protocols' };
   }
+  if (
+    pathPart === 'linux' ||
+    pathPart === 'boot' ||
+    pathPart === 'fs' ||
+    pathPart === 'perm' ||
+    pathPart === 'perms' ||
+    pathPart === 'permissions'
+  ) {
+    /** @type {'boot'|'fs'|'perm'} */
+    let domain = 'boot';
+    if (pathPart === 'fs') domain = 'fs';
+    else if (pathPart === 'perm' || pathPart === 'perms' || pathPart === 'permissions') {
+      domain = 'perm';
+    }
+    return { name: 'linux', domain };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -97,6 +123,7 @@ function layout(content) {
         <a href="#/pagoda">木塔</a>
         <a href="#/shader">Shader</a>
         <a href="#/protocols">协议</a>
+        <a href="#/linux">Linux</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
     </header>
@@ -163,6 +190,8 @@ function renderHome() {
     <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
     <div class="proto-home-slot" data-protocol-mount data-protocol-compact></div>
     <p class="proto-home-link"><a href="#/protocols">打开完整协议探索 →</a></p>
+    <div class="linux-home-slot" data-linux-sys-mount data-linux-sys-compact></div>
+    <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -201,6 +230,15 @@ function renderProtocolsPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>协议探索</span></nav>
     <div class="proto-page-slot site-main-breakout" data-protocol-mount></div>
     <p class="proto-credit">步进动画 + 报文表，覆盖 HTTP/HTTPS、TCP、UDP、IP、DNS、DHCP、ICMP、SMTP、POP3、IMAP、FTP、SSH、TLS 等；中文 UI。原创实现，非第三方嵌入。</p>
+  `);
+}
+
+function renderLinuxSysPage(domain = 'boot') {
+  const labels = { boot: '系统启动', fs: '目录结构', perm: '权限设置' };
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>Linux 系统探索</span>${labels[domain] ? ` / <span>${labels[domain]}</span>` : ''}</nav>
+    <div class="linux-page-slot site-main-breakout" data-linux-sys-mount data-linux-domain="${escapeHtml(domain)}"></div>
+    <p class="linux-credit">交互演示：系统启动流水线、FHS 目录结构、文件权限（rwx / 特殊位 / ACL 速览）。流程模型 + 时序图 + 事件表；中文 UI。</p>
   `);
 }
 
@@ -310,6 +348,27 @@ async function mountProtocolIfPresent(root) {
   }
 }
 
+async function mountLinuxSysIfPresent(root) {
+  const slot = root.querySelector('[data-linux-sys-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-linux-sys-compact');
+  const domainAttr = slot.getAttribute('data-linux-domain') || 'boot';
+  const domain =
+    domainAttr === 'fs' || domainAttr === 'perm' || domainAttr === 'boot'
+      ? domainAttr
+      : 'boot';
+  const gen = linuxSysMountGen;
+  try {
+    const { mountLinuxSysExplorer } = await import('./linux-sys-explorer.js');
+    if (gen !== linuxSysMountGen || !slot.isConnected) return;
+    linuxSysHandle = mountLinuxSysExplorer(slot, { compact, domain });
+  } catch {
+    if (gen !== linuxSysMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="linux-sys__fallback">Linux 系统探索模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -383,6 +442,7 @@ function mountContent() {
   disposePagoda();
   disposeShader();
   disposeProtocol();
+  disposeLinuxSys();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -396,7 +456,6 @@ function mountContent() {
     window.location.replace(`${window.location.pathname}${window.location.search}#/protocols`);
     return;
   }
-
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
@@ -419,6 +478,10 @@ function mountContent() {
     browse.innerHTML = renderProtocolsPage();
     void syncSidePanel(null);
     mountProtocolIfPresent(browse);
+  } else if (route.name === 'linux') {
+    browse.innerHTML = renderLinuxSysPage(route.domain || 'boot');
+    void syncSidePanel(null);
+    mountLinuxSysIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -426,6 +489,7 @@ function mountContent() {
     mountPagodaIfPresent(browse);
     mountShaderIfPresent(browse);
     mountProtocolIfPresent(browse);
+    mountLinuxSysIfPresent(browse);
   }
 }
 
