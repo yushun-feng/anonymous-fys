@@ -1542,6 +1542,45 @@ export function mountMemoryExplorer(container, options = {}) {
         <div class="mem-layout__stats-chain"><span>调用链</span><strong>${escapeHtml(callChain)}</strong></div>
       </div>
 
+      <details class="mem-layout__glossary" open>
+        <summary>小白概念速查（SP / FP·RBP / 栈帧…）</summary>
+        <dl class="mem-layout__glossary-list">
+          <div>
+            <dt>栈（Stack）</dt>
+            <dd>函数调用时临时用的内存区。本页<strong>高地址在上</strong>，栈向<strong>低地址</strong>生长（↓）。紫色块 = 一次调用的<strong>栈帧</strong>。</dd>
+          </div>
+          <div>
+            <dt>SP（Stack Pointer，栈指针）</dt>
+            <dd>CPU 寄存器（x86-64 上常叫 <code>RSP</code>），记下「栈现在用到哪」——相当于<strong>当前栈顶地址</strong>。调用/加局部变量 → SP 变小；返回 → SP 变大。顶部摘要里的 SP 就是它。</dd>
+          </div>
+          <div>
+            <dt>FP / RBP（帧指针）</dt>
+            <dd><strong>FP</strong> = Frame Pointer。在 x86-64 上这个寄存器叫 <code>RBP</code>（32 位时代是 <code>EBP</code>）。它常固定指着<strong>当前帧的一个基准位置</strong>，方便用「相对 RBP 的偏移」找局部变量和参数。槽位表里的 <code>saved FP</code> = 调用时把<strong>上一帧的 RBP</strong>存起来，返回时好恢复。</dd>
+          </div>
+          <div>
+            <dt>SP 和 RBP 差在哪？</dt>
+            <dd><strong>SP 一直跟着栈顶动</strong>（push/pop 就变）；<strong>RBP 在一帧内往往相对固定</strong>，当「这一帧的尺子原点」。有的编译器优化会省掉 RBP（frame pointer omission），教学上仍画出 saved FP 帮助建立心智模型。</dd>
+          </div>
+          <div>
+            <dt>retaddr（返回地址）</dt>
+            <dd>调用函数时压进栈的「回去接着执行哪条指令」。函数 <code>return</code> 时跳回这里。属于<strong>控制信息</strong>，不是你的业务变量。</dd>
+          </div>
+          <div>
+            <dt>自动变量</dt>
+            <dd>写在函数里的普通局部变量（默认寿命）。住在<strong>当前栈帧</strong>里，函数返回帧弹出就失效。加局部变量 = 帧变厚、SP 下移，<strong>不会</strong>多出一块新紫色（那要再调用别的函数）。</dd>
+          </div>
+          <div>
+            <dt>堆（Heap）</dt>
+            <dd><code>new</code> / <code>malloc</code> 拿到的内存。向<strong>高地址</strong>涨（↑）。寿命由你释放（或智能指针）决定，不随函数返回自动消失。</dd>
+          </div>
+          <div>
+            <dt>静态区 Data / BSS</dt>
+            <dd>全局 / <code>static</code> 变量。Data = 有初值；BSS = 零初始化。寿命 ≈ 整个程序，不在栈上。</dd>
+          </div>
+        </dl>
+        <p class="mem-layout__glossary-tip">提示：先看中间紫色帧和顶部 SP，再点帧打开下方「帧内槽位」对照 retaddr / saved FP / 自动变量。</p>
+      </details>
+
       <div class="mem-layout__grid">
         <aside class="mem-layout__panel mem-layout__panel--controls" aria-label="操作">
           <p class="mem-layout__panel-hint mem-layout__panel-hint--top">左侧栏内滚动；中间布局保持可见。</p>

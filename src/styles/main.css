@@ -3432,6 +3432,45 @@ code {
 .mem-layout__stats-chain { grid-column: 1 / -1; }
 .mem-layout__stats-chain strong { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 550; color: var(--ml-stack); }
 
+.mem-layout__glossary {
+  margin: 0 0 0.9rem; padding: 0.35rem 0.85rem 0.75rem;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: rgba(11, 16, 21, 0.45);
+}
+.mem-layout__glossary > summary {
+  cursor: pointer; list-style: none; padding: 0.45rem 0;
+  font-size: 0.9rem; font-weight: 650; user-select: none;
+}
+.mem-layout__glossary > summary::-webkit-details-marker { display: none; }
+.mem-layout__glossary > summary::before {
+  content: '▸'; display: inline-block; margin-right: 0.4rem; color: var(--ml-warn);
+  transition: transform 0.15s ease;
+}
+.mem-layout__glossary[open] > summary::before { transform: rotate(90deg); }
+.mem-layout__glossary-list {
+  margin: 0.25rem 0 0; display: grid; gap: 0.55rem;
+}
+@media (min-width: 900px) {
+  .mem-layout__glossary-list { grid-template-columns: 1fr 1fr; gap: 0.65rem 1.1rem; }
+}
+.mem-layout__glossary-list > div {
+  padding: 0.45rem 0.55rem; border-left: 3px solid rgba(230, 184, 77, 0.45);
+  background: rgba(23, 30, 38, 0.55); border-radius: 0 6px 6px 0;
+}
+.mem-layout__glossary-list dt {
+  margin: 0 0 0.2rem; font-size: 0.84rem; font-weight: 650; color: var(--ml-warn);
+  font-family: var(--font-mono);
+}
+.mem-layout__glossary-list dd {
+  margin: 0; font-size: 0.82rem; line-height: 1.45; color: var(--text);
+}
+.mem-layout__glossary-list code {
+  font-size: 0.78rem; color: #d7c2ea;
+}
+.mem-layout__glossary-tip {
+  margin: 0.75rem 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.4;
+}
+
 .mem-layout__grid {
   display: grid; gap: 0.85rem; margin-bottom: 1rem;
 }
