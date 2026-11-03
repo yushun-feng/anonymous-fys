@@ -262,7 +262,7 @@ function renderMemoryPage() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>内存布局沙箱</span></nav>
     <div class="memory-page-slot site-main-breakout" data-memory-mount></div>
-    <p class="memory-credit">可交互虚存布局：栈↓ 压栈/返回、堆↑ 分配/释放、点选查看详情；内置调用链与相向生长演示。教学示意，中文 UI。</p>
+    <p class="memory-credit">常用内存操作：调用/静态/自动变量、结构体对齐与 packed、new/move/delete，以及 10MiB 缓冲稀疏写与 memmove/memset/memcpy。教学示意，中文 UI。</p>
   `);
 }
 
