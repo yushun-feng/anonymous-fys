@@ -526,6 +526,8 @@ function mountContent() {
   } else if (route.name === 'memory') {
     browse.innerHTML = renderMemoryPage();
     void syncSidePanel(null);
+    // Give the VAS more horizontal room; playground can be re-opened via fab.
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountMemoryIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
