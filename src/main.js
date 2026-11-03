@@ -33,6 +33,10 @@ let pagodaMountGen = 0;
 let shaderHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let shaderMountGen = 0;
+/** Active Protocol Explorer instance; disposed on every remount. */
+let protocolHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let protocolMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -48,6 +52,12 @@ function disposeShader() {
   shaderMountGen += 1;
   shaderHandle?.dispose();
   shaderHandle = null;
+}
+
+function disposeProtocol() {
+  protocolMountGen += 1;
+  protocolHandle?.dispose();
+  protocolHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -69,6 +79,9 @@ function parseRoute() {
     return { name: 'pagoda' };
   }
   if (pathPart === 'shader') return { name: 'shader' };
+  if (pathPart === 'protocols' || pathPart === 'protocol') {
+    return { name: 'protocols' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -83,8 +96,9 @@ function layout(content) {
         <a href="#/">笔记</a>
         <a href="#/pagoda">木塔</a>
         <a href="#/shader">Shader</a>
+        <a href="#/protocols">协议</a>
       </nav>
-      <p class="tagline">C++ · Graphics · GPU — 公开技术笔记浏览</p>
+      <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
     <footer class="site-footer">
@@ -147,6 +161,8 @@ function renderHome() {
     <p class="pagoda-home-link"><a href="#/pagoda">打开完整应县木塔展台 →</a></p>
     <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
     <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
+    <div class="proto-home-slot" data-protocol-mount data-protocol-compact></div>
+    <p class="proto-home-link"><a href="#/protocols">打开完整协议探索 →</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -177,6 +193,14 @@ function renderShaderPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>Shader Toy</span></nav>
     <div class="shader-page-slot" data-shader-mount></div>
     <p class="shader-credit">原生 WebGL 全屏四边形 + 片段着色器；CodeMirror 编辑 GLSL，应用/防抖自动重编译，并保留预设与 uniform 滑条。非 Shadertoy.com 嵌入。</p>
+  `);
+}
+
+function renderProtocolsPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>协议探索</span></nav>
+    <div class="proto-page-slot site-main-breakout" data-protocol-mount></div>
+    <p class="proto-credit">步进动画 + 报文表，覆盖 HTTP/HTTPS、TCP、UDP、IP、DNS、DHCP、ICMP、SMTP、POP3、IMAP、FTP、SSH、TLS 等；中文 UI。原创实现，非第三方嵌入。</p>
   `);
 }
 
@@ -270,6 +294,22 @@ async function mountShaderIfPresent(root) {
   }
 }
 
+async function mountProtocolIfPresent(root) {
+  const slot = root.querySelector('[data-protocol-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-protocol-compact');
+  const gen = protocolMountGen;
+  try {
+    const { mountProtocolExplorer } = await import('./protocol-explorer.js');
+    if (gen !== protocolMountGen || !slot.isConnected) return;
+    protocolHandle = mountProtocolExplorer(slot, { compact });
+  } catch {
+    if (gen !== protocolMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="proto-explorer__fallback">协议探索模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -342,6 +382,7 @@ function mountContent() {
 
   disposePagoda();
   disposeShader();
+  disposeProtocol();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -349,6 +390,10 @@ function mountContent() {
   const rawPath = window.location.hash.replace(/^#/, '').split('?')[0].replace(/^\//, '');
   if (rawPath === 'portal' || rawPath === 'solar' || rawPath === 'moon') {
     window.location.replace(`${window.location.pathname}${window.location.search}#/pagoda`);
+    return;
+  }
+  if (rawPath === 'protocol') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/protocols`);
     return;
   }
 
@@ -370,12 +415,17 @@ function mountContent() {
     browse.innerHTML = renderShaderPage();
     void syncSidePanel(null);
     mountShaderIfPresent(browse);
+  } else if (route.name === 'protocols') {
+    browse.innerHTML = renderProtocolsPage();
+    void syncSidePanel(null);
+    mountProtocolIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
     bindHomeFilters(browse);
     mountPagodaIfPresent(browse);
     mountShaderIfPresent(browse);
+    mountProtocolIfPresent(browse);
   }
 }
 
