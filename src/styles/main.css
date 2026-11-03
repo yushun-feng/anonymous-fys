@@ -3372,7 +3372,7 @@ code {
 /* ——— Memory Layout Sandbox (interactive VAS) ——— */
 .site-main:has(.memory-page-slot),
 .site-main:has(.mem-layout:not(.mem-layout--compact)) {
-  max-width: min(1200px, 100%);
+  max-width: min(1320px, 100%);
 }
 
 .mem-layout {
@@ -3437,7 +3437,7 @@ code {
 }
 @media (min-width: 980px) {
   .mem-layout__grid {
-    grid-template-columns: 200px minmax(0, 1fr) 220px;
+    grid-template-columns: 200px minmax(0, 1fr) minmax(280px, 340px);
     align-items: start;
   }
 }
@@ -3445,6 +3445,11 @@ code {
 .mem-layout__panel {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 0.75rem; background: var(--code-bg);
+}
+.mem-layout__panel--detail {
+  position: sticky; top: 0.75rem;
+  max-height: calc(100vh - 1.5rem);
+  overflow: auto;
 }
 .mem-layout__panel-title {
   margin: 0.65rem 0 0.45rem; font-size: 0.78rem; letter-spacing: 0.06em;
@@ -3625,14 +3630,19 @@ code {
 .mem-layout__locals li { margin: 0.15rem 0; }
 .mem-layout__locals span { color: var(--muted); margin-left: 0.35rem; font-size: 0.75rem; }
 .mem-layout__slot-wrap {
-  overflow: auto; max-height: 180px; border: 1px solid var(--border); border-radius: 6px;
+  overflow: auto;
+  max-height: min(52vh, 440px);
+  min-height: 220px;
+  border: 1px solid var(--border); border-radius: 6px;
 }
 .mem-layout__slots {
-  width: 100%; border-collapse: collapse; font-size: 0.72rem; font-family: var(--font-mono);
+  width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: var(--font-mono);
 }
 .mem-layout__slots th, .mem-layout__slots td {
-  padding: 0.28rem 0.4rem; border-bottom: 1px solid var(--border); text-align: left;
+  padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left;
+  white-space: nowrap;
 }
+.mem-layout__slots td:nth-child(2) { white-space: normal; min-width: 6rem; }
 .mem-layout__slots th { color: var(--muted); font-weight: 550; background: rgba(23, 30, 38, 0.85); }
 .mem-layout__slots tr.is-meta td:nth-child(2) { color: var(--ml-warn); }
 .mem-layout__slots tr.is-local td:nth-child(2),
