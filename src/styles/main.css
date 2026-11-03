@@ -4023,6 +4023,18 @@ code {
 .xf-explorer__formula .is-left { color: var(--xf-left); }
 .xf-explorer__formula .is-right { color: var(--xf-right); }
 
+.xf-explorer__dets {
+  margin: 0 0 0.65rem; font-size: 0.78rem; font-family: var(--font-mono);
+  line-height: 1.45; padding: 0.4rem 0.5rem; border-radius: 6px;
+  background: rgba(230, 184, 77, 0.08); border: 1px solid rgba(230, 184, 77, 0.25);
+}
+.xf-explorer__dets .is-left { color: var(--xf-left); }
+.xf-explorer__dets .is-right { color: var(--xf-right); }
+.xf-explorer__det-tip {
+  display: inline-block; margin-top: 0.2rem; font-family: var(--font-sans);
+  font-size: 0.72rem; color: var(--muted);
+}
+
 .xf-explorer__mat-label {
   margin: 0.55rem 0 0.25rem; font-size: 0.72rem; color: var(--muted);
   letter-spacing: 0.04em; text-transform: uppercase;

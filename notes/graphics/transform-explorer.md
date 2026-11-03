@@ -10,7 +10,7 @@ order: 12
 
 交互页：[打开变换沙箱 `#/transform`](#/transform)
 
-配合阅读：[第 2 章 向量、矩阵与变换](./foundation/ch02-vectors-transforms.md)
+配合阅读：[第 2 章 向量、矩阵与变换](./foundation/ch02-vectors-transforms.md) · [线性代数的几何意义导读](./linalg-geometry-map.md)
 
 ## 这一页在练什么
 
@@ -27,6 +27,7 @@ order: 12
 3. 点「③ 对比平移 +X」：左乘走世界 \(+X\)，右乘走局部红轴——分叉最明显。
 4. 「先 R 后 T / 先 T 后 R」把左右乘落到 TRS 顺序特例。
 5. 拧滑条改 \(A\)，需要时点「采用左乘 / 采用右乘」写入当前 \(M\)。
+6. 「④ 非均匀缩放看 det」「⑤ 镜像翻转」对照行列式的体积/朝向几何意义（见[导读](./linalg-geometry-map.md)；推荐纸书《线性代数的几何意义》作延伸）。
 
 ## 和代码的对应
 
