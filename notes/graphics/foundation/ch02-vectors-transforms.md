@@ -26,7 +26,7 @@ order: 2
 | GLM 风格示意 | 与 LearnOpenGL 一致的用法 |
 | 流程结构图 | MVP / 坐标空间链；复合变换顺序 |
 
-相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md) · [路线图](./00-roadmap.md)
+相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md) · [路线图](./00-roadmap.md) · [变换沙箱（左乘/右乘）](../transform-explorer.md)
 
 ## 核心概念
 
@@ -206,6 +206,7 @@ glm::mat4 projection = glm::perspective(
 
 ## 练习指引
 
+- 打开站内 [变换沙箱](../transform-explorer.md)（`#/transform`）：同一增量 \(A\) 对比左乘 \(A\cdot M\)（世界系）与右乘 \(M\cdot A\)（物体系）；建议先「歪尖端」再对比平移。
 - 手算：点 \((1,0,0)\) 先绕 \(Z\) 转 \(90^\circ\) 再平移 \((0,2,0)\)；再反过来算一遍，确认结果不同。
 - 用 LearnOpenGL Transformations 练习：让箱子随时间旋转；再加入 `perspective` 与简单 `lookAt`，移动「相机」观察同一模型矩阵。
 - 在 VS 里分别只乘 `model`、`view*model`、完整 MVP，观察物体如何逐步「进入」相机与透视。

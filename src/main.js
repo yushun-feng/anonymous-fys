@@ -45,6 +45,10 @@ let linuxSysMountGen = 0;
 let memoryHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let memoryMountGen = 0;
+/** Active Transform Explorer instance; disposed on every remount. */
+let transformHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let transformMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -78,6 +82,12 @@ function disposeMemory() {
   memoryMountGen += 1;
   memoryHandle?.dispose();
   memoryHandle = null;
+}
+
+function disposeTransform() {
+  transformMountGen += 1;
+  transformHandle?.dispose();
+  transformHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -121,6 +131,9 @@ function parseRoute() {
   if (pathPart === 'memory' || pathPart === 'mem') {
     return { name: 'memory' };
   }
+  if (pathPart === 'transform' || pathPart === 'math' || pathPart === 'linalg') {
+    return { name: 'transform' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -138,6 +151,7 @@ function layout(content) {
         <a href="#/protocols">协议</a>
         <a href="#/linux">Linux</a>
         <a href="#/memory">内存</a>
+        <a href="#/transform">变换</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
     </header>
@@ -208,6 +222,8 @@ function renderHome() {
     <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
     <div class="memory-home-slot" data-memory-mount data-memory-compact></div>
     <p class="memory-home-link"><a href="#/memory">打开内存布局沙箱（栈 / 堆）→</a></p>
+    <div class="transform-home-slot" data-transform-mount data-transform-compact></div>
+    <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -263,6 +279,14 @@ function renderMemoryPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>内存布局沙箱</span></nav>
     <div class="memory-page-slot site-main-breakout" data-memory-mount></div>
     <p class="memory-credit">常用内存操作：调用/静态/自动变量、结构体对齐与 packed、new/move/delete，以及 10MiB 缓冲稀疏写与 memmove/memset/memcpy。教学示意，中文 UI。</p>
+  `);
+}
+
+function renderTransformPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>变换沙箱</span></nav>
+    <div class="transform-page-slot site-main-breakout" data-transform-mount></div>
+    <p class="transform-credit">列向量约定下演示 TRS 与左乘/右乘（世界系 vs 物体系）；定向飞镖看朝向。对接笔记 ch02。</p>
   `);
 }
 
@@ -409,6 +433,22 @@ async function mountMemoryIfPresent(root) {
   }
 }
 
+async function mountTransformIfPresent(root) {
+  const slot = root.querySelector('[data-transform-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-transform-compact');
+  const gen = transformMountGen;
+  try {
+    const { mountTransformExplorer } = await import('./transform-explorer.js');
+    if (gen !== transformMountGen || !slot.isConnected) return;
+    transformHandle = mountTransformExplorer(slot, { compact });
+  } catch {
+    if (gen !== transformMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="xf-explorer__credit">变换沙箱加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -484,6 +524,7 @@ function mountContent() {
   disposeProtocol();
   disposeLinuxSys();
   disposeMemory();
+  disposeTransform();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -495,6 +536,10 @@ function mountContent() {
   }
   if (rawPath === 'protocol') {
     window.location.replace(`${window.location.pathname}${window.location.search}#/protocols`);
+    return;
+  }
+  if (rawPath === 'math' || rawPath === 'linalg') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/transform`);
     return;
   }
   if (route.name === 'note') {
@@ -529,6 +574,11 @@ function mountContent() {
     // Give the VAS more horizontal room; playground can be re-opened via fab.
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountMemoryIfPresent(browse);
+  } else if (route.name === 'transform') {
+    browse.innerHTML = renderTransformPage();
+    void syncSidePanel(null);
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
+    mountTransformIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -538,6 +588,7 @@ function mountContent() {
     mountProtocolIfPresent(browse);
     mountLinuxSysIfPresent(browse);
     mountMemoryIfPresent(browse);
+    mountTransformIfPresent(browse);
   }
 }
 
