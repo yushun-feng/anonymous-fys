@@ -2,7 +2,7 @@
 title: 文件权限速查（ls -l / rwx / 八进制 / SUID·SGID·Sticky）
 tags: [linux, permissions, chmod, filesystem, security-basics]
 topic: linux
-updated: 2026-11-01
+updated: 2026-11-03
 order: 2
 ---
 
@@ -10,7 +10,8 @@ order: 2
 
 > **用途**：把 `ls -l` 一行权限串、`rwx` 与八进制、特殊位（SUID / SGID / Sticky）压成可检索 cheat sheet。  
 > **默认模型**：常见 Linux 本地文件系统上的 **POSIX 权限**（owner / group / other）；ACL、SELinux、AppArmor、umask 细节另见扩展节。  
-> **相关**：[本主题路线图](./00-roadmap.md) · [进程内存分段速查](./memory-segmentation-cheatsheet.md)
+> **交互**：[权限设置探索 `#/perm`](#/perm)（步进 + 模式示意 + 判定链）。  
+> **相关**：[本主题路线图](./00-roadmap.md) · [进程内存分段速查](./memory-segmentation-cheatsheet.md) · [Linux 系统探索导读](./linux-sys-explorer.md)
 
 ## 参考图
 
