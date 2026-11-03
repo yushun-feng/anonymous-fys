@@ -2,7 +2,7 @@
 title: 进程内存分段速查（Text / Data / BSS / Heap / Stack）
 tags: [linux, memory, stack, heap, aslr, security-basics]
 topic: linux
-updated: 2026-11-01
+updated: 2026-11-03
 order: 1
 ---
 
@@ -10,9 +10,10 @@ order: 1
 
 > **用途**：把「一个用户态进程的虚地址空间长什么样」压成一张可检索的 cheat sheet。  
 > **范围**：布局、栈帧、常用寄存器角色、缓冲越界的**结构解剖（学习向）**，以及 ASLR / 栈保护等**训练与编译标志参考**。  
-> **边界**：下文不提供可复现的利用链、shellcode 或绕过步骤；安全内容止于理解「为何会坏、防护在挡什么」。
+> **边界**：下文不提供可复现的利用链、shellcode 或绕过步骤；安全内容止于理解「为何会坏、防护在挡什么」。  
+> **交互**：[内存管理探索 `#/memory`](#/memory)（布局 / 栈帧 / 堆示意）。
 
-相关：[本主题路线图](./00-roadmap.md)
+相关：[本主题路线图](./00-roadmap.md) · [C++ 内存探索导读](../cpp/memory-explorer.md)
 
 ## 一页总览
 
