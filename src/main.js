@@ -286,7 +286,7 @@ function renderTransformPage() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>变换沙箱</span></nav>
     <div class="transform-page-slot site-main-breakout" data-transform-mount></div>
-    <p class="transform-credit">列向量约定下演示 TRS 与左乘/右乘（世界系 vs 物体系）；定向飞镖看朝向。对接笔记 ch02。</p>
+    <p class="transform-credit">列向量约定下演示 TRS、左乘/右乘与行列式几何意义；定向飞镖看朝向。对接 ch02 与<a href="#/note/graphics/linalg-geometry-map">线代几何导读</a>。</p>
   `);
 }
 

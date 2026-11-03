@@ -207,8 +207,16 @@ export function mountTransformExplorer(container, options = {}) {
           <dt>尖端朝向</dt>
           <dd>飞镖锥尖默认沿物体局部 <code>+Z</code>；尾翼十字辨滚转；局部 RGB 轴随物体。</dd>
         </div>
+        <div>
+          <dt>行列式 det</dt>
+          <dd>有向体积缩放：纯旋转 ≈ ±1；非均匀缩放会变；为 0 表示压扁；负号表示朝向翻转。右侧面板实时显示。</dd>
+        </div>
+        <div>
+          <dt>矩阵的列</dt>
+          <dd>列向量约定下，线性部分的三列是基向量 e₁,e₂,e₃ 的像——飞镖局部 RGB 轴就是「基被变到哪」。详见几何意义导读。</dd>
+        </div>
       </div>
-      <p class="xf-explorer__glossary-tip">先跑剧本「歪尖端 → 世界/局部平移」，再自己拧滑条。</p>
+      <p class="xf-explorer__glossary-tip">先跑剧本「歪尖端 → 世界/局部平移」；再拧缩放看 det。延伸：<a href="#/note/graphics/linalg-geometry-map">线性代数的几何意义导读</a>。</p>
     </details>
 
     <div class="xf-explorer__chips" role="toolbar" aria-label="演示剧本">
@@ -217,6 +225,8 @@ export function mountTransformExplorer(container, options = {}) {
       <button type="button" class="xf-explorer__chip" data-script="compare-ry">② 对比再绕 Y 45°</button>
       <button type="button" class="xf-explorer__chip" data-script="compare-tx">③ 对比平移 +X</button>
       <button type="button" class="xf-explorer__chip" data-script="rt-vs-tr">先 R 后 T / 先 T 后 R</button>
+      <button type="button" class="xf-explorer__chip" data-script="det-scale">④ 非均匀缩放看 det</button>
+      <button type="button" class="xf-explorer__chip" data-script="det-reflect">⑤ 镜像翻转 det&lt;0</button>
     </div>
 
     <div class="xf-explorer__grid">
@@ -250,7 +260,8 @@ export function mountTransformExplorer(container, options = {}) {
       <aside class="xf-explorer__panel xf-explorer__panel--detail">
         <p class="xf-explorer__panel-title">矩阵</p>
         <p class="xf-explorer__formula" data-formula>预览：M′ = A·M　与　M′ = M·A</p>
-        <p class="xf-explorer__panel-hint">下列为列主序存储、按数学行显示；单位与滑条一致。</p>
+        <p class="xf-explorer__panel-hint">列主序存储、按数学行显示。det ≈ 有向体积缩放（仿射 4×4 末行 [0,0,0,1] 时等于线性部分）。</p>
+        <p class="xf-explorer__dets" data-dets></p>
         <p class="xf-explorer__mat-label">当前 M</p>
         <div data-mat-m></div>
         <p class="xf-explorer__mat-label">增量 A</p>
@@ -271,7 +282,7 @@ export function mountTransformExplorer(container, options = {}) {
         </table>
       </div>
     </div>
-    <p class="xf-explorer__credit">教学示意；尖端 = 局部 +Z。与 <a href="#/note/graphics/foundation/ch02-vectors-transforms">ch02 向量与变换</a> 约定一致。</p>
+    <p class="xf-explorer__credit">教学示意；尖端 = 局部 +Z。约定见 <a href="#/note/graphics/foundation/ch02-vectors-transforms">ch02</a>；几何直觉地图见 <a href="#/note/graphics/linalg-geometry-map">导读</a>（推荐纸书《线性代数的几何意义》作延伸，本站不摘录正文）。</p>
   `;
 
   container.replaceChildren(shell);
@@ -377,6 +388,23 @@ export function mountTransformExplorer(container, options = {}) {
     if (matL) matL.innerHTML = matrixTableHtml(_left, 'left');
     if (matR) matR.innerHTML = matrixTableHtml(_right, 'right');
 
+    const detsEl = shell.querySelector('[data-dets]');
+    if (detsEl) {
+      const dM = M.determinant();
+      const dA = _A.determinant();
+      const dL = _left.determinant();
+      const dR = _right.determinant();
+      const tip =
+        Math.abs(dA) < 1e-8
+          ? 'A 把体积压扁（奇异）'
+          : dA < 0
+            ? 'det(A)&lt;0：朝向翻转'
+            : Math.abs(dA - 1) < 1e-6
+              ? 'det(A)≈1：体积几乎不变（如纯旋转/平移）'
+              : 'det(A) 为体积缩放因子';
+      detsEl.innerHTML = `det(M)=<strong>${fmt(dM)}</strong>　det(A)=<strong>${fmt(dA)}</strong>　det(A·M)=<strong class="is-left">${fmt(dL)}</strong>　det(M·A)=<strong class="is-right">${fmt(dR)}</strong><br/><span class="xf-explorer__det-tip">${tip}</span>`;
+    }
+
     if (formula) {
       if (previewMode === 'left') {
         formula.innerHTML = '预览强调：<strong class="is-left">M′ = A · M</strong>（世界系）';
@@ -463,6 +491,26 @@ export function mountTransformExplorer(container, options = {}) {
       previewMode = 'both';
       syncPreviewRadios();
       pushLog('剧本', 'M=R_y(60°), A=T(2,0,0)：蓝=A·M=先旋后移；绿=M·A=先移后旋');
+      renderPanels();
+      return;
+    }
+    if (id === 'det-scale') {
+      M = new THREE.Matrix4().identity();
+      Aparams = { tx: 0, ty: 0, tz: 0, rx: 0, ry: 0, rz: 0, sx: 2, sy: 0.5, sz: 1 };
+      syncSliderInputs();
+      previewMode = 'both';
+      syncPreviewRadios();
+      pushLog('剧本④', 'A = diag(2,0.5,1)：det(A)=1，体积不变但形状变；看飞镖被拉扁');
+      renderPanels();
+      return;
+    }
+    if (id === 'det-reflect') {
+      M = new THREE.Matrix4().identity();
+      Aparams = { tx: 0, ty: 0, tz: 0, rx: 0, ry: 0, rz: 0, sx: -1, sy: 1, sz: 1 };
+      syncSliderInputs();
+      previewMode = 'left';
+      syncPreviewRadios();
+      pushLog('剧本⑤', 'A = diag(-1,1,1)：镜像，det(A)=-1，朝向翻转（尖端左右对调）');
       renderPanels();
     }
   }

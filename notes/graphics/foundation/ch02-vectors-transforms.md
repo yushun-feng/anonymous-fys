@@ -26,7 +26,7 @@ order: 2
 | GLM 风格示意 | 与 LearnOpenGL 一致的用法 |
 | 流程结构图 | MVP / 坐标空间链；复合变换顺序 |
 
-相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md) · [路线图](./00-roadmap.md) · [变换沙箱（左乘/右乘）](../transform-explorer.md)
+相关：[第 1 章 管线](./ch01-graphics-pipeline.md) · [第 3 章 着色器](./ch03-shaders-opengl-basics.md) · [路线图](./00-roadmap.md) · [变换沙箱（左乘/右乘）](../transform-explorer.md) · [线代几何意义导读](../linalg-geometry-map.md)
 
 ## 核心概念
 
