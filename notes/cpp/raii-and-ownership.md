@@ -7,7 +7,7 @@ updated: 2026-11-03
 
 # RAII 与所有权基础
 
-> **交互**：[内存管理探索 `#/memory`](#/memory) 中的 RAII / `unique_ptr` / `shared_ptr` 场景（步进 + 内存条）。
+> **交互**：[内存布局沙箱 `#/memory`](#/memory) 可对照栈帧与堆块寿命；智能指针细节见下文与 LearnCpp 笔记。
 
 RAII（Resource Acquisition Is Initialization）把资源生命周期绑在对象作用域上：构造时获取，析构时释放。
 

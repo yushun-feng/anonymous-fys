@@ -1,23 +1,24 @@
 ---
-title: 内存管理探索（交互导读）
-tags: [cpp, memory, raii, smart-pointers, vector]
+title: 内存布局沙箱（交互）
+tags: [cpp, memory, stack, heap, layout]
 topic: cpp
 updated: 2026-11-03
 order: 1
 ---
 
-# 内存管理探索（交互导读）
+# 内存布局沙箱（交互）
 
 > **交互页**：[`#/memory`](#/memory)  
-> **覆盖**：虚存布局、栈帧、堆与 `new`/`delete`、RAII、`unique_ptr` / `shared_ptr`+`weak_ptr`、`vector` 扩容。  
-> **形态**：内存条示意 + 流程模型 + 时序图 + 事件表（与协议/Linux 探索同款）。
+> **覆盖**：进程虚存示意、栈帧压栈/弹栈、堆 bump 分配与释放、栈↓ 堆↑ 相向生长。  
+> **形态**：可点击的地址空间布局 + 操作面板 + 详情 + 操作日志（教学沙箱，非真实分配器）。
 
 相关：[RAII 与所有权](./raii-and-ownership.md) · [LearnCpp 移动与智能指针](./learncpp/ch22-move-smart-pointers.md) · [Linux 内存分段速查](../linux/memory-segmentation-cheatsheet.md)
 
 ## 建议路径
 
-1. **地址空间 → 栈帧 → 堆分配**：先分清「自动 vs 显式」。
-2. **RAII → unique → shared**：所有权从作用域绑到智能指针。
-3. **vector 扩容**：连续缓冲重分配与迭代器失效。
+1. **先看布局**：高地址栈区、中间空隙、堆区、底部 Text/Data/BSS。
+2. **压栈 / 返回**：调用 `foo` / `bar` / `recur`，观察 SP 下移与帧弹出。
+3. **堆分配 / 释放**：`new` / `malloc` 示意块向上 bump；点选后释放看墓碑。
+4. **相向生长**：用「演示：栈↓ 堆↑ 相向」感受空隙被挤窄；过近会触发 FAULT 提示。
 
-打开 **[内存管理探索 →](#/memory)** 用自动播放走完各场景；细节仍以笔记与标准为准。
+打开 **[内存布局沙箱 →](#/memory)** 自行操作或跑内置演示；细节仍以笔记与平台 ABI 为准。

@@ -41,7 +41,7 @@ flowchart LR
 | 篇 | 主题 | 本库笔记 |
 |----|------|----------|
 | — | 路线与地图 | [00-roadmap](./00-roadmap.md) |
-| 1 | 进程内存分段速查（已展开） | [memory-segmentation](./memory-segmentation-cheatsheet.md) · [内存探索](#/memory) |
+| 1 | 进程内存分段速查（已展开） | [memory-segmentation](./memory-segmentation-cheatsheet.md) · [内存布局沙箱](#/memory) |
 | 2 | 文件权限速查（已展开） | [file-permissions](./file-permissions-cheatsheet.md) · [权限演示](#/perm) |
 | 3 | Bash 参数扩展速查（已展开） | [bash-parameter-expansion](./bash-parameter-expansion-cheatsheet.md) |
 | 4 | 网络协议速览（已展开） | [network-protocols](./network-protocols-overview.md) · [协议探索](#/protocols) |

@@ -41,7 +41,7 @@ let protocolMountGen = 0;
 let linuxSysHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let linuxSysMountGen = 0;
-/** Active Memory Explorer instance; disposed on every remount. */
+/** Active Memory Layout Sandbox instance; disposed on every remount. */
 let memoryHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let memoryMountGen = 0;
@@ -207,7 +207,7 @@ function renderHome() {
     <div class="linux-home-slot" data-linux-sys-mount data-linux-sys-compact></div>
     <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
     <div class="memory-home-slot" data-memory-mount data-memory-compact></div>
-    <p class="memory-home-link"><a href="#/memory">打开内存管理探索 →</a></p>
+    <p class="memory-home-link"><a href="#/memory">打开内存布局沙箱（栈 / 堆）→</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -260,9 +260,9 @@ function renderLinuxSysPage(domain = 'boot') {
 
 function renderMemoryPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>内存管理探索</span></nav>
+    <nav class="crumb"><a href="#/">首页</a> / <span>内存布局沙箱</span></nav>
     <div class="memory-page-slot site-main-breakout" data-memory-mount></div>
-    <p class="memory-credit">交互演示：虚存布局、栈帧、堆与 new/delete、RAII、unique/shared、vector 扩容。内存条 + 流程/时序 + 事件表；中文 UI。</p>
+    <p class="memory-credit">可交互虚存布局：栈↓ 压栈/返回、堆↑ 分配/释放、点选查看详情；内置调用链与相向生长演示。教学示意，中文 UI。</p>
   `);
 }
 
@@ -405,7 +405,7 @@ async function mountMemoryIfPresent(root) {
   } catch {
     if (gen !== memoryMountGen || !slot.isConnected) return;
     slot.innerHTML =
-      '<p class="mem-ex__fallback">内存管理探索模块加载失败，笔记浏览不受影响。</p>';
+      '<p class="mem-layout__credit">内存布局沙箱加载失败，笔记浏览不受影响。</p>';
   }
 }
 
