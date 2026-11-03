@@ -56,6 +56,207 @@ function packetsUpTo(protocol, stepIndex) {
 }
 
 /**
+ * Map a packet address to a topology node index (best-effort for teaching IPs).
+ * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
+ * @param {string} addr
+ * @returns {number}
+ */
+function nodeIndexForAddr(protocol, addr) {
+  const exact = protocol.nodes.findIndex((n) => n.ip === addr || n.ip.includes(addr));
+  if (exact >= 0) return exact;
+  // Broadcast / unknown → leftmost active-looking peer (client/first)
+  if (addr.includes('255.255.255.255') || addr.includes('ff:ff:ff') || addr === '0.0.0.0') {
+    return 0;
+  }
+  // NAT public / intermediate: prefer router if present, else last node
+  const router = protocol.nodes.findIndex((n) => /网关|路由|NAT|DHCP|MSA|解析/i.test(n.label));
+  if (router >= 0) return router;
+  return Math.max(0, protocol.nodes.length - 1);
+}
+
+/**
+ * Horizontal process-model diagram of all steps (图画流程).
+ * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
+ * @param {number} stepIndex
+ */
+function renderProcessModel(protocol, stepIndex) {
+  const parts = protocol.steps
+    .map((s, i) => {
+      const state = i < stepIndex ? 'is-done' : i === stepIndex ? 'is-current' : '';
+      const arrow =
+        i < protocol.steps.length - 1
+          ? `<span class="proto-explorer__model-arrow${i < stepIndex ? ' is-lit' : ''}" aria-hidden="true">
+              <svg viewBox="0 0 40 16" width="40" height="16"><path d="M2 8h28M24 3l10 5-10 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>`
+          : '';
+      return `
+        <div class="proto-explorer__model-item ${state}">
+          <button type="button" class="proto-explorer__model-node" data-goto-step="${i}">
+            <span class="proto-explorer__model-idx">${i + 1}</span>
+            <span class="proto-explorer__model-title">${escapeHtml(s.title)}</span>
+            <span class="proto-explorer__model-sum">${escapeHtml(s.summary)}</span>
+          </button>
+          ${arrow}
+        </div>`;
+    })
+    .join('');
+  return `
+    <section class="proto-explorer__model" aria-label="协议流程模型">
+      <div class="proto-explorer__model-head">
+        <h4 class="proto-explorer__model-heading">流程模型</h4>
+        <p class="proto-explorer__model-hint">点击节点跳转步骤 · 高亮为当前</p>
+      </div>
+      <div class="proto-explorer__model-track">${parts}</div>
+    </section>`;
+}
+
+/**
+ * SVG sequence diagram: actors + message arrows up to current step.
+ * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
+ * @param {number} stepIndex
+ * @param {boolean} animate
+ */
+function renderSequenceDiagram(protocol, stepIndex, animate) {
+  const n = protocol.nodes.length;
+  const colW = 140;
+  const leftPad = 36;
+  const topPad = 52;
+  const rowH = 36;
+  const width = Math.max(320, leftPad * 2 + colW * (n - 1) + 40);
+
+  /** @type {{from:number,to:number,label:string,proto:string,step:number,loss:boolean}[]} */
+  const msgs = [];
+  for (let si = 0; si <= stepIndex; si += 1) {
+    const step = protocol.steps[si];
+    const pkts = step.packets || [];
+    if (!pkts.length) {
+      const hi = step.highlight || [];
+      if (hi.length) {
+        const idx = protocol.nodes.findIndex((node) => node.id === hi[0]);
+        if (idx >= 0) {
+          msgs.push({
+            from: idx,
+            to: idx,
+            label: step.title,
+            proto: '本地',
+            step: si,
+            loss: false,
+          });
+        }
+      }
+      continue;
+    }
+    for (const p of pkts) {
+      const from = nodeIndexForAddr(protocol, p.src);
+      let to = nodeIndexForAddr(protocol, p.dst);
+      if (p.dst.includes('255.255.255.255') || p.dst.includes('ff:ff:ff')) {
+        // broadcast: fan to last non-self node for teaching sketch
+        to = Math.min(n - 1, Math.max(0, from === 0 ? 1 : 0));
+      }
+      const loss = /丢失|lost/i.test(p.info) || p.size === '—';
+      msgs.push({
+        from,
+        to,
+        label: p.info.length > 36 ? `${p.info.slice(0, 34)}…` : p.info,
+        proto: p.proto,
+        step: si,
+        loss,
+      });
+    }
+  }
+
+  const height = topPad + 28 + Math.max(msgs.length, 1) * rowH + 24;
+  const xs = protocol.nodes.map((_, i) => leftPad + i * colW);
+
+  const actors = protocol.nodes
+    .map((node, i) => {
+      const x = xs[i];
+      const active = (protocol.steps[stepIndex].highlight || []).includes(node.id);
+      return `
+        <g class="pe-seq__actor${active ? ' is-active' : ''}">
+          <rect x="${x - 54}" y="8" width="108" height="36" rx="8" class="pe-seq__actor-box"/>
+          <text x="${x}" y="24" text-anchor="middle" class="pe-seq__actor-label">${escapeHtml(node.label)}</text>
+          <text x="${x}" y="38" text-anchor="middle" class="pe-seq__actor-ip">${escapeHtml(node.ip.length > 18 ? `${node.ip.slice(0, 16)}…` : node.ip)}</text>
+          <line x1="${x}" y1="${topPad}" x2="${x}" y2="${height - 12}" class="pe-seq__life"/>
+        </g>`;
+    })
+    .join('');
+
+  const arrows = msgs
+    .map((m, i) => {
+      const y = topPad + 18 + i * rowH;
+      const x1 = xs[m.from];
+      const x2 = xs[m.to];
+      const live = m.step === stepIndex;
+      const self = m.from === m.to;
+      if (self) {
+        return `
+          <g class="pe-seq__msg${live ? ' is-live' : ''} is-self${m.loss ? ' is-loss' : ''}">
+            <path d="M${x1 + 8} ${y - 8} h22 v16 h-22" fill="none" class="pe-seq__line"/>
+            <text x="${x1 + 34}" y="${y + 4}" class="pe-seq__msg-label">${escapeHtml(m.proto)} · ${escapeHtml(m.label)}</text>
+          </g>`;
+      }
+      const dir = x2 >= x1 ? 1 : -1;
+      const tip = x2 - dir * 8;
+      return `
+        <g class="pe-seq__msg${live ? ' is-live' : ''}${m.loss ? ' is-loss' : ''}${animate && live ? ' is-anim' : ''}">
+          <line x1="${x1}" y1="${y}" x2="${tip}" y2="${y}" class="pe-seq__line"/>
+          <path d="M${tip} ${y} l${-dir * 7} -4 v8 z" class="pe-seq__head"/>
+          <text x="${(x1 + x2) / 2}" y="${y - 6}" text-anchor="middle" class="pe-seq__msg-label">${escapeHtml(m.proto)} · ${escapeHtml(m.label)}</text>
+        </g>`;
+    })
+    .join('');
+
+  const empty =
+    msgs.length === 0
+      ? `<text x="${width / 2}" y="${topPad + 40}" text-anchor="middle" class="pe-seq__empty">本步尚无跨节点报文 · 见上方流程模型</text>`
+      : '';
+
+  return `
+    <section class="proto-explorer__seq-wrap" aria-label="时序交互图">
+      <div class="proto-explorer__model-head">
+        <h4 class="proto-explorer__model-heading">时序图 · 模型流程</h4>
+        <p class="proto-explorer__model-hint">随步骤累计箭头 · 当前步高亮动画</p>
+      </div>
+      <div class="proto-explorer__seq-scroll">
+        <svg class="proto-explorer__seq" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${escapeHtml(protocol.name)} 时序图">
+          ${actors}
+          ${arrows}
+          ${empty}
+        </svg>
+      </div>
+    </section>`;
+}
+
+/**
+ * Compact OSI stack strip showing where this protocol sits.
+ * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
+ */
+function renderStackModel(protocol) {
+  const layers = [
+    { n: 7, name: '应用' },
+    { n: 6, name: '表示' },
+    { n: 5, name: '会话' },
+    { n: 4, name: '传输' },
+    { n: 3, name: '网络' },
+    { n: 2, name: '链路' },
+    { n: 1, name: '物理' },
+  ];
+  const cells = layers
+    .map((l) => {
+      const on = l.n === protocol.osiLayer;
+      return `<div class="proto-explorer__stack-cell${on ? ' is-active' : ''}"><span>${l.n}</span>${l.name}</div>`;
+    })
+    .join('');
+  return `
+    <div class="proto-explorer__stack" aria-label="OSI 栈位">
+      <span class="proto-explorer__stack-label">栈模型</span>
+      <div class="proto-explorer__stack-row">${cells}</div>
+      <span class="proto-explorer__stack-note">${escapeHtml(protocol.osiLabel)}</span>
+    </div>`;
+}
+
+/**
  * Mount the protocol explorer into `container`.
  * @param {HTMLElement} container
  * @param {{ compact?: boolean }} [options]
@@ -318,6 +519,8 @@ export function mountProtocolExplorer(container, options = {}) {
               ${facts}
             </div>
             <p class="proto-explorer__blurb">${escapeHtml(proto.blurb)}</p>
+            ${renderStackModel(proto)}
+            ${renderProcessModel(proto, stepIndex)}
 
             <div class="proto-explorer__stage">
               <div class="proto-explorer__topology">${nodes}</div>
@@ -325,6 +528,7 @@ export function mountProtocolExplorer(container, options = {}) {
                 <span class="proto-explorer__flow-legend">${escapeHtml(proto.flowLegend)}</span>
                 <span class="proto-explorer__packet-dot" aria-hidden="true"></span>
               </div>
+              ${renderSequenceDiagram(proto, stepIndex, Boolean(opts.animate))}
               <div class="proto-explorer__step-panel">
                 <p class="proto-explorer__step-kicker">步骤 ${stepIndex + 1} / ${proto.steps.length}</p>
                 <h4 class="proto-explorer__step-title">${escapeHtml(step.title)}</h4>
@@ -431,6 +635,12 @@ export function mountProtocolExplorer(container, options = {}) {
         render({ animate: true });
       });
     });
+
+    // Keep the sequence diagram scrolled to the latest message when stepping.
+    const seqScroll = shell.querySelector('.proto-explorer__seq-scroll');
+    if (seqScroll && opts.animate) {
+      seqScroll.scrollTop = seqScroll.scrollHeight;
+    }
   }
 
   // Mark first open as in-progress

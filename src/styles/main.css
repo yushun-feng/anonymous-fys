@@ -2095,3 +2095,306 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ——— Protocol Explorer: process / sequence / stack diagrams ——— */
+.proto-explorer--compact .proto-explorer__seq-wrap,
+.proto-explorer--compact .proto-explorer__stack,
+.proto-explorer--compact .proto-explorer__model-sum {
+  display: none;
+}
+
+.proto-explorer__stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.7rem;
+  margin: 0 0 0.9rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(11, 16, 21, 0.45);
+}
+
+.proto-explorer__stack-label,
+.proto-explorer__stack-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.proto-explorer__stack-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.proto-explorer__stack-cell {
+  min-width: 2.6rem;
+  padding: 0.28rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.proto-explorer__stack-cell span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+}
+
+.proto-explorer__stack-cell.is-active {
+  color: var(--text);
+  border-color: rgba(61, 156, 253, 0.55);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(61, 156, 253, 0.2);
+}
+
+.proto-explorer__model {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.8rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(120deg, rgba(62, 207, 142, 0.05), transparent 40%),
+    var(--code-bg);
+}
+
+.proto-explorer__model-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.proto-explorer__model-heading {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.proto-explorer__model-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.proto-explorer__model-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem 0.15rem;
+}
+
+.proto-explorer__model-item {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+}
+
+.proto-explorer__model-node {
+  appearance: none;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.45rem;
+  row-gap: 0.1rem;
+  align-items: start;
+  min-width: 7.5rem;
+  max-width: 11rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.proto-explorer__model-node:hover {
+  border-color: rgba(61, 156, 253, 0.5);
+  transform: translateY(-1px);
+}
+
+.proto-explorer__model-item.is-current .proto-explorer__model-node {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(61, 156, 253, 0.25);
+}
+
+.proto-explorer__model-item.is-done .proto-explorer__model-node {
+  border-color: rgba(62, 207, 142, 0.4);
+}
+
+.proto-explorer__model-idx {
+  grid-row: 1 / span 2;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: 0.1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  background: var(--border);
+  color: var(--text);
+}
+
+.proto-explorer__model-item.is-current .proto-explorer__model-idx {
+  background: var(--accent);
+  color: #041018;
+}
+
+.proto-explorer__model-title {
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.proto-explorer__model-sum {
+  grid-column: 2;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.proto-explorer__model-arrow {
+  color: var(--border);
+  flex: 0 0 auto;
+  display: inline-flex;
+  opacity: 0.85;
+}
+
+.proto-explorer__model-arrow.is-lit {
+  color: var(--pe-good);
+}
+
+.proto-explorer__seq-wrap {
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.7rem 0.75rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(600px 180px at 10% 0%, rgba(61, 156, 253, 0.08), transparent 60%),
+    rgba(11, 16, 21, 0.55);
+}
+
+.proto-explorer__seq-scroll {
+  overflow: auto;
+  max-height: min(420px, 55vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1015;
+}
+
+.proto-explorer__seq {
+  display: block;
+  min-width: 100%;
+  font-family: var(--font-sans);
+}
+
+.pe-seq__actor-box {
+  fill: #171e26;
+  stroke: #2a3541;
+  stroke-width: 1;
+}
+
+.pe-seq__actor.is-active .pe-seq__actor-box {
+  fill: rgba(61, 156, 253, 0.16);
+  stroke: #3d9cfd;
+}
+
+.pe-seq__actor-label {
+  fill: #e7ecf1;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.pe-seq__actor-ip {
+  fill: #9aa7b5;
+  font-size: 9px;
+  font-family: var(--font-mono);
+}
+
+.pe-seq__life {
+  stroke: #2a3541;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 4;
+}
+
+.pe-seq__line {
+  stroke: #6a8199;
+  stroke-width: 1.5;
+}
+
+.pe-seq__head {
+  fill: #6a8199;
+}
+
+.pe-seq__msg-label {
+  fill: #9aa7b5;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+}
+
+.pe-seq__msg.is-live .pe-seq__line,
+.pe-seq__msg.is-live .pe-seq__head {
+  stroke: #3d9cfd;
+  fill: #3d9cfd;
+}
+
+.pe-seq__msg.is-live .pe-seq__msg-label {
+  fill: #e7ecf1;
+}
+
+.pe-seq__msg.is-loss .pe-seq__line {
+  stroke: #e07070;
+  stroke-dasharray: 4 3;
+}
+
+.pe-seq__msg.is-loss .pe-seq__head {
+  fill: #e07070;
+}
+
+.pe-seq__msg.is-anim .pe-seq__line {
+  stroke-dasharray: 6 4;
+  animation: pe-seq-draw 0.85s ease forwards;
+}
+
+.pe-seq__msg.is-anim .pe-seq__msg-label {
+  animation: pe-seq-fade 0.85s ease forwards;
+}
+
+.pe-seq__empty {
+  fill: #9aa7b5;
+  font-size: 12px;
+}
+
+.pe-seq__msg.is-self .pe-seq__line {
+  stroke: #e6b84d;
+}
+
+@keyframes pe-seq-draw {
+  from { stroke-dashoffset: 40; opacity: 0.2; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes pe-seq-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 560px) {
+  .proto-explorer__model-node {
+    min-width: 6.4rem;
+    max-width: 9rem;
+  }
+}
