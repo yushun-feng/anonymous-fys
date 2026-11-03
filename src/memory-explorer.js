@@ -1,15 +1,7 @@
 /**
- * Memory Explorer — stack/heap, RAII, smart pointers, vector growth.
- * Chinese UI with memory-strip visualization + process/sequence/event panels.
+ * Interactive process memory layout sandbox (stack ↓ / heap ↑).
+ * Clickable regions + allocate/free/call/return controls. Chinese UI.
  */
-
-import {
-  MEM_SCENARIOS,
-  MEM_CATEGORY_LABELS,
-  MEM_STAGES,
-} from './memory-explorer-data.js';
-
-const STORAGE_KEY = 'anonymous-fys-memory-progress-v1';
 
 function escapeHtml(text) {
   return String(text)
@@ -19,194 +11,72 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
-function loadProgress() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
+const STACK_TOP = 0x7fffffff0000;
+const HEAP_BASE = 0x555555559000;
+
+const FRAME_PRESETS = [
+  {
+    id: 'main',
+    label: 'main()',
+    locals: [
+      { name: 'argc', bytes: 4 },
+      { name: 'argv', bytes: 8 },
+    ],
+  },
+  {
+    id: 'foo',
+    label: 'foo()',
+    locals: [
+      { name: 'x', bytes: 4 },
+      { name: 'buf[16]', bytes: 16 },
+    ],
+  },
+  {
+    id: 'bar',
+    label: 'bar()',
+    locals: [
+      { name: 'n', bytes: 8 },
+      { name: 'tmp', bytes: 8 },
+    ],
+  },
+  {
+    id: 'recurse',
+    label: 'recur()',
+    locals: [{ name: 'depth', bytes: 4 }],
+  },
+];
+
+const HEAP_PRESETS = [
+  { label: 'new int', bytes: 4, tag: 'int' },
+  { label: 'new int[4]', bytes: 16, tag: 'int[4]' },
+  { label: 'new Obj', bytes: 32, tag: 'Obj' },
+  { label: 'malloc(64)', bytes: 64, tag: 'raw64' },
+];
+
+const DEMOS = [
+  {
+    id: 'call-chain',
+    label: '演示：调用链压栈',
+    steps: ['reset', 'call:foo', 'call:bar', 'select-stack-top', 'ret', 'ret'],
+  },
+  {
+    id: 'heap-life',
+    label: '演示：堆分配与释放',
+    steps: ['reset', 'heap:0', 'heap:2', 'select-heap-0', 'free', 'heap:1'],
+  },
+  {
+    id: 'meet-in-middle',
+    label: '演示：栈↓ 堆↑ 相向',
+    steps: ['reset', 'call:foo', 'heap:0', 'call:bar', 'heap:2', 'heap:3'],
+  },
+];
+
+function fmtAddr(n) {
+  return `0x${n.toString(16)}`;
 }
 
-/** @param {Record<string, unknown>} progress */
-function saveProgress(progress) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch {
-    // ignore
-  }
-}
-
-/** @param {{ steps: any[] }} scenario @param {number} stepIndex */
-function eventsUpTo(scenario, stepIndex) {
-  /** @type {any[]} */
-  const out = [];
-  for (let i = 0; i <= stepIndex; i += 1) {
-    const step = scenario.steps[i];
-    if (step?.events?.length) out.push(...step.events);
-  }
-  return out;
-}
-
-/** @param {any} scenario @param {string} name */
-function nodeIndexByLabelish(scenario, name) {
-  const exact = scenario.nodes.findIndex(
-    (n) => n.label === name || n.id === name || n.role === name,
-  );
-  if (exact >= 0) return exact;
-  const soft = scenario.nodes.findIndex(
-    (n) => name.includes(n.label) || n.label.includes(name) || name.includes(n.id),
-  );
-  return soft >= 0 ? soft : 0;
-}
-
-/** @param {import('./memory-explorer-data.js').MEM_SCENARIOS[number]['steps'][0]['memory']} blocks */
-function renderMemoryStrip(blocks) {
-  if (!blocks?.length) {
-    return `<div class="mem-ex__strip mem-ex__strip--empty">本步暂无内存条示意</div>`;
-  }
-  // Display high address at top (stack-first teaching layout)
-  const rows = blocks
-    .map(
-      (b) => `
-      <div class="mem-ex__block is-${escapeHtml(b.region)}" data-block="${escapeHtml(b.id)}">
-        <span class="mem-ex__block-label">${escapeHtml(b.label)}</span>
-        ${b.detail ? `<span class="mem-ex__block-detail">${escapeHtml(b.detail)}</span>` : ''}
-      </div>`,
-    )
-    .join('');
-  return `
-    <section class="mem-ex__strip-wrap" aria-label="内存条示意">
-      <div class="mem-ex__strip-head">
-        <h4 class="mem-ex__model-heading">内存条</h4>
-        <p class="mem-ex__model-hint">上≈高地址 · 下≈低地址（教学）</p>
-      </div>
-      <div class="mem-ex__strip" role="img">${rows}</div>
-    </section>`;
-}
-
-/** @param {any} scenario @param {number} stepIndex */
-function renderProcessModel(scenario, stepIndex) {
-  const parts = scenario.steps
-    .map((s, i) => {
-      const state = i < stepIndex ? 'is-done' : i === stepIndex ? 'is-current' : '';
-      const arrow =
-        i < scenario.steps.length - 1
-          ? `<span class="mem-ex__model-arrow${i < stepIndex ? ' is-lit' : ''}" aria-hidden="true">
-              <svg viewBox="0 0 40 16" width="40" height="16"><path d="M2 8h28M24 3l10 5-10 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>`
-          : '';
-      return `
-        <div class="mem-ex__model-item ${state}">
-          <button type="button" class="mem-ex__model-node" data-goto-step="${i}">
-            <span class="mem-ex__model-idx">${i + 1}</span>
-            <span class="mem-ex__model-title">${escapeHtml(s.title)}</span>
-            <span class="mem-ex__model-sum">${escapeHtml(s.summary)}</span>
-          </button>
-          ${arrow}
-        </div>`;
-    })
-    .join('');
-  return `
-    <section class="mem-ex__model" aria-label="流程模型">
-      <div class="mem-ex__model-head">
-        <h4 class="mem-ex__model-heading">流程模型</h4>
-        <p class="mem-ex__model-hint">点击跳转 · 高亮当前</p>
-      </div>
-      <div class="mem-ex__model-track">${parts}</div>
-    </section>`;
-}
-
-/** @param {any} scenario @param {number} stepIndex @param {boolean} animate */
-function renderSequenceDiagram(scenario, stepIndex, animate) {
-  const n = scenario.nodes.length;
-  const colW = 128;
-  const leftPad = 36;
-  const topPad = 52;
-  const rowH = 34;
-  const width = Math.max(300, leftPad * 2 + colW * Math.max(n - 1, 1) + 40);
-
-  /** @type {{from:number,to:number,label:string,phase:string,step:number}[]} */
-  const msgs = [];
-  for (let si = 0; si <= stepIndex; si += 1) {
-    const step = scenario.steps[si];
-    const events = step.events || [];
-    if (!events.length) {
-      const hi = step.highlight || [];
-      if (hi.length) {
-        const idx = scenario.nodes.findIndex((node) => node.id === hi[0]);
-        if (idx >= 0) {
-          msgs.push({ from: idx, to: idx, label: step.title, phase: '本地', step: si });
-        }
-      }
-      continue;
-    }
-    for (const e of events) {
-      msgs.push({
-        from: nodeIndexByLabelish(scenario, e.from),
-        to: nodeIndexByLabelish(scenario, e.to),
-        label: e.info.length > 34 ? `${e.info.slice(0, 32)}…` : e.info,
-        phase: e.phase,
-        step: si,
-      });
-    }
-  }
-
-  const height = topPad + 28 + Math.max(msgs.length, 1) * rowH + 24;
-  const xs = scenario.nodes.map((_, i) => leftPad + i * colW);
-
-  const actors = scenario.nodes
-    .map((node, i) => {
-      const x = xs[i];
-      const active = (scenario.steps[stepIndex].highlight || []).includes(node.id);
-      return `
-        <g class="mem-seq__actor${active ? ' is-active' : ''}">
-          <rect x="${x - 48}" y="8" width="96" height="36" rx="8" class="mem-seq__actor-box"/>
-          <text x="${x}" y="24" text-anchor="middle" class="mem-seq__actor-label">${escapeHtml(node.label)}</text>
-          <text x="${x}" y="38" text-anchor="middle" class="mem-seq__actor-ip">${escapeHtml(node.role)}</text>
-          <line x1="${x}" y1="${topPad}" x2="${x}" y2="${height - 12}" class="mem-seq__life"/>
-        </g>`;
-    })
-    .join('');
-
-  const arrows = msgs
-    .map((m, i) => {
-      const y = topPad + 18 + i * rowH;
-      const x1 = xs[m.from];
-      const x2 = xs[m.to];
-      const live = m.step === stepIndex;
-      if (m.from === m.to) {
-        return `
-          <g class="mem-seq__msg${live ? ' is-live' : ''} is-self">
-            <path d="M${x1 + 8} ${y - 8} h22 v16 h-22" fill="none" class="mem-seq__line"/>
-            <text x="${x1 + 34}" y="${y + 4}" class="mem-seq__msg-label">${escapeHtml(m.phase)} · ${escapeHtml(m.label)}</text>
-          </g>`;
-      }
-      const dir = x2 >= x1 ? 1 : -1;
-      const tip = x2 - dir * 8;
-      return `
-        <g class="mem-seq__msg${live ? ' is-live' : ''}${animate && live ? ' is-anim' : ''}">
-          <line x1="${x1}" y1="${y}" x2="${tip}" y2="${y}" class="mem-seq__line"/>
-          <path d="M${tip} ${y} l${-dir * 7} -4 v8 z" class="mem-seq__head"/>
-          <text x="${(x1 + x2) / 2}" y="${y - 6}" text-anchor="middle" class="mem-seq__msg-label">${escapeHtml(m.phase)} · ${escapeHtml(m.label)}</text>
-        </g>`;
-    })
-    .join('');
-
-  return `
-    <section class="mem-ex__seq-wrap" aria-label="时序图">
-      <div class="mem-ex__model-head">
-        <h4 class="mem-ex__model-heading">时序图 · 模型流程</h4>
-        <p class="mem-ex__model-hint">随步骤累计 · 当前步高亮</p>
-      </div>
-      <div class="mem-ex__seq-scroll">
-        <svg class="mem-ex__seq" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img">
-          ${actors}${arrows}
-        </svg>
-      </div>
-    </section>`;
+function frameBytes(locals) {
+  return locals.reduce((s, l) => s + l.bytes, 16); // +16 teaching overhead (retaddr/fp)
 }
 
 /**
@@ -215,358 +85,467 @@ function renderSequenceDiagram(scenario, stepIndex, animate) {
  */
 export function mountMemoryExplorer(container, options = {}) {
   const compact = Boolean(options.compact);
-  let category = 'all';
-  let scenarioId = MEM_SCENARIOS[0].id;
-  let stepIndex = 0;
-  /** @type {Record<string, { status: string, maxStep: number }>} */
-  let progress = loadProgress();
+
+  /** @type {{
+   *   frames: { uid: string, presetId: string, label: string, locals: {name:string,bytes:number}[], base: number, size: number }[],
+   *   blocks: { uid: string, label: string, tag: string, bytes: number, addr: number, live: boolean }[],
+   *   heapBump: number,
+   *   selected: null | { kind: 'stack'|'heap', uid: string },
+   *   log: { no: number, op: string, detail: string }[],
+   *   logNo: number,
+   * }} */
+  let state = freshState();
   /** @type {ReturnType<typeof setInterval> | null} */
-  let timer = null;
-  let playing = false;
-  /** @type {ReturnType<typeof setTimeout> | null} */
-  let animTimer = null;
+  let demoTimer = null;
+  let demoPlaying = false;
+  /** @type {string[]} */
+  let demoQueue = [];
 
   const shell = document.createElement('section');
-  shell.className = `mem-ex${compact ? ' mem-ex--compact' : ''}`;
-  shell.setAttribute('aria-label', '内存管理交互演示');
+  shell.className = `mem-layout${compact ? ' mem-layout--compact' : ''}`;
+  shell.setAttribute('aria-label', '可交互进程内存布局');
 
-  function currentScenario() {
-    return MEM_SCENARIOS.find((s) => s.id === scenarioId) || MEM_SCENARIOS[0];
+  function freshState() {
+    const main = FRAME_PRESETS[0];
+    const size = frameBytes(main.locals);
+    return {
+      frames: [
+        {
+          uid: 'frame-main',
+          presetId: 'main',
+          label: main.label,
+          locals: main.locals.map((l) => ({ ...l })),
+          base: STACK_TOP - size,
+          size,
+        },
+      ],
+      blocks: [],
+      heapBump: HEAP_BASE,
+      selected: { kind: 'stack', uid: 'frame-main' },
+      log: [
+        {
+          no: 1,
+          op: 'INIT',
+          detail: `进程启动，main 帧 @ ${fmtAddr(STACK_TOP - size)}`,
+        },
+      ],
+      logNo: 1,
+    };
   }
 
-  function filtered() {
-    if (category === 'all') return MEM_SCENARIOS;
-    return MEM_SCENARIOS.filter((s) => s.category === category);
+  function pushLog(op, detail) {
+    state.logNo += 1;
+    state.log.push({ no: state.logNo, op, detail });
+    if (state.log.length > 40) state.log = state.log.slice(-40);
   }
 
-  function stopPlay() {
-    playing = false;
-    if (timer != null) {
-      clearInterval(timer);
-      timer = null;
+  function stackPointer() {
+    if (!state.frames.length) return STACK_TOP;
+    const top = state.frames[state.frames.length - 1];
+    return top.base;
+  }
+
+  function stopDemo() {
+    if (demoTimer != null) {
+      clearInterval(demoTimer);
+      demoTimer = null;
+    }
+    demoPlaying = false;
+    demoQueue = [];
+  }
+
+  function reset() {
+    stopDemo();
+    state = freshState();
+    render();
+  }
+
+  function callFrame(presetId, { fromDemo = false } = {}) {
+    if (!fromDemo) stopDemo();
+    const preset = FRAME_PRESETS.find((f) => f.id === presetId);
+    if (!preset) return;
+    if (state.frames.length >= 8) {
+      pushLog('LIMIT', '教学沙箱最多 8 层栈帧');
+      render();
+      return;
+    }
+    const size = frameBytes(preset.locals);
+    const sp = stackPointer();
+    const base = sp - size;
+    // collide with heap?
+    if (base <= state.heapBump + 64) {
+      pushLog('FAULT', '栈与堆过于接近（示意栈溢出风险）——先释放堆或返回');
+      render();
+      return;
+    }
+    const uid = `frame-${presetId}-${state.logNo + 1}`;
+    state.frames.push({
+      uid,
+      presetId: preset.id,
+      label: preset.label,
+      locals: preset.locals.map((l) => ({ ...l })),
+      base,
+      size,
+    });
+    state.selected = { kind: 'stack', uid };
+    pushLog('CALL', `调用 ${preset.label}，新帧 ${fmtAddr(base)} … ${fmtAddr(base + size)}（栈↓）`);
+    render();
+  }
+
+  function retFrame({ fromDemo = false } = {}) {
+    if (!fromDemo) stopDemo();
+    if (state.frames.length <= 1) {
+      pushLog('RET', '已在 main，无法再返回');
+      render();
+      return;
+    }
+    const gone = state.frames.pop();
+    if (state.selected?.kind === 'stack' && state.selected.uid === gone.uid) {
+      state.selected = {
+        kind: 'stack',
+        uid: state.frames[state.frames.length - 1].uid,
+      };
+    }
+    pushLog('RET', `返回，弹出 ${gone.label}（${gone.size} B）`);
+    render();
+  }
+
+  function allocHeap(presetIndex, { fromDemo = false } = {}) {
+    if (!fromDemo) stopDemo();
+    const preset = HEAP_PRESETS[presetIndex];
+    if (!preset) return;
+    if (state.blocks.filter((b) => b.live).length >= 12) {
+      pushLog('LIMIT', '教学沙箱最多 12 个存活堆块');
+      render();
+      return;
+    }
+    const addr = state.heapBump;
+    const next = state.heapBump + preset.bytes + 8; // +8 header sketch
+    if (next + 64 >= stackPointer()) {
+      pushLog('FAULT', '堆向上扩张将撞上栈——先返回或缩小分配');
+      render();
+      return;
+    }
+    const uid = `heap-${state.logNo + 1}`;
+    state.blocks.push({
+      uid,
+      label: preset.label,
+      tag: preset.tag,
+      bytes: preset.bytes,
+      addr,
+      live: true,
+    });
+    state.heapBump = next;
+    state.selected = { kind: 'heap', uid };
+    pushLog(
+      'NEW',
+      `${preset.label} @ ${fmtAddr(addr)}（${preset.bytes} B），堆 bump → ${fmtAddr(next)}（堆↑）`,
+    );
+    render();
+  }
+
+  function freeSelected({ fromDemo = false } = {}) {
+    if (!fromDemo) stopDemo();
+    if (state.selected?.kind !== 'heap') {
+      pushLog('FREE', '请先点选一个堆块再释放');
+      render();
+      return;
+    }
+    const blk = state.blocks.find((b) => b.uid === state.selected.uid);
+    if (!blk || !blk.live) {
+      pushLog('FREE', '该块已释放或不存在');
+      render();
+      return;
+    }
+    blk.live = false;
+    pushLog('DELETE', `释放 ${blk.label} @ ${fmtAddr(blk.addr)}（示意；未做真实 coalescing）`);
+    render();
+  }
+
+  function select(kind, uid) {
+    stopDemo();
+    state.selected = { kind, uid };
+    render();
+  }
+
+  function runDemoStep(token) {
+    const demoOpts = { fromDemo: true };
+    if (token === 'reset') {
+      state = freshState();
+      return;
+    }
+    if (token.startsWith('call:')) {
+      callFrame(token.slice(5), demoOpts);
+      return;
+    }
+    if (token === 'ret') {
+      retFrame(demoOpts);
+      return;
+    }
+    if (token.startsWith('heap:')) {
+      allocHeap(Number(token.slice(5)), demoOpts);
+      return;
+    }
+    if (token === 'free') {
+      freeSelected(demoOpts);
+      return;
+    }
+    if (token === 'select-stack-top') {
+      const top = state.frames[state.frames.length - 1];
+      if (top) state.selected = { kind: 'stack', uid: top.uid };
+      render();
+      return;
+    }
+    if (token.startsWith('select-heap-')) {
+      const idx = Number(token.replace('select-heap-', ''));
+      const live = state.blocks.filter((b) => b.live);
+      const blk = live[idx] || state.blocks[idx];
+      if (blk) state.selected = { kind: 'heap', uid: blk.uid };
+      render();
     }
   }
 
-  function bumpProgress(sc, step) {
-    const prev = progress[sc.id] || { status: 'idle', maxStep: -1 };
-    const maxStep = Math.max(prev.maxStep, step);
-    progress = {
-      ...progress,
-      [sc.id]: {
-        status: maxStep >= sc.steps.length - 1 ? 'complete' : 'in_progress',
-        maxStep,
-      },
-    };
-    saveProgress(progress);
-  }
-
-  function stats() {
-    const complete = MEM_SCENARIOS.filter((s) => progress[s.id]?.status === 'complete').length;
-    const inProgress = MEM_SCENARIOS.filter((s) => progress[s.id]?.status === 'in_progress').length;
-    const pct = Math.round((complete / MEM_SCENARIOS.length) * 100);
-    return { complete, inProgress, pct, total: MEM_SCENARIOS.length };
-  }
-
-  function flashAnim(kind) {
-    if (animTimer) clearTimeout(animTimer);
-    const lane = shell.querySelector('[data-flow-lane]');
-    if (!lane || !kind) return;
-    lane.setAttribute('data-anim', kind);
-    animTimer = setTimeout(() => lane.removeAttribute('data-anim'), 900);
-  }
-
-  function startPlay() {
-    stopPlay();
-    playing = true;
-    const playBtn = shell.querySelector('[data-play]');
-    if (playBtn) playBtn.textContent = '暂停';
-    timer = setInterval(() => {
-      const sc = currentScenario();
-      if (stepIndex >= sc.steps.length - 1) {
-        stopPlay();
-        const btn = shell.querySelector('[data-play]');
-        if (btn) btn.textContent = '自动播放';
+  function playDemo(demoId) {
+    const demo = DEMOS.find((d) => d.id === demoId);
+    if (!demo) return;
+    stopDemo();
+    demoPlaying = true;
+    demoQueue = [...demo.steps];
+    const tick = () => {
+      const step = demoQueue.shift();
+      if (!step) {
+        stopDemo();
+        render();
         return;
       }
-      stepIndex += 1;
-      bumpProgress(sc, stepIndex);
-      render({ animate: true });
-    }, 1700);
+      runDemoStep(step);
+      // callFrame/ret/etc already render; ensure UI for reset-only
+      if (step === 'reset') render();
+    };
+    demoTimer = setInterval(tick, 1100);
+    tick();
   }
 
-  function selectScenario(id) {
-    if (!MEM_SCENARIOS.some((s) => s.id === id)) return;
-    stopPlay();
-    scenarioId = id;
-    stepIndex = 0;
-    bumpProgress(currentScenario(), 0);
-    render({ animate: true });
-  }
-
-  function goStep(delta) {
-    stopPlay();
-    const sc = currentScenario();
-    const next = Math.max(0, Math.min(sc.steps.length - 1, stepIndex + delta));
-    if (next === stepIndex) return;
-    stepIndex = next;
-    bumpProgress(sc, stepIndex);
-    render({ animate: true });
-  }
-
-  function renderEventTable(events) {
-    if (!events.length) {
-      return `<tbody><tr class="mem-ex__empty-row"><td colspan="6">尚无事件。</td></tr></tbody>`;
+  function selectedDetail() {
+    if (!state.selected) {
+      return `<p class="mem-layout__hint">点击栈帧或堆块查看详情；用左侧按钮改变布局。</p>`;
     }
-    return `<tbody>${events
-      .map(
-        (e, i) => `
-      <tr class="mem-ex__evt${i === events.length - 1 ? ' is-latest' : ''}">
-        <td>${escapeHtml(String(e.no))}</td>
-        <td>${escapeHtml(e.time)}</td>
-        <td>${escapeHtml(e.from)}</td>
-        <td>${escapeHtml(e.to)}</td>
-        <td><span class="mem-ex__phase-tag">${escapeHtml(e.phase)}</span></td>
-        <td>${escapeHtml(e.info)}</td>
-      </tr>`,
-      )
-      .join('')}</tbody>`;
+    if (state.selected.kind === 'stack') {
+      const fr = state.frames.find((f) => f.uid === state.selected.uid);
+      if (!fr) return '';
+      const locals = fr.locals
+        .map(
+          (l) =>
+            `<li><code>${escapeHtml(l.name)}</code> <span>${l.bytes} B</span></li>`,
+        )
+        .join('');
+      return `
+        <h4 class="mem-layout__detail-title">栈帧 · ${escapeHtml(fr.label)}</h4>
+        <dl class="mem-layout__facts">
+          <div><dt>基址</dt><dd><code>${fmtAddr(fr.base)}</code></dd></div>
+          <div><dt>上限</dt><dd><code>${fmtAddr(fr.base + fr.size)}</code></dd></div>
+          <div><dt>大小</dt><dd>${fr.size} B（含教学用开销）</dd></div>
+          <div><dt>SP 示意</dt><dd><code>${fmtAddr(stackPointer())}</code></dd></div>
+        </dl>
+        <p class="mem-layout__sub">局部（示意槽位）</p>
+        <ul class="mem-layout__locals">${locals}</ul>
+        <p class="mem-layout__note">栈向低地址生长：越新的帧越靠近中间空隙。</p>`;
+    }
+    const blk = state.blocks.find((b) => b.uid === state.selected.uid);
+    if (!blk) return '';
+    return `
+      <h4 class="mem-layout__detail-title">堆块 · ${escapeHtml(blk.label)}</h4>
+      <dl class="mem-layout__facts">
+        <div><dt>地址</dt><dd><code>${fmtAddr(blk.addr)}</code></dd></div>
+        <div><dt>大小</dt><dd>${blk.bytes} B</dd></div>
+        <div><dt>标签</dt><dd><code>${escapeHtml(blk.tag)}</code></dd></div>
+        <div><dt>状态</dt><dd>${blk.live ? '已分配' : '已释放（墓碑）'}</dd></div>
+      </dl>
+      <p class="mem-layout__note">堆向高地址 bump；真实分配器有 free-list/合并，此处只演示布局直觉。</p>`;
   }
 
-  /** @param {{ animate?: boolean }} [opts] */
-  function render(opts = {}) {
-    const sc = currentScenario();
-    const step = sc.steps[stepIndex];
-    const highlight = new Set(step.highlight || []);
-    const events = eventsUpTo(sc, stepIndex);
-    const st = stats();
-    const list = filtered();
-
-    /** @type {Record<string, number>} */
-    const catCounts = { all: MEM_SCENARIOS.length };
-    for (const s of MEM_SCENARIOS) catCounts[s.category] = (catCounts[s.category] || 0) + 1;
-
-    const catFilters = Object.keys(MEM_CATEGORY_LABELS)
-      .map(
-        (c) => `
-      <button type="button" class="mem-ex__filter${category === c ? ' is-active' : ''}" data-cat="${c}">
-        ${MEM_CATEGORY_LABELS[c]} <em>${c === 'all' ? MEM_SCENARIOS.length : catCounts[c] || 0}</em>
-      </button>`,
-      )
-      .join('');
-
-    const stages = MEM_STAGES.map((row) => {
-      const active = row.n === sc.stage;
-      return `<div class="mem-ex__stage-row${active ? ' is-active' : ''}">
-        <span class="mem-ex__stage-num">${row.n}</span><span>${escapeHtml(row.name)}</span>
-      </div>`;
-    }).join('');
-
-    const cards = list
-      .map((s) => {
-        const pst = progress[s.id]?.status || 'idle';
+  function renderVas() {
+    const frames = state.frames
+      .map((fr, i) => {
+        const active = state.selected?.kind === 'stack' && state.selected.uid === fr.uid;
+        const depth = state.frames.length - 1 - i;
         return `
-        <button type="button" class="mem-ex__card${s.id === sc.id ? ' is-active' : ''} is-${pst}" data-scenario="${escapeHtml(s.id)}">
-          <span class="mem-ex__card-name">${escapeHtml(s.name)}</span>
-          <span class="mem-ex__card-full">${escapeHtml(s.fullName)}</span>
-          <span class="mem-ex__card-status">${pst === 'complete' ? '已完成' : pst === 'in_progress' ? '进行中' : '未开始'}</span>
+        <button type="button" class="mem-layout__frame${active ? ' is-active' : ''}" data-sel-stack="${escapeHtml(fr.uid)}" style="--depth:${depth}">
+          <span class="mem-layout__frame-name">${escapeHtml(fr.label)}</span>
+          <span class="mem-layout__frame-meta">${fr.size} B · ${fmtAddr(fr.base)}</span>
+          <span class="mem-layout__frame-locals">${fr.locals.map((l) => escapeHtml(l.name)).join(' · ')}</span>
         </button>`;
       })
       .join('');
 
-    const nodes = sc.nodes
+    const liveBlocks = state.blocks.filter((b) => b.live);
+    const deadBlocks = state.blocks.filter((b) => !b.live).slice(-3);
+    const heapBtns = [...liveBlocks, ...deadBlocks]
+      .map((blk) => {
+        const active = state.selected?.kind === 'heap' && state.selected.uid === blk.uid;
+        return `
+        <button type="button" class="mem-layout__hblock${active ? ' is-active' : ''}${blk.live ? '' : ' is-freed'}" data-sel-heap="${escapeHtml(blk.uid)}">
+          <span class="mem-layout__hblock-name">${escapeHtml(blk.label)}</span>
+          <span class="mem-layout__hblock-meta">${blk.bytes} B · ${fmtAddr(blk.addr)}${blk.live ? '' : ' · freed'}</span>
+        </button>`;
+      })
+      .join('');
+
+    const sp = stackPointer();
+    const gapBytes = Math.max(0, sp - state.heapBump);
+    const gapPct = Math.min(40, Math.max(8, Math.round((gapBytes / 0x200000) * 100)));
+
+    return `
+      <div class="mem-layout__vas" role="img" aria-label="进程虚存布局，高地址在上">
+        <div class="mem-layout__addr-rail">
+          <span>高地址</span>
+          <code>${fmtAddr(STACK_TOP)}</code>
+        </div>
+
+        <div class="mem-layout__region mem-layout__region--stack">
+          <div class="mem-layout__region-head">
+            <strong>栈 Stack</strong>
+            <span>向下生长 ↓ · SP <code>${fmtAddr(sp)}</code></span>
+          </div>
+          <div class="mem-layout__frames">${frames || '<p class="mem-layout__empty">（空）</p>'}</div>
+        </div>
+
+        <div class="mem-layout__region mem-layout__region--gap" style="--gap-flex:${gapPct}">
+          <div class="mem-layout__gap-label">未映射 / 空隙（示意 ${fmtAddr(state.heapBump)} … ${fmtAddr(sp)}）</div>
+        </div>
+
+        <div class="mem-layout__region mem-layout__region--heap">
+          <div class="mem-layout__region-head">
+            <strong>堆 Heap</strong>
+            <span>向上生长 ↑ · bump <code>${fmtAddr(state.heapBump)}</code></span>
+          </div>
+          <div class="mem-layout__hblocks">${heapBtns || '<p class="mem-layout__empty">点击「堆分配」创建块</p>'}</div>
+        </div>
+
+        <div class="mem-layout__region mem-layout__region--static">
+          <div class="mem-layout__static-row is-bss"><span>BSS</span><em>未初始化静态</em></div>
+          <div class="mem-layout__static-row is-data"><span>Data</span><em>已初始化静态</em></div>
+          <div class="mem-layout__static-row is-text"><span>Text</span><em>代码</em></div>
+        </div>
+
+        <div class="mem-layout__addr-rail mem-layout__addr-rail--low">
+          <span>低地址</span>
+          <code>${fmtAddr(HEAP_BASE - 0x1000)}</code>
+        </div>
+      </div>`;
+  }
+
+  function render() {
+    const callBtns = FRAME_PRESETS.filter((f) => f.id !== 'main')
       .map(
-        (n) => `
-      <div class="mem-ex__node${highlight.has(n.id) ? ' is-active' : ''}">
-        <span class="mem-ex__node-label">${escapeHtml(n.label)}</span>
-        <code class="mem-ex__node-role">${escapeHtml(n.role)}</code>
-      </div>`,
+        (f) =>
+          `<button type="button" class="mem-layout__btn" data-call="${f.id}">调用 ${escapeHtml(f.label)}</button>`,
       )
-      .join('<span class="mem-ex__wire" aria-hidden="true"></span>');
+      .join('');
+    const heapBtns = HEAP_PRESETS.map(
+      (h, i) =>
+        `<button type="button" class="mem-layout__btn mem-layout__btn--heap" data-alloc="${i}">${escapeHtml(h.label)}</button>`,
+    ).join('');
+    const demoBtns = DEMOS.map(
+      (d) =>
+        `<button type="button" class="mem-layout__demo" data-demo="${d.id}">${escapeHtml(d.label)}</button>`,
+    ).join('');
 
-    const facts = `
-      <dl class="mem-ex__facts">
-        ${(sc.facts || [])
-          .map((f) => `<div><dt>${escapeHtml(f.label)}</dt><dd>${escapeHtml(f.value)}</dd></div>`)
-          .join('')}
-        <div><dt>阶段</dt><dd>${escapeHtml(sc.stageLabel)}</dd></div>
-      </dl>`;
-
-    const stepList = sc.steps
+    const logRows = [...state.log]
+      .reverse()
+      .slice(0, 12)
       .map(
-        (s, i) => `
-      <li class="mem-ex__step-item${i === stepIndex ? ' is-current' : ''}${i < stepIndex ? ' is-done' : ''}">
-        <button type="button" data-goto-step="${i}">
-          <span class="mem-ex__step-num">${i + 1}</span>
-          <span class="mem-ex__step-text">
-            <strong>${escapeHtml(s.title)}</strong>
-            <em>${escapeHtml(s.summary)}</em>
-          </span>
-        </button>
-      </li>`,
+        (e) => `
+        <tr><td>${e.no}</td><td><span class="mem-layout__op">${escapeHtml(e.op)}</span></td><td>${escapeHtml(e.detail)}</td></tr>`,
       )
       .join('');
 
     shell.innerHTML = `
-      <header class="mem-ex__hero">
+      <header class="mem-layout__hero">
         <div>
-          <p class="mem-ex__eyebrow">MEMORY EXPLORER</p>
-          <h2 class="mem-ex__title">内存管理探索</h2>
-          <p class="mem-ex__subtitle">栈 / 堆 · RAII · 智能指针 · vector 扩容 · 中文步进示意</p>
+          <p class="mem-layout__eyebrow">MEMORY LAYOUT SANDBOX</p>
+          <h2 class="mem-layout__title">内存布局沙箱</h2>
+          <p class="mem-layout__subtitle">可交互：压栈 / 返回 · 堆分配 / 释放 · 点选查看 · 栈↓ 堆↑</p>
         </div>
-        <div class="mem-ex__progress">
-          <div class="mem-ex__progress-head"><span>学习进度</span><strong>${st.pct}%</strong></div>
-          <div class="mem-ex__progress-bar" role="progressbar" aria-valuenow="${st.pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${st.pct}%"></i></div>
-          <p class="mem-ex__progress-meta">${st.complete} / ${st.total} 已完成 · ${st.inProgress} 进行中</p>
-          <button type="button" class="mem-ex__linkish" data-reset-progress>重置进度</button>
+        <div class="mem-layout__hero-actions">
+          <button type="button" class="mem-layout__btn mem-layout__btn--accent" data-reset>重置布局</button>
+          ${demoPlaying ? '<button type="button" class="mem-layout__btn" data-stop-demo>停止演示</button>' : ''}
         </div>
       </header>
 
-      <div class="mem-ex__layout">
-        <aside class="mem-ex__sidebar">
-          <h3 class="mem-ex__side-title">阶段条</h3>
-          <div class="mem-ex__stages">${stages}</div>
-          <p class="mem-ex__side-hint">高亮为当前场景阶段。</p>
+      <div class="mem-layout__demos">${demoBtns}</div>
+
+      <div class="mem-layout__grid">
+        <aside class="mem-layout__panel">
+          <h3 class="mem-layout__panel-title">栈操作</h3>
+          <div class="mem-layout__btn-row">${callBtns}</div>
+          <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-ret>返回（弹栈）</button>
+
+          <h3 class="mem-layout__panel-title">堆操作</h3>
+          <div class="mem-layout__btn-row">${heapBtns}</div>
+          <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--danger" data-free>释放选中堆块</button>
+
+          <div class="mem-layout__legend">
+            <span class="is-stack">栈帧</span>
+            <span class="is-heap">堆块</span>
+            <span class="is-gap">空隙</span>
+            <span class="is-static">静态/代码</span>
+          </div>
         </aside>
 
-        <div class="mem-ex__main">
-          <div class="mem-ex__filters">${catFilters}</div>
-          <h3 class="mem-ex__section-title">场景 <span>${list.length}</span></h3>
-          <div class="mem-ex__cards">${cards}</div>
-
-          <article class="mem-ex__detail" aria-live="polite">
-            <div class="mem-ex__detail-head">
-              <div>
-                <p class="mem-ex__active-badge">当前</p>
-                <h3 class="mem-ex__scene-name">${escapeHtml(sc.name)}</h3>
-                <p class="mem-ex__full-name">${escapeHtml(sc.fullName)}</p>
-              </div>
-              ${facts}
-            </div>
-            <p class="mem-ex__blurb">${escapeHtml(sc.blurb)}</p>
-
-            ${renderProcessModel(sc, stepIndex)}
-
-            <div class="mem-ex__stage-grid">
-              <div>
-                <div class="mem-ex__topology">${nodes}</div>
-                <div class="mem-ex__flow-lane" data-flow-lane>
-                  <span class="mem-ex__flow-legend">${escapeHtml(sc.flowLegend)}</span>
-                  <span class="mem-ex__packet-dot" aria-hidden="true"></span>
-                </div>
-                ${renderSequenceDiagram(sc, stepIndex, Boolean(opts.animate))}
-              </div>
-              ${renderMemoryStrip(step.memory)}
-            </div>
-
-            <div class="mem-ex__step-panel">
-              <p class="mem-ex__step-kicker">步骤 ${stepIndex + 1} / ${sc.steps.length}</p>
-              <h4 class="mem-ex__step-title">${escapeHtml(step.title)}</h4>
-              <p class="mem-ex__step-summary">${escapeHtml(step.summary)}</p>
-              <p class="mem-ex__step-body">${escapeHtml(step.body)}</p>
-            </div>
-
-            <div class="mem-ex__controls">
-              <button type="button" class="mem-ex__btn" data-reset-step>重置步骤</button>
-              <button type="button" class="mem-ex__btn" data-prev ${stepIndex === 0 ? 'disabled' : ''}>上一步</button>
-              <button type="button" class="mem-ex__btn mem-ex__btn--accent" data-play>${playing ? '暂停' : '自动播放'}</button>
-              <button type="button" class="mem-ex__btn" data-next ${stepIndex >= sc.steps.length - 1 ? 'disabled' : ''}>下一步</button>
-            </div>
-
-            <ol class="mem-ex__step-list">${stepList}</ol>
-
-            <section class="mem-ex__events" aria-label="内存事件">
-              <div class="mem-ex__events-head">
-                <h4 class="mem-ex__events-title">内存事件</h4>
-                <span class="mem-ex__events-legend">${escapeHtml(sc.flowLegend)}</span>
-              </div>
-              <div class="mem-ex__table-wrap">
-                <table class="mem-ex__table">
-                  <thead>
-                    <tr><th>No.</th><th>时间</th><th>从</th><th>到</th><th>阶段</th><th>信息</th></tr>
-                  </thead>
-                  ${renderEventTable(events)}
-                </table>
-              </div>
-            </section>
-          </article>
+        <div class="mem-layout__center">
+          ${renderVas()}
         </div>
+
+        <aside class="mem-layout__panel mem-layout__panel--detail">
+          <h3 class="mem-layout__panel-title">选中详情</h3>
+          <div class="mem-layout__detail">${selectedDetail()}</div>
+        </aside>
       </div>
 
-      <p class="mem-ex__credit">教学示意：布局与所有权动机；非分配器源码级模拟。安全相关不含利用步骤。可与 Linux 内存分段笔记、RAII 笔记对照。</p>
+      <section class="mem-layout__log" aria-label="操作日志">
+        <h3 class="mem-layout__panel-title">操作日志</h3>
+        <div class="mem-layout__table-wrap">
+          <table class="mem-layout__table">
+            <thead><tr><th>No.</th><th>操作</th><th>说明</th></tr></thead>
+            <tbody>${logRows}</tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="mem-layout__credit">教学沙箱：地址与大小为示意；不模拟真实分配器碎片合并或 ABI 细节。可与 Linux 内存分段笔记对照。</p>
     `;
 
-    if (opts.animate) flashAnim(step.anim);
-
-    shell.querySelectorAll('[data-cat]').forEach((el) => {
-      el.addEventListener('click', () => {
-        category = el.getAttribute('data-cat') || 'all';
-        if (!filtered().some((s) => s.id === scenarioId)) {
-          const first = filtered()[0];
-          if (first) {
-            scenarioId = first.id;
-            stepIndex = 0;
-            bumpProgress(first, 0);
-          }
-        }
-        stopPlay();
-        render();
-      });
-    });
-    shell.querySelectorAll('[data-scenario]').forEach((el) => {
-      el.addEventListener('click', () => selectScenario(el.getAttribute('data-scenario') || ''));
-    });
-    shell.querySelector('[data-prev]')?.addEventListener('click', () => goStep(-1));
-    shell.querySelector('[data-next]')?.addEventListener('click', () => goStep(1));
-    shell.querySelector('[data-reset-step]')?.addEventListener('click', () => {
-      stopPlay();
-      stepIndex = 0;
-      render({ animate: true });
-    });
-    shell.querySelector('[data-reset-progress]')?.addEventListener('click', () => {
-      stopPlay();
-      progress = {};
-      saveProgress(progress);
-      stepIndex = 0;
+    shell.querySelector('[data-reset]')?.addEventListener('click', reset);
+    shell.querySelector('[data-stop-demo]')?.addEventListener('click', () => {
+      stopDemo();
       render();
     });
-    shell.querySelector('[data-play]')?.addEventListener('click', () => {
-      if (playing) {
-        stopPlay();
-        const btn = shell.querySelector('[data-play]');
-        if (btn) btn.textContent = '自动播放';
-        return;
-      }
-      const scNow = currentScenario();
-      if (stepIndex >= scNow.steps.length - 1) {
-        stepIndex = 0;
-        bumpProgress(scNow, 0);
-        render({ animate: true });
-      }
-      startPlay();
-      const btn = shell.querySelector('[data-play]');
-      if (btn) btn.textContent = '暂停';
+    shell.querySelector('[data-ret]')?.addEventListener('click', retFrame);
+    shell.querySelector('[data-free]')?.addEventListener('click', freeSelected);
+    shell.querySelectorAll('[data-call]').forEach((el) => {
+      el.addEventListener('click', () => callFrame(el.getAttribute('data-call') || ''));
     });
-    shell.querySelectorAll('[data-goto-step]').forEach((el) => {
-      el.addEventListener('click', () => {
-        stopPlay();
-        stepIndex = Number(el.getAttribute('data-goto-step') || 0);
-        bumpProgress(currentScenario(), stepIndex);
-        render({ animate: true });
-      });
+    shell.querySelectorAll('[data-alloc]').forEach((el) => {
+      el.addEventListener('click', () => allocHeap(Number(el.getAttribute('data-alloc'))));
     });
-
-    const seqScroll = shell.querySelector('.mem-ex__seq-scroll');
-    if (seqScroll && opts.animate) seqScroll.scrollTop = seqScroll.scrollHeight;
+    shell.querySelectorAll('[data-demo]').forEach((el) => {
+      el.addEventListener('click', () => playDemo(el.getAttribute('data-demo') || ''));
+    });
+    shell.querySelectorAll('[data-sel-stack]').forEach((el) => {
+      el.addEventListener('click', () => select('stack', el.getAttribute('data-sel-stack') || ''));
+    });
+    shell.querySelectorAll('[data-sel-heap]').forEach((el) => {
+      el.addEventListener('click', () => select('heap', el.getAttribute('data-sel-heap') || ''));
+    });
   }
 
-  bumpProgress(currentScenario(), 0);
   container.replaceChildren(shell);
-  render({ animate: true });
+  render();
 
   return {
     dispose() {
-      stopPlay();
-      if (animTimer) clearTimeout(animTimer);
+      stopDemo();
       shell.remove();
     },
   };
