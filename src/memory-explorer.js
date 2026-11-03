@@ -1198,15 +1198,20 @@ export function mountMemoryExplorer(container, options = {}) {
       .join('');
   }
 
-  function selectedDetail() {
+  /** @returns {{ side: string, wide: string }} side=窄栏摘要；wide=通栏槽位表（避免挤在右侧看不全） */
+  function selectionPanels() {
     if (!state.selected) {
-      return `<p class="mem-layout__hint">点击栈帧、堆块或静态符号查看详情。</p>`;
+      return {
+        side: `<p class="mem-layout__hint">点击栈帧、堆块或静态符号查看详情。</p>`,
+        wide: '',
+      };
     }
 
     if (state.selected.kind === 'static') {
       const st = state.statics.find((s) => s.uid === state.selected.uid);
-      if (!st) return '';
-      return `
+      if (!st) return { side: '', wide: '' };
+      return {
+        side: `
         <h4 class="mem-layout__detail-title">静态 · ${escapeHtml(st.name)}</h4>
         <dl class="mem-layout__facts">
           <div><dt>段</dt><dd>${st.region === 'data' ? 'Data（已初始化）' : 'BSS（零初始化）'}</dd></div>
@@ -1214,16 +1219,19 @@ export function mountMemoryExplorer(container, options = {}) {
           <div><dt>大小</dt><dd>${st.bytes} B</dd></div>
           <div><dt>寿命</dt><dd>整个程序</dd></div>
         </dl>
-        <p class="mem-layout__note">静态变量不在栈上；与函数调用无关，返回也不会销毁。</p>`;
+        <p class="mem-layout__note">静态变量不在栈上；与函数调用无关，返回也不会销毁。</p>`,
+        wide: '',
+      };
     }
 
     if (state.selected.kind === 'stack') {
       const idx = state.frames.findIndex((f) => f.uid === state.selected.uid);
       const fr = state.frames[idx];
-      if (!fr) return '';
+      if (!fr) return { side: '', wide: '' };
       const isTop = idx === state.frames.length - 1;
       const caller = idx > 0 ? state.frames[idx - 1] : null;
-      const slots = frameSlots(fr)
+      const slotList = frameSlots(fr);
+      const slots = slotList
         .map(
           (s) => `
           <tr class="is-${s.kind}">
@@ -1240,21 +1248,24 @@ export function mountMemoryExplorer(container, options = {}) {
       if (typed) {
         const meta = TYPE_LAYOUTS[typed.typeId];
         const layout = typeLayoutFor(typed.typeId, Boolean(typed.packed));
-        const base = frameSlots(fr).find((s) => s.name === typed.name)?.addr;
+        const base = slotList.find((s) => s.name === typed.name)?.addr;
         const mode = typed.packed ? '已压缩（无间隔）' : `对齐布局（间隔 ${layout.padBytes} B）`;
         typeExtra = `
-          <p class="mem-layout__sub">${escapeHtml(meta.label)} · ${mode} · sizeof=${layout.size}</p>
-          ${renderByteStrip(layout)}
-          <div class="mem-layout__slot-wrap">
-            <table class="mem-layout__slots">
-              <thead><tr><th>地址/偏移</th><th>字段</th><th>种类</th><th>大小</th></tr></thead>
-              <tbody>${renderTypeLayoutTable(layout, base)}</tbody>
-            </table>
-          </div>
-          <p class="mem-layout__note">色条中灰色=对齐间隔。点左侧「压缩：消除间隔」可去掉空隙（示意 packed）。</p>`;
+          <div class="mem-layout__inspect-block">
+            <h4 class="mem-layout__inspect-sub">${escapeHtml(meta.label)} · ${mode} · sizeof=${layout.size}</h4>
+            ${renderByteStrip(layout)}
+            <div class="mem-layout__slot-wrap mem-layout__slot-wrap--wide">
+              <table class="mem-layout__slots">
+                <thead><tr><th>地址/偏移</th><th>字段</th><th>种类</th><th>大小</th></tr></thead>
+                <tbody>${renderTypeLayoutTable(layout, base)}</tbody>
+              </table>
+            </div>
+            <p class="mem-layout__note">色条中灰色=对齐间隔。点左侧「压缩：消除间隔」可去掉空隙（示意 packed）。</p>
+          </div>`;
       }
 
-      return `
+      return {
+        side: `
         <h4 class="mem-layout__detail-title">栈帧 · ${escapeHtml(fr.label)}</h4>
         <dl class="mem-layout__facts">
           <div><dt>深度</dt><dd>#${idx}${isTop ? ' · 当前顶帧（SP）' : ''}</dd></div>
@@ -1262,23 +1273,31 @@ export function mountMemoryExplorer(container, options = {}) {
           <div><dt>帧基址</dt><dd><code>${fmtAddr(fr.base)}</code></dd></div>
           <div><dt>大小</dt><dd>${fr.size} B</dd></div>
           <div><dt>当前 SP</dt><dd><code>${fmtAddr(stackPointer())}</code></dd></div>
+          <div><dt>槽位数</dt><dd>${slotList.length}（见下方通栏表）</dd></div>
         </dl>
-        <p class="mem-layout__sub">帧内槽位（高 → 低）</p>
-        <div class="mem-layout__slot-wrap">
-          <table class="mem-layout__slots">
-            <thead><tr><th>地址</th><th>槽位</th><th>种类</th><th>大小</th></tr></thead>
-            <tbody>${slots}</tbody>
-          </table>
-        </div>
-        ${typeExtra}
-        <p class="mem-layout__note">自动变量 / 栈上对象随帧生灭；指针可指向堆，move 只转句柄不搬对象本体。</p>`;
+        <p class="mem-layout__note">完整槽位表在下方通栏，避免右侧挤兑。</p>`,
+        wide: `
+        <section class="mem-layout__inspect" aria-label="帧内槽位">
+          <header class="mem-layout__inspect-head">
+            <h3 class="mem-layout__inspect-title">帧内槽位（高地址 → 低地址）· ${escapeHtml(fr.label)}</h3>
+            <p class="mem-layout__inspect-meta">共 ${slotList.length} 槽 · SP <code>${fmtAddr(stackPointer())}</code></p>
+          </header>
+          <div class="mem-layout__slot-wrap mem-layout__slot-wrap--wide">
+            <table class="mem-layout__slots">
+              <thead><tr><th>地址</th><th>槽位</th><th>种类</th><th>大小</th></tr></thead>
+              <tbody>${slots}</tbody>
+            </table>
+          </div>
+          ${typeExtra}
+          <p class="mem-layout__note">自动变量 / 栈上对象随帧生灭；指针可指向堆，move 只转句柄不搬对象本体。</p>
+        </section>`,
+      };
     }
 
     const blk = state.blocks.find((b) => b.uid === state.selected.uid);
-    if (!blk) return '';
+    if (!blk) return { side: '', wide: '' };
     const hdr = blk.header || 8;
-    const end = blk.addr + blk.bytes;
-    const dist = Math.max(0, stackPointer() - end);
+    const dist = Math.max(0, stackPointer() - (blk.addr + blk.bytes));
 
     if (blk.buffer && blk.regions) {
       const used = bufferUsedBytes(blk.regions);
@@ -1294,7 +1313,8 @@ export function mountMemoryExplorer(container, options = {}) {
           </tr>`,
         )
         .join('');
-      return `
+      return {
+        side: `
         <h4 class="mem-layout__detail-title">大缓冲 · ${escapeHtml(blk.label)}</h4>
         <dl class="mem-layout__facts">
           <div><dt>基址</dt><dd><code>${fmtAddr(blk.addr)}</code></dd></div>
@@ -1303,31 +1323,46 @@ export function mountMemoryExplorer(container, options = {}) {
           <div><dt>内部空洞</dt><dd>${fmtBytes(gaps)}</dd></div>
           <div><dt>距 SP</dt><dd>${fmtBytes(dist)}</dd></div>
         </dl>
-        <p class="mem-layout__sub">块内布局（稀疏写 / memmove 紧缩）</p>
-        ${renderBufferStrip(blk.regions, blk.bytes)}
-        <div class="mem-layout__slot-wrap">
-          <table class="mem-layout__slots">
-            <thead><tr><th>地址</th><th>偏移</th><th>段</th><th>大小</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-        <p class="mem-layout__note">紧缩用 <code>memmove</code> 把数据段前移消空洞；尾部可用 <code>memset</code>。块总容量仍是 10MiB。</p>`;
+        <p class="mem-layout__note">块内分段表见下方通栏。</p>`,
+        wide: `
+        <section class="mem-layout__inspect" aria-label="缓冲布局">
+          <header class="mem-layout__inspect-head">
+            <h3 class="mem-layout__inspect-title">块内布局 · ${escapeHtml(blk.label)}</h3>
+            <p class="mem-layout__inspect-meta">有效 ${fmtBytes(used)} · 空洞 ${fmtBytes(gaps)}</p>
+          </header>
+          ${renderBufferStrip(blk.regions, blk.bytes)}
+          <div class="mem-layout__slot-wrap mem-layout__slot-wrap--wide">
+            <table class="mem-layout__slots">
+              <thead><tr><th>地址</th><th>偏移</th><th>段</th><th>大小</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <p class="mem-layout__note">紧缩用 <code>memmove</code> 把数据段前移消空洞；尾部可用 <code>memset</code>。块总容量仍是 10MiB。</p>
+        </section>`,
+      };
     }
 
     const layout = blk.typeId
       ? typeLayoutFor(blk.typeId, Boolean(blk.packed))
       : blk.layout || null;
-    const layoutTable = layout
-      ? `<p class="mem-layout__sub">对象布局 · ${blk.packed ? '已压缩' : `对齐（间隔 ${layout.padBytes} B）`} · sizeof=${layout.size}</p>
-         ${renderByteStrip(layout)}
-         <div class="mem-layout__slot-wrap">
-           <table class="mem-layout__slots">
-             <thead><tr><th>地址</th><th>字段</th><th>种类</th><th>大小</th></tr></thead>
-             <tbody>${renderTypeLayoutTable(layout, blk.addr)}</tbody>
-           </table>
-         </div>`
+    const layoutWide = layout
+      ? `
+        <section class="mem-layout__inspect" aria-label="对象布局">
+          <header class="mem-layout__inspect-head">
+            <h3 class="mem-layout__inspect-title">对象布局 · ${escapeHtml(blk.label)}</h3>
+            <p class="mem-layout__inspect-meta">${blk.packed ? '已压缩' : `对齐（间隔 ${layout.padBytes} B）`} · sizeof=${layout.size}</p>
+          </header>
+          ${renderByteStrip(layout)}
+          <div class="mem-layout__slot-wrap mem-layout__slot-wrap--wide">
+            <table class="mem-layout__slots">
+              <thead><tr><th>地址</th><th>字段</th><th>种类</th><th>大小</th></tr></thead>
+              <tbody>${renderTypeLayoutTable(layout, blk.addr)}</tbody>
+            </table>
+          </div>
+        </section>`
       : '';
-    return `
+    return {
+      side: `
       <h4 class="mem-layout__detail-title">堆块 · ${escapeHtml(blk.label)}</h4>
       <dl class="mem-layout__facts">
         <div><dt>用户指针</dt><dd><code>${fmtAddr(blk.addr)}</code></dd></div>
@@ -1336,8 +1371,9 @@ export function mountMemoryExplorer(container, options = {}) {
         <div><dt>状态</dt><dd>${blk.live ? '已分配' : '已释放（墓碑）'}</dd></div>
         <div><dt>距 SP</dt><dd>${fmtBytes(dist)}</dd></div>
       </dl>
-      ${layoutTable}
-      <p class="mem-layout__note">结构体「压缩」消的是成员对齐间隔；大缓冲「memmove 紧缩」消的是块内写入空洞——两回事。</p>`;
+      <p class="mem-layout__note">${layout ? '字段表见下方通栏。' : '结构体压缩消成员间隔；大缓冲 memmove 消写入空洞。'}</p>`,
+      wide: layoutWide,
+    };
   }
 
   function renderVas() {
@@ -1480,6 +1516,7 @@ export function mountMemoryExplorer(container, options = {}) {
 
     const u = usageStats();
     const callChain = state.frames.map((f) => f.label.replace(/\(\)$/, '')).join(' → ');
+    const panels = selectionPanels();
 
     shell.innerHTML = `
       <header class="mem-layout__hero">
@@ -1559,9 +1596,11 @@ export function mountMemoryExplorer(container, options = {}) {
 
         <aside class="mem-layout__panel mem-layout__panel--detail">
           <h3 class="mem-layout__panel-title">选中详情</h3>
-          <div class="mem-layout__detail">${selectedDetail()}</div>
+          <div class="mem-layout__detail">${panels.side}</div>
         </aside>
       </div>
+
+      ${panels.wide}
 
       <section class="mem-layout__log" aria-label="操作日志">
         <h3 class="mem-layout__panel-title">操作日志</h3>
