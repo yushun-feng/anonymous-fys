@@ -232,7 +232,11 @@ export function mountTransformExplorer(container, options = {}) {
     <div class="xf-explorer__grid">
       <aside class="xf-explorer__panel xf-explorer__panel--controls">
         <p class="xf-explorer__panel-title">增量矩阵 A（TRS）</p>
-        <p class="xf-explorer__panel-hint">滑条改 A；下方同时预览左乘/右乘结果。点「采用」写入当前 M。</p>
+        <p class="xf-explorer__panel-hint">拖滑条粗调，右侧数字框精输；± 步进，快捷值一键吸附。勾选精调或按住 Shift 拖滑条可把步进缩小 10 倍。</p>
+        <label class="xf-explorer__fine">
+          <input type="checkbox" data-fine />
+          精调（步进 ÷10）
+        </label>
         <div class="xf-explorer__sliders" data-a-sliders></div>
         <div class="xf-explorer__side-row">
           <span class="xf-explorer__side-label">预览</span>
@@ -288,25 +292,83 @@ export function mountTransformExplorer(container, options = {}) {
   container.replaceChildren(shell);
 
   const sliderHost = /** @type {HTMLElement} */ (shell.querySelector('[data-a-sliders]'));
+  const fineToggle = /** @type {HTMLInputElement | null} */ (shell.querySelector('[data-fine]'));
+  /** Coarse step for range/± ; fine = coarse / 10 when精调 or Shift. */
   const sliderDefs = [
-    { key: 'tx', label: 'T.x', min: -3, max: 3, step: 0.05 },
-    { key: 'ty', label: 'T.y', min: -3, max: 3, step: 0.05 },
-    { key: 'tz', label: 'T.z', min: -3, max: 3, step: 0.05 },
-    { key: 'rx', label: 'R.x°', min: -180, max: 180, step: 1 },
-    { key: 'ry', label: 'R.y°', min: -180, max: 180, step: 1 },
-    { key: 'rz', label: 'R.z°', min: -180, max: 180, step: 1 },
-    { key: 'sx', label: 'S.x', min: 0.2, max: 2.5, step: 0.05 },
-    { key: 'sy', label: 'S.y', min: 0.2, max: 2.5, step: 0.05 },
-    { key: 'sz', label: 'S.z', min: 0.2, max: 2.5, step: 0.05 },
+    { key: 'tx', label: 'T.x', min: -3, max: 3, step: 0.01, snaps: [-2, -1, 0, 1, 2] },
+    { key: 'ty', label: 'T.y', min: -3, max: 3, step: 0.01, snaps: [-2, -1, 0, 1, 2] },
+    { key: 'tz', label: 'T.z', min: -3, max: 3, step: 0.01, snaps: [-2, -1, 0, 1, 2] },
+    { key: 'rx', label: 'R.x°', min: -180, max: 180, step: 0.5, snaps: [-90, -45, 0, 45, 90] },
+    { key: 'ry', label: 'R.y°', min: -180, max: 180, step: 0.5, snaps: [-90, -45, 0, 45, 90] },
+    { key: 'rz', label: 'R.z°', min: -180, max: 180, step: 0.5, snaps: [-90, -45, 0, 45, 90] },
+    { key: 'sx', label: 'S.x', min: -3, max: 3, step: 0.01, snaps: [-1, 0.5, 1, 1.5, 2] },
+    { key: 'sy', label: 'S.y', min: -3, max: 3, step: 0.01, snaps: [-1, 0.5, 1, 1.5, 2] },
+    { key: 'sz', label: 'S.z', min: -3, max: 3, step: 0.01, snaps: [-1, 0.5, 1, 1.5, 2] },
   ];
+
+  /** @type {Map<string, (typeof sliderDefs)[number]>} */
+  const sliderByKey = new Map(sliderDefs.map((d) => [d.key, d]));
+
+  /** @param {number} value @param {number} min @param {number} max */
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  /** Snap to nearest multiple of step (stable for floats). */
+  function quantize(value, step) {
+    if (!(step > 0)) return value;
+    const n = Math.round(value / step);
+    const q = n * step;
+    const decimals = String(step).includes('.') ? String(step).split('.')[1].length : 0;
+    return Number(q.toFixed(Math.min(6, decimals + 1)));
+  }
+
+  function isFineMode(shiftKey = false) {
+    return Boolean(fineToggle?.checked) || shiftKey;
+  }
+
+  function activeStep(def, shiftKey = false) {
+    return isFineMode(shiftKey) ? def.step / 10 : def.step;
+  }
+
+  /**
+   * @param {keyof typeof Aparams} key
+   * @param {number} raw
+   * @param {{ shiftKey?: boolean, quantizeTo?: number, source?: 'range' | 'num' | 'other' }} [opts]
+   */
+  function setParam(key, raw, opts = {}) {
+    const def = sliderByKey.get(key);
+    if (!def) return;
+    const step = opts.quantizeTo ?? activeStep(def, opts.shiftKey);
+    const next = clamp(quantize(raw, step), def.min, def.max);
+    Aparams[key] = next;
+    syncSliderInputs(opts.source === 'range' ? key : null, opts.source === 'num' ? key : null);
+    renderPanels();
+  }
 
   sliderHost.innerHTML = sliderDefs
     .map((d) => {
       const v = /** @type {number} */ (Aparams[/** @type {keyof typeof Aparams} */ (d.key)]);
-      return `<label class="xf-explorer__slider">
-        <span>${d.label} <em data-val-${d.key}>${fmt(v)}</em></span>
-        <input type="range" data-key="${d.key}" min="${d.min}" max="${d.max}" step="${d.step}" value="${v}" />
-      </label>`;
+      const snaps = d.snaps
+        .map(
+          (s) =>
+            `<button type="button" class="xf-explorer__snap" data-snap-key="${d.key}" data-snap-val="${s}">${s}</button>`,
+        )
+        .join('');
+      return `<div class="xf-explorer__slider" data-slider-row="${d.key}">
+        <div class="xf-explorer__slider-head">
+          <span class="xf-explorer__slider-label">${d.label}</span>
+          <div class="xf-explorer__slider-tools">
+            <button type="button" class="xf-explorer__nudge" data-nudge="-1" data-key="${d.key}" aria-label="${d.label} 减小">−</button>
+            <input type="number" class="xf-explorer__num" data-num-key="${d.key}"
+              min="${d.min}" max="${d.max}" step="${d.step}" value="${v}" inputmode="decimal" />
+            <button type="button" class="xf-explorer__nudge" data-nudge="1" data-key="${d.key}" aria-label="${d.label} 增大">+</button>
+          </div>
+        </div>
+        <input type="range" class="xf-explorer__range" data-key="${d.key}"
+          min="${d.min}" max="${d.max}" step="${d.step}" value="${v}" />
+        <div class="xf-explorer__snaps" role="group" aria-label="${d.label} 快捷值">${snaps}</div>
+      </div>`;
     })
     .join('');
 
@@ -416,13 +478,6 @@ export function mountTransformExplorer(container, options = {}) {
       }
     }
 
-    for (const d of sliderDefs) {
-      const em = shell.querySelector(`[data-val-${d.key}]`);
-      if (em) {
-        em.textContent = fmt(/** @type {number} */ (Aparams[/** @type {keyof typeof Aparams} */ (d.key)]));
-      }
-    }
-
     if (logBody) {
       logBody.innerHTML = [...log]
         .reverse()
@@ -515,11 +570,29 @@ export function mountTransformExplorer(container, options = {}) {
     }
   }
 
-  function syncSliderInputs() {
+  /**
+   * @param {string | null} [skipRangeKey] skip rewriting the range currently being dragged
+   * @param {string | null} [skipNumKey] skip rewriting the number field being typed
+   */
+  function syncSliderInputs(skipRangeKey = null, skipNumKey = null) {
     for (const d of sliderDefs) {
-      const input = /** @type {HTMLInputElement | null} */ (shell.querySelector(`input[data-key="${d.key}"]`));
-      if (input) {
-        input.value = String(Aparams[/** @type {keyof typeof Aparams} */ (d.key)]);
+      const key = /** @type {keyof typeof Aparams} */ (d.key);
+      const val = Aparams[key];
+      const range = /** @type {HTMLInputElement | null} */ (
+        shell.querySelector(`input.xf-explorer__range[data-key="${d.key}"]`)
+      );
+      const num = /** @type {HTMLInputElement | null} */ (
+        shell.querySelector(`input.xf-explorer__num[data-num-key="${d.key}"]`)
+      );
+      if (range) {
+        range.step = String(activeStep(d));
+        if (d.key !== skipRangeKey) range.value = String(val);
+      }
+      if (num) {
+        num.step = String(activeStep(d));
+        if (d.key !== skipNumKey && document.activeElement !== num) {
+          num.value = String(val);
+        }
       }
     }
   }
@@ -531,12 +604,74 @@ export function mountTransformExplorer(container, options = {}) {
     }
   }
 
+  fineToggle?.addEventListener('change', () => {
+    syncSliderInputs();
+  });
+
+  sliderHost.addEventListener('pointerdown', (ev) => {
+    const t = /** @type {HTMLElement} */ (ev.target);
+    if (!(t instanceof HTMLInputElement) || t.type !== 'range' || !t.dataset.key) return;
+    const def = sliderByKey.get(t.dataset.key);
+    if (!def) return;
+    t.step = String(activeStep(def, ev.shiftKey));
+  });
+
   sliderHost.addEventListener('input', (ev) => {
     const t = /** @type {HTMLElement} */ (ev.target);
-    if (!(t instanceof HTMLInputElement) || !t.dataset.key) return;
-    const keyName = /** @type {keyof typeof Aparams} */ (t.dataset.key);
-    Aparams[keyName] = Number(t.value);
-    renderPanels();
+    if (!(t instanceof HTMLInputElement)) return;
+    if (t.dataset.key && t.type === 'range') {
+      const keyName = /** @type {keyof typeof Aparams} */ (t.dataset.key);
+      const def = sliderByKey.get(keyName);
+      if (!def) return;
+      const pe = /** @type {InputEvent & { shiftKey?: boolean }} */ (ev);
+      setParam(keyName, Number(t.value), {
+        shiftKey: Boolean(pe.shiftKey),
+        quantizeTo: activeStep(def, Boolean(pe.shiftKey)),
+        source: 'range',
+      });
+      return;
+    }
+    if (t.dataset.numKey && t.type === 'number') {
+      const keyName = /** @type {keyof typeof Aparams} */ (t.dataset.numKey);
+      const def = sliderByKey.get(keyName);
+      if (!def || t.value === '' || Number.isNaN(Number(t.value))) return;
+      setParam(keyName, Number(t.value), { quantizeTo: activeStep(def), source: 'num' });
+    }
+  });
+
+  sliderHost.addEventListener('change', (ev) => {
+    const t = /** @type {HTMLElement} */ (ev.target);
+    if (!(t instanceof HTMLInputElement) || t.type !== 'number' || !t.dataset.numKey) return;
+    const keyName = /** @type {keyof typeof Aparams} */ (t.dataset.numKey);
+    const def = sliderByKey.get(keyName);
+    if (!def) return;
+    const raw = t.value === '' || Number.isNaN(Number(t.value)) ? Aparams[keyName] : Number(t.value);
+    setParam(keyName, raw, { quantizeTo: activeStep(def), source: 'other' });
+  });
+
+  sliderHost.addEventListener('click', (ev) => {
+    const t = /** @type {HTMLElement} */ (ev.target);
+    const nudgeBtn = t.closest('[data-nudge]');
+    if (nudgeBtn instanceof HTMLElement && nudgeBtn.dataset.key) {
+      const keyName = /** @type {keyof typeof Aparams} */ (nudgeBtn.dataset.key);
+      const def = sliderByKey.get(keyName);
+      if (!def) return;
+      const dir = Number(nudgeBtn.dataset.nudge) || 0;
+      const step = activeStep(def, ev.shiftKey);
+      setParam(keyName, Aparams[keyName] + dir * step, {
+        shiftKey: ev.shiftKey,
+        quantizeTo: step,
+      });
+      return;
+    }
+    const snapBtn = t.closest('[data-snap-key]');
+    if (snapBtn instanceof HTMLElement && snapBtn.dataset.snapKey != null) {
+      const keyName = /** @type {keyof typeof Aparams} */ (snapBtn.dataset.snapKey);
+      const def = sliderByKey.get(keyName);
+      if (!def) return;
+      const snapVal = Number(snapBtn.dataset.snapVal);
+      setParam(keyName, snapVal, { quantizeTo: def.step });
+    }
   });
 
   shell.querySelectorAll('input[name="xf-preview"]').forEach((input) => {
