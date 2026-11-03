@@ -41,6 +41,10 @@ let protocolMountGen = 0;
 let linuxSysHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let linuxSysMountGen = 0;
+/** Active Memory Explorer instance; disposed on every remount. */
+let memoryHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let memoryMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -68,6 +72,12 @@ function disposeLinuxSys() {
   linuxSysMountGen += 1;
   linuxSysHandle?.dispose();
   linuxSysHandle = null;
+}
+
+function disposeMemory() {
+  memoryMountGen += 1;
+  memoryHandle?.dispose();
+  memoryHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -108,6 +118,9 @@ function parseRoute() {
     }
     return { name: 'linux', domain };
   }
+  if (pathPart === 'memory' || pathPart === 'mem') {
+    return { name: 'memory' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -124,6 +137,7 @@ function layout(content) {
         <a href="#/shader">Shader</a>
         <a href="#/protocols">协议</a>
         <a href="#/linux">Linux</a>
+        <a href="#/memory">内存</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
     </header>
@@ -192,6 +206,8 @@ function renderHome() {
     <p class="proto-home-link"><a href="#/protocols">打开完整协议探索 →</a></p>
     <div class="linux-home-slot" data-linux-sys-mount data-linux-sys-compact></div>
     <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
+    <div class="memory-home-slot" data-memory-mount data-memory-compact></div>
+    <p class="memory-home-link"><a href="#/memory">打开内存管理探索 →</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -239,6 +255,14 @@ function renderLinuxSysPage(domain = 'boot') {
     <nav class="crumb"><a href="#/">首页</a> / <span>Linux 系统探索</span>${labels[domain] ? ` / <span>${labels[domain]}</span>` : ''}</nav>
     <div class="linux-page-slot site-main-breakout" data-linux-sys-mount data-linux-domain="${escapeHtml(domain)}"></div>
     <p class="linux-credit">交互演示：系统启动流水线、FHS 目录结构、文件权限（rwx / 特殊位 / ACL 速览）。流程模型 + 时序图 + 事件表；中文 UI。</p>
+  `);
+}
+
+function renderMemoryPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>内存管理探索</span></nav>
+    <div class="memory-page-slot site-main-breakout" data-memory-mount></div>
+    <p class="memory-credit">交互演示：虚存布局、栈帧、堆与 new/delete、RAII、unique/shared、vector 扩容。内存条 + 流程/时序 + 事件表；中文 UI。</p>
   `);
 }
 
@@ -369,6 +393,22 @@ async function mountLinuxSysIfPresent(root) {
   }
 }
 
+async function mountMemoryIfPresent(root) {
+  const slot = root.querySelector('[data-memory-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-memory-compact');
+  const gen = memoryMountGen;
+  try {
+    const { mountMemoryExplorer } = await import('./memory-explorer.js');
+    if (gen !== memoryMountGen || !slot.isConnected) return;
+    memoryHandle = mountMemoryExplorer(slot, { compact });
+  } catch {
+    if (gen !== memoryMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="mem-ex__fallback">内存管理探索模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -443,6 +483,7 @@ function mountContent() {
   disposeShader();
   disposeProtocol();
   disposeLinuxSys();
+  disposeMemory();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -482,6 +523,10 @@ function mountContent() {
     browse.innerHTML = renderLinuxSysPage(route.domain || 'boot');
     void syncSidePanel(null);
     mountLinuxSysIfPresent(browse);
+  } else if (route.name === 'memory') {
+    browse.innerHTML = renderMemoryPage();
+    void syncSidePanel(null);
+    mountMemoryIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -490,6 +535,7 @@ function mountContent() {
     mountShaderIfPresent(browse);
     mountProtocolIfPresent(browse);
     mountLinuxSysIfPresent(browse);
+    mountMemoryIfPresent(browse);
   }
 }
 
