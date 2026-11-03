@@ -1543,43 +1543,54 @@ export function mountMemoryExplorer(container, options = {}) {
       </div>
 
       <div class="mem-layout__grid">
-        <aside class="mem-layout__panel">
-          <h3 class="mem-layout__panel-title">函数调用</h3>
-          <p class="mem-layout__panel-hint">从 Text 进入下一帧；返回 LIFO 弹栈。</p>
-          <div class="mem-layout__btn-row">${callBtns}</div>
-          <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-ret>返回（弹栈）</button>
+        <aside class="mem-layout__panel mem-layout__panel--controls" aria-label="操作">
+          <p class="mem-layout__panel-hint mem-layout__panel-hint--top">左侧栏内滚动；中间布局保持可见。</p>
 
-          <h3 class="mem-layout__panel-title">静态变量</h3>
-          <p class="mem-layout__panel-hint">进 Data / BSS，寿命=程序，不随返回消失。</p>
-          <div class="mem-layout__btn-row">${staticBtns}</div>
+          <details class="mem-layout__fold" open>
+            <summary>函数调用</summary>
+            <p class="mem-layout__panel-hint">压栈 / LIFO 返回</p>
+            <div class="mem-layout__btn-row">${callBtns}</div>
+            <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-ret>返回（弹栈）</button>
+          </details>
 
-          <h3 class="mem-layout__panel-title">自动变量</h3>
-          <p class="mem-layout__panel-hint">写入<strong>当前顶帧</strong>。</p>
-          <div class="mem-layout__btn-row">${localBtns}</div>
+          <details class="mem-layout__fold">
+            <summary>静态 / 自动变量</summary>
+            <p class="mem-layout__panel-hint">静态→Data/BSS；自动变量→顶帧</p>
+            <div class="mem-layout__btn-row">${staticBtns}</div>
+            <div class="mem-layout__btn-row" style="margin-top:0.35rem">${localBtns}</div>
+          </details>
 
-          <h3 class="mem-layout__panel-title">结构体 / 类</h3>
-          <p class="mem-layout__panel-hint">默认带对齐间隔；可放栈上或 <code>new</code> 到堆。</p>
-          <div class="mem-layout__btn-row">${typeStackBtns}</div>
-          <div class="mem-layout__btn-row" style="margin-top:0.35rem">${typeHeapBtns}</div>
-          <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--pack" data-pack>压缩：消除间隔</button>
-          <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-unpack>恢复对齐布局</button>
+          <details class="mem-layout__fold">
+            <summary>结构体 / 对齐压缩</summary>
+            <p class="mem-layout__panel-hint">成员 padding ↔ packed</p>
+            <div class="mem-layout__btn-row">${typeStackBtns}</div>
+            <div class="mem-layout__btn-row" style="margin-top:0.35rem">${typeHeapBtns}</div>
+            <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--pack" data-pack>压缩：消除间隔</button>
+            <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-unpack>恢复对齐布局</button>
+          </details>
 
-          <h3 class="mem-layout__panel-title">句柄与 move</h3>
-          <p class="mem-layout__panel-hint">栈上指针持有堆对象；move 转移所有权。</p>
-          <div class="mem-layout__btn-row">${uniqueBtns}</div>
-          <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--move" data-move>move 顶帧句柄</button>
+          <details class="mem-layout__fold">
+            <summary>句柄与 move</summary>
+            <p class="mem-layout__panel-hint">栈指针持有堆对象</p>
+            <div class="mem-layout__btn-row">${uniqueBtns}</div>
+            <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--move" data-move>move 顶帧句柄</button>
+          </details>
 
-          <h3 class="mem-layout__panel-title">大缓冲 / memmove</h3>
-          <p class="mem-layout__panel-hint">10MiB 内稀疏写 → <code>memmove</code> 收拢到前 2MiB → <code>memset</code> 清尾。</p>
-          <button type="button" class="mem-layout__btn mem-layout__btn--heap" data-buf-new>new char[10MiB]</button>
-          <button type="button" class="mem-layout__btn" data-buf-sparse>稀疏写：1MiB + 空4MiB + 1MiB</button>
-          <button type="button" class="mem-layout__btn mem-layout__btn--pack" data-buf-compact>memmove 紧缩到前端</button>
-          <button type="button" class="mem-layout__btn" data-buf-memset>memset 清尾/空洞</button>
-          <button type="button" class="mem-layout__btn" data-buf-memcpy>memcpy 整块克隆</button>
+          <details class="mem-layout__fold" open>
+            <summary>大缓冲 / memmove</summary>
+            <p class="mem-layout__panel-hint">稀疏写 → memmove → memset</p>
+            <button type="button" class="mem-layout__btn mem-layout__btn--heap" data-buf-new>new char[10MiB]</button>
+            <button type="button" class="mem-layout__btn" data-buf-sparse>稀疏写：1MiB + 空4MiB + 1MiB</button>
+            <button type="button" class="mem-layout__btn mem-layout__btn--pack" data-buf-compact>memmove 紧缩到前端</button>
+            <button type="button" class="mem-layout__btn" data-buf-memset>memset 清尾/空洞</button>
+            <button type="button" class="mem-layout__btn" data-buf-memcpy>memcpy 整块克隆</button>
+          </details>
 
-          <h3 class="mem-layout__panel-title">裸堆分配</h3>
-          <div class="mem-layout__btn-row">${heapBtns}</div>
-          <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--danger" data-free>释放选中堆块（delete）</button>
+          <details class="mem-layout__fold">
+            <summary>裸堆 / delete</summary>
+            <div class="mem-layout__btn-row">${heapBtns}</div>
+            <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--danger" data-free>释放选中堆块（delete）</button>
+          </details>
 
           <div class="mem-layout__legend">
             <span class="is-stack">栈帧</span>
