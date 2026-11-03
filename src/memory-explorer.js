@@ -53,11 +53,24 @@ const HEAP_PRESETS = [
   { label: 'malloc(64)', bytes: 64, tag: 'raw64' },
 ];
 
+/** Automatic (stack) locals the user can push into the top frame. */
+const LOCAL_PRESETS = [
+  { label: 'int x', name: 'x', bytes: 4 },
+  { label: 'long n', name: 'n', bytes: 8 },
+  { label: 'void* p', name: 'p', bytes: 8 },
+  { label: 'char buf[32]', name: 'buf[32]', bytes: 32 },
+];
+
 const DEMOS = [
   {
     id: 'call-chain',
     label: '演示：调用链压栈',
     steps: ['reset', 'call:foo', 'call:bar', 'select-stack-top', 'ret', 'ret'],
+  },
+  {
+    id: 'auto-locals',
+    label: '演示：自动变量进栈',
+    steps: ['reset', 'call:foo', 'local:0', 'local:3', 'select-stack-top'],
   },
   {
     id: 'heap-life',
@@ -75,8 +88,36 @@ function fmtAddr(n) {
   return `0x${n.toString(16)}`;
 }
 
+function fmtBytes(n) {
+  if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(2)} MiB`;
+  if (n >= 1024) return `${(n / 1024).toFixed(1)} KiB`;
+  return `${n} B`;
+}
+
 function frameBytes(locals) {
   return locals.reduce((s, l) => s + l.bytes, 16); // +16 teaching overhead (retaddr/fp)
+}
+
+/** Teaching frame slots: high → low = retaddr, saved FP, then locals. */
+function frameSlots(fr) {
+  /** @type {{ name: string, bytes: number, addr: number, kind: string }[]} */
+  const slots = [];
+  let cursor = fr.base + fr.size;
+  cursor -= 8;
+  slots.push({ name: 'retaddr', bytes: 8, addr: cursor, kind: 'meta', kindLabel: '控制' });
+  cursor -= 8;
+  slots.push({ name: 'saved FP', bytes: 8, addr: cursor, kind: 'meta', kindLabel: '控制' });
+  for (const loc of fr.locals) {
+    cursor -= loc.bytes;
+    slots.push({
+      name: loc.name,
+      bytes: loc.bytes,
+      addr: cursor,
+      kind: 'local',
+      kindLabel: '自动变量',
+    });
+  }
+  return slots;
 }
 
 /**
@@ -232,6 +273,7 @@ export function mountMemoryExplorer(container, options = {}) {
       label: preset.label,
       tag: preset.tag,
       bytes: preset.bytes,
+      header: 8,
       addr,
       live: true,
     });
@@ -240,6 +282,42 @@ export function mountMemoryExplorer(container, options = {}) {
     pushLog(
       'NEW',
       `${preset.label} @ ${fmtAddr(addr)}（${preset.bytes} B），堆 bump → ${fmtAddr(next)}（堆↑）`,
+    );
+    render();
+  }
+
+  function addLocal(presetIndex, { fromDemo = false } = {}) {
+    if (!fromDemo) stopDemo();
+    const preset = LOCAL_PRESETS[presetIndex];
+    if (!preset) return;
+    if (!state.frames.length) return;
+    const fr = state.frames[state.frames.length - 1];
+    if (fr.locals.length >= 10) {
+      pushLog('LIMIT', '单帧最多 10 个自动变量（教学限制）');
+      render();
+      return;
+    }
+    // Disambiguate duplicate names: x, x#2, …
+    let name = preset.name;
+    const same = fr.locals.filter((l) => l.name === name || l.name.startsWith(`${name}#`)).length;
+    if (same > 0) name = `${preset.name}#${same + 1}`;
+
+    const high = fr.base + fr.size;
+    const nextLocals = [...fr.locals, { name, bytes: preset.bytes }];
+    const nextSize = frameBytes(nextLocals);
+    const nextBase = high - nextSize;
+    if (nextBase <= state.heapBump + 64) {
+      pushLog('FAULT', '自动变量过大，栈将撞上堆——先返回或释放堆');
+      render();
+      return;
+    }
+    fr.locals = nextLocals;
+    fr.size = nextSize;
+    fr.base = nextBase;
+    state.selected = { kind: 'stack', uid: fr.uid };
+    pushLog(
+      'AUTO',
+      `${fr.label} 增加自动变量 ${name}（${preset.bytes} B），帧基址 → ${fmtAddr(nextBase)}（栈↓）`,
     );
     render();
   }
@@ -286,6 +364,10 @@ export function mountMemoryExplorer(container, options = {}) {
       allocHeap(Number(token.slice(5)), demoOpts);
       return;
     }
+    if (token.startsWith('local:')) {
+      addLocal(Number(token.slice(6)), demoOpts);
+      return;
+    }
     if (token === 'free') {
       freeSelected(demoOpts);
       return;
@@ -326,42 +408,75 @@ export function mountMemoryExplorer(container, options = {}) {
     tick();
   }
 
+  function usageStats() {
+    const sp = stackPointer();
+    const stackUsed = STACK_TOP - sp;
+    const live = state.blocks.filter((b) => b.live);
+    const heapLive = live.reduce((s, b) => s + b.bytes + (b.header || 8), 0);
+    const heapFreed = state.blocks.filter((b) => !b.live).length;
+    const gap = Math.max(0, sp - state.heapBump);
+    return { sp, stackUsed, heapLive, heapFreed, liveCount: live.length, gap, depth: state.frames.length };
+  }
+
   function selectedDetail() {
     if (!state.selected) {
       return `<p class="mem-layout__hint">点击栈帧或堆块查看详情；用左侧按钮改变布局。</p>`;
     }
     if (state.selected.kind === 'stack') {
-      const fr = state.frames.find((f) => f.uid === state.selected.uid);
+      const idx = state.frames.findIndex((f) => f.uid === state.selected.uid);
+      const fr = state.frames[idx];
       if (!fr) return '';
-      const locals = fr.locals
+      const isTop = idx === state.frames.length - 1;
+      const caller = idx > 0 ? state.frames[idx - 1] : null;
+      const slots = frameSlots(fr)
         .map(
-          (l) =>
-            `<li><code>${escapeHtml(l.name)}</code> <span>${l.bytes} B</span></li>`,
+          (s) => `
+          <tr class="is-${s.kind}">
+            <td><code>${fmtAddr(s.addr)}</code></td>
+            <td>${escapeHtml(s.name)}</td>
+            <td>${escapeHtml(s.kindLabel)}</td>
+            <td>${s.bytes} B</td>
+          </tr>`,
         )
         .join('');
+      const autoCount = fr.locals.length;
       return `
         <h4 class="mem-layout__detail-title">栈帧 · ${escapeHtml(fr.label)}</h4>
         <dl class="mem-layout__facts">
-          <div><dt>基址</dt><dd><code>${fmtAddr(fr.base)}</code></dd></div>
-          <div><dt>上限</dt><dd><code>${fmtAddr(fr.base + fr.size)}</code></dd></div>
-          <div><dt>大小</dt><dd>${fr.size} B（含教学用开销）</dd></div>
-          <div><dt>SP 示意</dt><dd><code>${fmtAddr(stackPointer())}</code></dd></div>
+          <div><dt>深度</dt><dd>#${idx}${isTop ? ' · 当前顶帧（SP）' : ''}</dd></div>
+          <div><dt>调用者</dt><dd>${caller ? escapeHtml(caller.label) : '（进程入口）'}</dd></div>
+          <div><dt>帧基址 SP′</dt><dd><code>${fmtAddr(fr.base)}</code></dd></div>
+          <div><dt>帧高址</dt><dd><code>${fmtAddr(fr.base + fr.size)}</code></dd></div>
+          <div><dt>大小</dt><dd>${fr.size} B（自动变量 + retaddr/FP）</dd></div>
+          <div><dt>自动变量</dt><dd>${autoCount} 个</dd></div>
+          <div><dt>当前 SP</dt><dd><code>${fmtAddr(stackPointer())}</code></dd></div>
         </dl>
-        <p class="mem-layout__sub">局部（示意槽位）</p>
-        <ul class="mem-layout__locals">${locals}</ul>
-        <p class="mem-layout__note">栈向低地址生长：越新的帧越靠近中间空隙。</p>`;
+        <p class="mem-layout__sub">帧内槽位（高地址 → 低地址）</p>
+        <div class="mem-layout__slot-wrap">
+          <table class="mem-layout__slots">
+            <thead><tr><th>地址</th><th>槽位</th><th>种类</th><th>大小</th></tr></thead>
+            <tbody>${slots}</tbody>
+          </table>
+        </div>
+        <p class="mem-layout__note">自动变量住在当前栈帧；函数返回后整帧（含这些变量）一起失效。连点同一函数 = 再压一层。</p>`;
     }
     const blk = state.blocks.find((b) => b.uid === state.selected.uid);
     if (!blk) return '';
+    const hdr = blk.header || 8;
+    const end = blk.addr + blk.bytes;
+    const dist = Math.max(0, stackPointer() - (blk.addr + blk.bytes + hdr));
     return `
       <h4 class="mem-layout__detail-title">堆块 · ${escapeHtml(blk.label)}</h4>
       <dl class="mem-layout__facts">
-        <div><dt>地址</dt><dd><code>${fmtAddr(blk.addr)}</code></dd></div>
-        <div><dt>大小</dt><dd>${blk.bytes} B</dd></div>
+        <div><dt>用户指针</dt><dd><code>${fmtAddr(blk.addr)}</code></dd></div>
+        <div><dt>有效载荷</dt><dd>${blk.bytes} B</dd></div>
+        <div><dt>块头示意</dt><dd>${hdr} B（教学用）</dd></div>
+        <div><dt>占用区间</dt><dd><code>${fmtAddr(blk.addr)}</code> … <code>${fmtAddr(end)}</code></dd></div>
         <div><dt>标签</dt><dd><code>${escapeHtml(blk.tag)}</code></dd></div>
-        <div><dt>状态</dt><dd>${blk.live ? '已分配' : '已释放（墓碑）'}</dd></div>
+        <div><dt>状态</dt><dd>${blk.live ? '已分配' : '已释放（墓碑，未归还 bump）'}</dd></div>
+        <div><dt>距 SP</dt><dd>${fmtBytes(dist)}</dd></div>
       </dl>
-      <p class="mem-layout__note">堆向高地址 bump；真实分配器有 free-list/合并，此处只演示布局直觉。</p>`;
+      <p class="mem-layout__note">bump 分配只往高地址推；释放后不回退 bump，故空隙不会因 DELETE 变大。</p>`;
   }
 
   function renderVas() {
@@ -369,11 +484,12 @@ export function mountMemoryExplorer(container, options = {}) {
       .map((fr, i) => {
         const active = state.selected?.kind === 'stack' && state.selected.uid === fr.uid;
         const depth = state.frames.length - 1 - i;
+        const h = Math.max(44, Math.min(88, 28 + fr.size));
         return `
-        <button type="button" class="mem-layout__frame${active ? ' is-active' : ''}" data-sel-stack="${escapeHtml(fr.uid)}" style="--depth:${depth}">
-          <span class="mem-layout__frame-name">${escapeHtml(fr.label)}</span>
+        <button type="button" class="mem-layout__frame${active ? ' is-active' : ''}" data-sel-stack="${escapeHtml(fr.uid)}" style="--depth:${depth};--frame-h:${h}px">
+          <span class="mem-layout__frame-name"><em>#${i}</em> ${escapeHtml(fr.label)}</span>
           <span class="mem-layout__frame-meta">${fr.size} B · ${fmtAddr(fr.base)}</span>
-          <span class="mem-layout__frame-locals">${fr.locals.map((l) => escapeHtml(l.name)).join(' · ')}</span>
+          <span class="mem-layout__frame-locals">自动变量：${fr.locals.map((l) => escapeHtml(l.name)).join(' · ') || '（无）'}</span>
         </button>`;
       })
       .join('');
@@ -383,8 +499,9 @@ export function mountMemoryExplorer(container, options = {}) {
     const heapBtns = [...liveBlocks, ...deadBlocks]
       .map((blk) => {
         const active = state.selected?.kind === 'heap' && state.selected.uid === blk.uid;
+        const h = Math.max(40, Math.min(96, 24 + blk.bytes / 2));
         return `
-        <button type="button" class="mem-layout__hblock${active ? ' is-active' : ''}${blk.live ? '' : ' is-freed'}" data-sel-heap="${escapeHtml(blk.uid)}">
+        <button type="button" class="mem-layout__hblock${active ? ' is-active' : ''}${blk.live ? '' : ' is-freed'}" data-sel-heap="${escapeHtml(blk.uid)}" style="--block-h:${h}px">
           <span class="mem-layout__hblock-name">${escapeHtml(blk.label)}</span>
           <span class="mem-layout__hblock-meta">${blk.bytes} B · ${fmtAddr(blk.addr)}${blk.live ? '' : ' · freed'}</span>
         </button>`;
@@ -411,7 +528,7 @@ export function mountMemoryExplorer(container, options = {}) {
         </div>
 
         <div class="mem-layout__region mem-layout__region--gap" style="--gap-flex:${gapPct}">
-          <div class="mem-layout__gap-label">未映射 / 空隙（示意 ${fmtAddr(state.heapBump)} … ${fmtAddr(sp)}）</div>
+          <div class="mem-layout__gap-label">未映射 / 空隙 · ${fmtBytes(gapBytes)}<br/><code>${fmtAddr(state.heapBump)}</code> … <code>${fmtAddr(sp)}</code></div>
         </div>
 
         <div class="mem-layout__region mem-layout__region--heap">
@@ -446,6 +563,10 @@ export function mountMemoryExplorer(container, options = {}) {
       (h, i) =>
         `<button type="button" class="mem-layout__btn mem-layout__btn--heap" data-alloc="${i}">${escapeHtml(h.label)}</button>`,
     ).join('');
+    const localBtns = LOCAL_PRESETS.map(
+      (l, i) =>
+        `<button type="button" class="mem-layout__btn mem-layout__btn--local" data-local="${i}">${escapeHtml(l.label)}</button>`,
+    ).join('');
     const demoBtns = DEMOS.map(
       (d) =>
         `<button type="button" class="mem-layout__demo" data-demo="${d.id}">${escapeHtml(d.label)}</button>`,
@@ -459,6 +580,9 @@ export function mountMemoryExplorer(container, options = {}) {
         <tr><td>${e.no}</td><td><span class="mem-layout__op">${escapeHtml(e.op)}</span></td><td>${escapeHtml(e.detail)}</td></tr>`,
       )
       .join('');
+
+    const u = usageStats();
+    const callChain = state.frames.map((f) => f.label.replace(/\(\)$/, '')).join(' → ');
 
     shell.innerHTML = `
       <header class="mem-layout__hero">
@@ -475,18 +599,34 @@ export function mountMemoryExplorer(container, options = {}) {
 
       <div class="mem-layout__demos">${demoBtns}</div>
 
+      <div class="mem-layout__stats" aria-label="布局摘要">
+        <div><span>SP</span><code>${fmtAddr(u.sp)}</code></div>
+        <div><span>栈已用</span><strong>${fmtBytes(u.stackUsed)}</strong><em>${u.depth} 帧</em></div>
+        <div><span>heap bump</span><code>${fmtAddr(state.heapBump)}</code></div>
+        <div><span>堆存活</span><strong>${fmtBytes(u.heapLive)}</strong><em>${u.liveCount} 块${u.heapFreed ? ` · ${u.heapFreed} 墓碑` : ''}</em></div>
+        <div><span>空隙</span><strong>${fmtBytes(u.gap)}</strong></div>
+        <div class="mem-layout__stats-chain"><span>调用链</span><strong>${escapeHtml(callChain)}</strong></div>
+      </div>
+
       <div class="mem-layout__grid">
         <aside class="mem-layout__panel">
           <h3 class="mem-layout__panel-title">栈操作</h3>
+          <p class="mem-layout__panel-hint">每次点击 = 再压一帧（可嵌套/递归）；返回按 LIFO 弹出。</p>
           <div class="mem-layout__btn-row">${callBtns}</div>
           <button type="button" class="mem-layout__btn mem-layout__btn--wide" data-ret>返回（弹栈）</button>
 
+          <h3 class="mem-layout__panel-title">自动变量</h3>
+          <p class="mem-layout__panel-hint">加到<strong>当前顶帧</strong>；扩大帧、SP 下移。对比右侧堆的 <code>new</code>。</p>
+          <div class="mem-layout__btn-row">${localBtns}</div>
+
           <h3 class="mem-layout__panel-title">堆操作</h3>
+          <p class="mem-layout__panel-hint">bump 向高地址推进；释放只标墓碑，不回退 bump。</p>
           <div class="mem-layout__btn-row">${heapBtns}</div>
           <button type="button" class="mem-layout__btn mem-layout__btn--wide mem-layout__btn--danger" data-free>释放选中堆块</button>
 
           <div class="mem-layout__legend">
             <span class="is-stack">栈帧</span>
+            <span class="is-local">自动变量</span>
             <span class="is-heap">堆块</span>
             <span class="is-gap">空隙</span>
             <span class="is-static">静态/代码</span>
@@ -528,6 +668,9 @@ export function mountMemoryExplorer(container, options = {}) {
     });
     shell.querySelectorAll('[data-alloc]').forEach((el) => {
       el.addEventListener('click', () => allocHeap(Number(el.getAttribute('data-alloc'))));
+    });
+    shell.querySelectorAll('[data-local]').forEach((el) => {
+      el.addEventListener('click', () => addLocal(Number(el.getAttribute('data-local'))));
     });
     shell.querySelectorAll('[data-demo]').forEach((el) => {
       el.addEventListener('click', () => playDemo(el.getAttribute('data-demo') || ''));
