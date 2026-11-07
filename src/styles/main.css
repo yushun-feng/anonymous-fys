@@ -1387,7 +1387,6 @@ html.is-gate #app {
   margin: 0;
   border: 1px solid #fff;
   background: #000;
-  line-height: 0;
 }
 
 .gate-satire-image {
@@ -1395,6 +1394,16 @@ html.is-gate #app {
   width: 100%;
   height: auto;
   filter: grayscale(0.15) contrast(1.05);
+}
+
+.gate-satire-caption {
+  margin: 0;
+  padding: 0.7rem 0.85rem 0.8rem;
+  border-top: 1px solid #fff;
+  color: #ddd;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
 }
 
 .gate-kicker {
