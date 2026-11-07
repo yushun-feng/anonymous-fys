@@ -23,6 +23,9 @@
 
 html {
   color-scheme: dark;
+  --shichen-panorama: none;
+  --shichen-focus: 50%;
+  --shichen-tint: rgba(12, 22, 28, 0.28);
 }
 
 body {
@@ -32,10 +35,58 @@ body {
   font-size: 16px;
   line-height: 1.65;
   color: var(--text);
+  background: var(--bg);
+  position: relative;
+}
+
+/* Forbidden City twelve-时辰 panorama — full-bleed atmosphere */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: var(--shichen-panorama);
+  background-size: cover;
+  background-position: var(--shichen-focus) 45%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  transition: background-position 1.2s ease;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
-    radial-gradient(1200px 500px at 10% -10%, #1a2a3d 0%, transparent 55%),
-    radial-gradient(900px 400px at 100% 0%, #152018 0%, transparent 50%),
-    var(--bg);
+    linear-gradient(180deg, rgba(8, 12, 18, 0.55) 0%, rgba(8, 12, 18, 0.42) 35%, rgba(8, 12, 18, 0.72) 100%),
+    radial-gradient(1200px 500px at 10% -10%, rgba(26, 42, 61, 0.35), transparent 55%),
+    var(--shichen-tint);
+  transition: background 0.8s ease;
+}
+
+/* Daily page: let more of the palace show through */
+html[data-route='daily'] body::after {
+  background:
+    linear-gradient(180deg, rgba(8, 12, 18, 0.38) 0%, rgba(8, 12, 18, 0.28) 40%, rgba(8, 12, 18, 0.58) 100%),
+    var(--shichen-tint);
+}
+
+/* Note pages: stronger scrim so markdown stays readable */
+html[data-route='note'] body::after {
+  background:
+    linear-gradient(180deg, rgba(8, 12, 18, 0.72) 0%, rgba(8, 12, 18, 0.78) 100%),
+    var(--shichen-tint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    transition: none;
+    background-attachment: scroll;
+  }
 }
 
 a {
@@ -86,6 +137,7 @@ code {
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
+  background: transparent;
 }
 
 .playground-splitter {
@@ -122,7 +174,8 @@ code {
   top: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-elevated);
+  background: rgba(23, 30, 38, 0.94);
+  backdrop-filter: blur(10px);
   border-left: 1px solid var(--border);
   overflow: hidden;
 }
@@ -454,6 +507,14 @@ code {
   max-width: var(--max);
   margin: 0 auto;
   width: 100%;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: linear-gradient(180deg, rgba(15, 20, 25, 0.72), rgba(15, 20, 25, 0.45));
+  backdrop-filter: blur(8px);
+}
+
+html[data-route='daily'] .site-header {
+  max-width: min(1180px, 100%);
+  background: linear-gradient(180deg, rgba(15, 20, 25, 0.55), rgba(15, 20, 25, 0.28));
 }
 
 .brand {
@@ -874,13 +935,16 @@ code {
 }
 
 .site-footer {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(42, 53, 65, 0.65);
   padding: 1rem 1.25rem 2rem;
   max-width: var(--max);
   margin: 0 auto;
   width: 100%;
   color: var(--muted);
   font-size: 0.85rem;
+  background: rgba(15, 20, 25, 0.55);
+  backdrop-filter: blur(6px);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .filters {
@@ -888,9 +952,10 @@ code {
   gap: 0.85rem;
   margin: 1rem 0 1.25rem;
   padding: 1rem;
-  background: var(--bg-elevated);
+  background: rgba(23, 30, 38, 0.82);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  backdrop-filter: blur(10px);
 }
 
 .filter-row {
@@ -963,7 +1028,8 @@ code {
   padding: 0.85rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg-elevated);
+  background: rgba(23, 30, 38, 0.88);
+  backdrop-filter: blur(8px);
   color: inherit;
   text-decoration: none;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -991,6 +1057,14 @@ code {
   margin: 0.5rem 0 1.25rem;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.note-article {
+  padding: 1rem 1.1rem 1.5rem;
+  border: 1px solid rgba(42, 53, 65, 0.7);
+  border-radius: var(--radius);
+  background: rgba(15, 20, 25, 0.88);
+  backdrop-filter: blur(12px);
 }
 
 .note-header h1 {
@@ -1287,6 +1361,11 @@ code {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid rgba(42, 53, 65, 0.75);
+  border-radius: var(--radius);
+  background: rgba(15, 20, 25, 0.82);
+  backdrop-filter: blur(14px);
 }
 
 .gate-title {
@@ -4834,21 +4913,16 @@ code {
   --dy-line: rgba(212, 165, 116, 0.35);
   margin: 0 0 1.5rem;
   padding: 1.15rem 1.2rem 1.35rem;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(42, 53, 65, 0.75);
   border-radius: var(--radius);
   color: var(--text);
   background:
-    radial-gradient(900px 420px at 8% -20%, rgba(212, 165, 116, 0.14), transparent 55%),
-    radial-gradient(700px 380px at 100% 0%, rgba(143, 175, 136, 0.08), transparent 50%),
-    linear-gradient(180deg, rgba(23, 30, 38, 0.92), rgba(15, 20, 25, 0.98)),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 11px,
-      rgba(255, 255, 255, 0.015) 11px,
-      rgba(255, 255, 255, 0.015) 12px
-    );
+    radial-gradient(900px 420px at 8% -20%, rgba(212, 165, 116, 0.12), transparent 55%),
+    radial-gradient(700px 380px at 100% 0%, rgba(143, 175, 136, 0.07), transparent 50%),
+    linear-gradient(180deg, rgba(15, 20, 25, 0.78), rgba(12, 16, 22, 0.88));
+  backdrop-filter: blur(12px) saturate(1.05);
   animation: daily-ex-in 0.45s ease both;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
 }
 
 @keyframes daily-ex-in {
@@ -4862,8 +4936,71 @@ code {
 }
 
 .daily-ex--compact .daily-ex__credit,
-.daily-ex--compact .daily-ex__poster {
+.daily-ex--compact .daily-ex__poster,
+.daily-ex--compact .daily-ex__shichen,
+.daily-ex--compact .daily-ex__shichen-meta {
   display: none;
+}
+
+.daily-ex__shichen {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.2rem;
+  margin: 0 0 0.9rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(212, 165, 116, 0.22);
+  border-radius: 10px;
+  background: rgba(8, 12, 18, 0.45);
+}
+
+.daily-ex__shichen-cell {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: clamp(0.62rem, 1.4vw, 0.74rem);
+  padding: 0.35rem 0.1rem;
+  border-radius: 6px;
+  cursor: default;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.daily-ex__shichen-cell strong {
+  display: block;
+  font-weight: 650;
+  color: var(--dy-ink);
+  font-size: 0.85em;
+}
+
+.daily-ex__shichen-cell em {
+  display: block;
+  font-style: normal;
+  font-size: 0.62em;
+  opacity: 0.75;
+  letter-spacing: -0.02em;
+}
+
+.daily-ex__shichen-cell.is-now {
+  background: rgba(212, 165, 116, 0.22);
+  color: var(--dy-amber);
+  box-shadow: inset 0 0 0 1px rgba(212, 165, 116, 0.45);
+}
+
+.daily-ex__shichen-cell.is-now strong {
+  color: var(--dy-amber);
+}
+
+.daily-ex__shichen-meta {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.daily-ex__shichen-meta strong {
+  color: var(--dy-amber);
+  font-weight: 650;
 }
 
 .daily-ex__hero {
