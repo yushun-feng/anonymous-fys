@@ -1466,14 +1466,6 @@ html.is-gate #app {
   line-height: 1.35;
 }
 
-.gate-vote-hint {
-  flex-basis: 100%;
-  margin: 0;
-  color: #777;
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-}
-
 .gate-form {
   width: 100%;
   max-width: 22rem;
@@ -1563,10 +1555,6 @@ html.is-gate #app {
 
   .gate-vote-btn {
     justify-content: space-between;
-  }
-
-  .gate-vote-hint {
-    max-width: 7.5rem;
   }
 }
 

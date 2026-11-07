@@ -155,7 +155,6 @@ export function renderGate(root, { onSuccess }) {
                 <span class="gate-vote-label">反对</span>
                 <span class="gate-vote-count" data-gate-vote-count="against">0</span>
               </button>
-              <p class="gate-vote-hint">本机一票，可切换；计数存于浏览器</p>
             </div>
           </div>
         </header>
