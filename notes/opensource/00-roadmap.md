@@ -19,6 +19,12 @@ order: 0
 | HelloGitHub 月刊 | [`hellogithub/`](./hellogithub/) | 已摘录若干期 |
 | （待定）其它杂志 / Awesome 列表 / 周刊 | `notes/opensource/<source-slug>/` | 规划中 |
 
+## 相关：生活向开源列表（正文在 `daily/`）
+
+| 仓库 | 站内落点 | 说明 |
+|------|----------|------|
+| [eternity4719/HowToLiveBetter](https://github.com/eternity4719/HowToLiveBetter) | [`daily/howto-live-better`](../daily/howto-live-better.md) · [`#/daily`](#/daily) | 「高性价比人生指南」：证据分级 + 可检索人生备选单。主题归 **日常**，此处只作开源架交叉入口。 |
+
 ## 如何新增一篇摘录
 
 1. 在 `notes/opensource/<source-slug>/` 下新建 `.md`（新来源先建子目录；HelloGitHub 继续放 `hellogithub/`）。
