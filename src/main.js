@@ -54,6 +54,10 @@ let transformMountGen = 0;
 let pointerHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let pointerMountGen = 0;
+/** Active Daily Rhythm Explorer instance; disposed on every remount. */
+let dailyHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let dailyMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -99,6 +103,12 @@ function disposePointer() {
   pointerMountGen += 1;
   pointerHandle?.dispose();
   pointerHandle = null;
+}
+
+function disposeDaily() {
+  dailyMountGen += 1;
+  dailyHandle?.dispose();
+  dailyHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -148,6 +158,9 @@ function parseRoute() {
   if (pathPart === 'pointers' || pathPart === 'pointer' || pathPart === 'ptr') {
     return { name: 'pointers' };
   }
+  if (pathPart === 'daily' || pathPart === 'habits' || pathPart === 'rhythm') {
+    return { name: 'daily' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -167,6 +180,7 @@ function layout(content) {
         <a href="#/memory">内存</a>
         <a href="#/pointers">指针</a>
         <a href="#/transform">变换</a>
+        <a href="#/daily">日常</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU · Linux · 日常 — 公开笔记浏览</p>
     </header>
@@ -241,6 +255,8 @@ function renderHome() {
     <p class="pointer-home-link"><a href="#/pointers">打开指针操作（槽位 · 箭头 · 智能指针）→</a></p>
     <div class="transform-home-slot" data-transform-mount data-transform-compact></div>
     <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
+    <div class="daily-home-slot" data-daily-mount data-daily-compact></div>
+    <p class="daily-home-link"><a href="#/daily">打开日常节奏板（日 / 周 / 月 / 年）→</a></p>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -312,6 +328,14 @@ function renderPointersPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>指针操作</span></nav>
     <div class="pointer-page-slot site-main-breakout" data-pointer-mount></div>
     <p class="pointer-credit">槽位 + 箭头演示取址、解引用、算术与 unique/shared/weak；环引用警示。笔记见<a href="#/note/cpp/pointer-ops-explorer">指针操作交互页</a>；完整虚存见<a href="#/memory">内存沙箱</a>。</p>
+  `);
+}
+
+function renderDailyPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>日常节奏</span></nav>
+    <div class="daily-page-slot site-main-breakout" data-daily-mount></div>
+    <p class="daily-credit">可勾选的日/周/月/年微习惯与长期原则；本机进度记忆。笔记见<a href="#/note/daily/2026-self-discipline-checklist">2026 自律清单</a>。</p>
   `);
 }
 
@@ -490,6 +514,22 @@ async function mountPointerIfPresent(root) {
   }
 }
 
+async function mountDailyIfPresent(root) {
+  const slot = root.querySelector('[data-daily-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-daily-compact');
+  const gen = dailyMountGen;
+  try {
+    const { mountDailyExplorer } = await import('./daily-explorer.js');
+    if (gen !== dailyMountGen || !slot.isConnected) return;
+    dailyHandle = mountDailyExplorer(slot, { compact });
+  } catch {
+    if (gen !== dailyMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="daily-ex__credit">日常节奏模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -567,6 +607,7 @@ function mountContent() {
   disposeMemory();
   disposeTransform();
   disposePointer();
+  disposeDaily();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -586,6 +627,10 @@ function mountContent() {
   }
   if (rawPath === 'pointer' || rawPath === 'ptr') {
     window.location.replace(`${window.location.pathname}${window.location.search}#/pointers`);
+    return;
+  }
+  if (rawPath === 'habits' || rawPath === 'rhythm') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/daily`);
     return;
   }
   if (route.name === 'note') {
@@ -630,6 +675,11 @@ function mountContent() {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountPointerIfPresent(browse);
+  } else if (route.name === 'daily') {
+    browse.innerHTML = renderDailyPage();
+    void syncSidePanel(null);
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
+    mountDailyIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -641,6 +691,7 @@ function mountContent() {
     mountMemoryIfPresent(browse);
     mountPointerIfPresent(browse);
     mountTransformIfPresent(browse);
+    mountDailyIfPresent(browse);
   }
 }
 
