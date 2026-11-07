@@ -1,6 +1,7 @@
 /**
  * Daily Rhythm Explorer — interactive self-discipline checklist.
- * Cadence tabs (日/周/月/年/长期), checkable items, local progress, poster.
+ * Cadence tabs (日/周/月/年/长期), checkable items, local progress,
+ * poster gallery, and a 20-minute starter timer.
  * Chinese UI. Teaching / personal rhythm — not a productivity SaaS.
  */
 
@@ -14,6 +15,31 @@ function escapeHtml(text) {
 
 const STORAGE_KEY = 'anonymous-fys-daily-checklist-v1';
 const FOCUS_KEY = 'anonymous-fys-daily-focus-v1';
+const TIMER_KEY = 'anonymous-fys-daily-20min-v1';
+const TIMER_MS = 20 * 60 * 1000;
+
+const BASE = import.meta.env.BASE_URL || '/';
+const asset = (path) => `${BASE.endsWith('/') ? BASE : `${BASE}/`}${path}`;
+
+/** @type {{ id: string, title: string, note: string, src: string, alt: string, caption: string }[]} */
+const POSTERS = [
+  {
+    id: 'checklist',
+    title: '自律清单',
+    note: '#/note/daily/2026-self-discipline-checklist',
+    src: asset('notes-assets/daily/2026-self-discipline-checklist.png'),
+    alt: '2026年顶级自律清单原图',
+    caption: '日/周/月/年微习惯 + 长期原则',
+  },
+  {
+    id: 'twenty',
+    title: '20 分钟定律',
+    note: '#/note/daily/20-minute-rule',
+    src: asset('notes-assets/daily/20-minute-rule.jpg'),
+    alt: '详解20分钟定律原图',
+    caption: '先启动 20 分钟，阻力常会下降',
+  },
+];
 
 /** @typedef {{ id: string, text: string }} HabitItem */
 /** @typedef {{ id: string, label: string, kicker: string, blurb: string, items: HabitItem[] }} Cadence */
@@ -122,9 +148,6 @@ const CADENCES = [
   },
 ];
 
-const BASE = import.meta.env.BASE_URL || '/';
-const POSTER_SRC = `${BASE.endsWith('/') ? BASE : `${BASE}/`}notes-assets/daily/2026-self-discipline-checklist.png`;
-
 function todayKey() {
   const d = new Date();
   const y = d.getFullYear();
@@ -181,6 +204,31 @@ function saveFocus(id) {
   }
 }
 
+function loadTimerEndsAt() {
+  try {
+    const n = Number(localStorage.getItem(TIMER_KEY) || 0);
+    return Number.isFinite(n) && n > Date.now() ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveTimerEndsAt(endsAt) {
+  try {
+    if (endsAt) localStorage.setItem(TIMER_KEY, String(endsAt));
+    else localStorage.removeItem(TIMER_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function fmtRemain(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+}
+
 function findItem(id) {
   for (const c of CADENCES) {
     const item = c.items.find((i) => i.id === id);
@@ -201,11 +249,80 @@ export function mountDailyExplorer(container, options = {}) {
   /** @type {string} */
   let active = 'day';
   let showPoster = !compact;
+  /** @type {string} */
+  let posterId = 'checklist';
+  let timerEndsAt = loadTimerEndsAt();
+  /** @type {'idle' | 'running' | 'done'} */
+  let timerPhase = timerEndsAt ? 'running' : 'idle';
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let timerTick = null;
   let disposed = false;
 
   const shell = document.createElement('section');
   shell.className = `daily-ex${compact ? ' daily-ex--compact' : ''}`;
   shell.setAttribute('aria-label', '日常节奏与自律清单');
+
+  function stopTick() {
+    if (timerTick) {
+      clearInterval(timerTick);
+      timerTick = null;
+    }
+  }
+
+  function remainingMs() {
+    if (!timerEndsAt) return TIMER_MS;
+    return Math.max(0, timerEndsAt - Date.now());
+  }
+
+  function paintTimer() {
+    const face = shell.querySelector('[data-timer-face]');
+    const bar = shell.querySelector('[data-timer-bar]');
+    if (!face) return;
+    const left = remainingMs();
+    if (timerPhase === 'running' && left <= 0) {
+      timerPhase = 'done';
+      timerEndsAt = 0;
+      saveTimerEndsAt(0);
+      stopTick();
+      render();
+      return;
+    }
+    face.textContent = timerPhase === 'idle' ? '20:00' : timerPhase === 'done' ? '完成' : fmtRemain(left);
+    if (bar) {
+      const pct =
+        timerPhase === 'idle' ? 0 : timerPhase === 'done' ? 100 : Math.round(((TIMER_MS - left) / TIMER_MS) * 100);
+      /** @type {HTMLElement} */ (bar).style.width = `${pct}%`;
+    }
+  }
+
+  function startTick() {
+    stopTick();
+    if (timerPhase !== 'running') return;
+    paintTimer();
+    timerTick = setInterval(() => {
+      if (disposed) {
+        stopTick();
+        return;
+      }
+      paintTimer();
+    }, 250);
+  }
+
+  function startTimer() {
+    timerEndsAt = Date.now() + TIMER_MS;
+    saveTimerEndsAt(timerEndsAt);
+    timerPhase = 'running';
+    render();
+    startTick();
+  }
+
+  function resetTimer() {
+    stopTick();
+    timerEndsAt = 0;
+    saveTimerEndsAt(0);
+    timerPhase = 'idle';
+    render();
+  }
 
   function progressFor(cadenceId) {
     const c = CADENCES.find((x) => x.id === cadenceId);
@@ -246,6 +363,11 @@ export function mountDailyExplorer(container, options = {}) {
     const prog = progressFor(cadence.id);
     const all = overall();
     const focusHit = focusId ? findItem(focusId) : null;
+    const poster = POSTERS.find((p) => p.id === posterId) || POSTERS[0];
+    const left = remainingMs();
+    const timerPct =
+      timerPhase === 'idle' ? 0 : timerPhase === 'done' ? 100 : Math.round(((TIMER_MS - left) / TIMER_MS) * 100);
+    const timerLabel = timerPhase === 'idle' ? '20:00' : timerPhase === 'done' ? '完成' : fmtRemain(left);
 
     const rings = CADENCES.map((c) => {
       const p = progressFor(c.id);
@@ -269,11 +391,12 @@ export function mountDailyExplorer(container, options = {}) {
         <div class="daily-ex__hero-copy">
           <p class="daily-ex__eyebrow">DAILY · RHYTHM</p>
           <h2 class="daily-ex__brand">日常</h2>
-          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯，外加长期原则。勾选记在本机；每日项会按日历日重置。</p>
+          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯、长期原则，以及 20 分钟启动定律。勾选记在本机；每日项按日历日重置。</p>
           <div class="daily-ex__hero-actions">
-            <a class="daily-ex__link" href="#/note/daily/2026-self-discipline-checklist">笔记正文 →</a>
+            <a class="daily-ex__link" href="#/note/daily/2026-self-discipline-checklist">自律清单笔记 →</a>
+            <a class="daily-ex__link" href="#/note/daily/20-minute-rule">20 分钟定律 →</a>
             ${compact ? '<a class="daily-ex__link" href="#/daily">打开完整页 →</a>' : ''}
-            <button type="button" class="daily-ex__linkish" data-toggle-poster>${showPoster ? '收起原图' : '展开原图'}</button>
+            <button type="button" class="daily-ex__linkish" data-toggle-poster>${showPoster ? '收起海报' : '展开海报'}</button>
           </div>
         </div>
         <div class="daily-ex__hero-stat" aria-label="总进度">
@@ -283,6 +406,26 @@ export function mountDailyExplorer(container, options = {}) {
         </div>
       </header>
 
+      <section class="daily-ex__timer${timerPhase === 'running' ? ' is-running' : ''}${timerPhase === 'done' ? ' is-done' : ''}" aria-label="20 分钟启动计时">
+        <div class="daily-ex__timer-copy">
+          <p class="daily-ex__kicker">20 分钟定律</p>
+          <h3 class="daily-ex__timer-title">先启动，再谈动力</h3>
+          <p class="daily-ex__timer-blurb">只承诺 20 分钟。过了启动段，阻力常会下降——学习、运动、家务都适用。</p>
+        </div>
+        <div class="daily-ex__timer-face-wrap">
+          <p class="daily-ex__timer-face" data-timer-face>${escapeHtml(timerLabel)}</p>
+          <div class="daily-ex__timer-track"><i data-timer-bar style="width:${timerPct}%"></i></div>
+          <div class="daily-ex__timer-actions">
+            ${
+              timerPhase === 'running'
+                ? `<button type="button" class="daily-ex__btn" data-timer-reset>放弃本次</button>`
+                : `<button type="button" class="daily-ex__btn daily-ex__btn--accent" data-timer-start>${timerPhase === 'done' ? '再来 20 分钟' : '开始 20 分钟'}</button>`
+            }
+            ${timerPhase === 'done' ? '<span class="daily-ex__timer-ok">启动段完成 · 若已进入状态，可继续做下去</span>' : ''}
+          </div>
+        </div>
+      </section>
+
       ${
         focusHit
           ? `<div class="daily-ex__focus" role="status">
@@ -290,7 +433,7 @@ export function mountDailyExplorer(container, options = {}) {
               <p>${escapeHtml(focusHit.item.text)}</p>
               <button type="button" class="daily-ex__ghost" data-clear-focus>取消聚焦</button>
             </div>`
-          : `<p class="daily-ex__hint">点条目旁的「聚焦」只盯一条——比一次勾完更接近「慢慢消化」。</p>`
+          : `<p class="daily-ex__hint">点条目旁的「聚焦」只盯一条；抗拒动手时，用上方 20 分钟计时先启动。</p>`
       }
 
       <div class="daily-ex__rings" role="tablist" aria-label="节奏">${rings}</div>
@@ -331,10 +474,16 @@ export function mountDailyExplorer(container, options = {}) {
         ${
           showPoster && !compact
             ? `<aside class="daily-ex__poster">
-                <p class="daily-ex__kicker">原图海报</p>
+                <p class="daily-ex__kicker">海报库</p>
+                <div class="daily-ex__poster-tabs" role="tablist">
+                  ${POSTERS.map(
+                    (p) =>
+                      `<button type="button" class="daily-ex__poster-tab${posterId === p.id ? ' is-active' : ''}" data-poster="${escapeHtml(p.id)}">${escapeHtml(p.title)}</button>`,
+                  ).join('')}
+                </div>
                 <figure>
-                  <img src="${escapeHtml(POSTER_SRC)}" alt="2026年顶级自律清单原图" loading="lazy" />
-                  <figcaption>可检索正文见笔记；此处保留版式原貌。</figcaption>
+                  <img src="${escapeHtml(poster.src)}" alt="${escapeHtml(poster.alt)}" loading="lazy" />
+                  <figcaption>${escapeHtml(poster.caption)} · <a href="${escapeHtml(poster.note)}">笔记</a></figcaption>
                 </figure>
               </aside>`
             : ''
@@ -344,11 +493,12 @@ export function mountDailyExplorer(container, options = {}) {
       ${
         compact
           ? ''
-          : `<p class="daily-ex__credit">本机 localStorage 记忆勾选；每日项按自然日清零。原则区「长期」用勾选表示本周仍在对齐。</p>`
+          : `<p class="daily-ex__credit">本机 localStorage 记忆勾选与 20 分钟计时；每日项按自然日清零。原则区「长期」用勾选表示本周仍在对齐。</p>`
       }
     `;
 
     bind();
+    if (timerPhase === 'running') startTick();
   }
 
   function bind() {
@@ -390,6 +540,16 @@ export function mountDailyExplorer(container, options = {}) {
       showPoster = !showPoster;
       render();
     });
+
+    shell.querySelectorAll('[data-poster]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        posterId = btn.getAttribute('data-poster') || 'checklist';
+        render();
+      });
+    });
+
+    shell.querySelector('[data-timer-start]')?.addEventListener('click', () => startTimer());
+    shell.querySelector('[data-timer-reset]')?.addEventListener('click', () => resetTimer());
   }
 
   render();
@@ -398,6 +558,7 @@ export function mountDailyExplorer(container, options = {}) {
   return {
     dispose() {
       disposed = true;
+      stopTick();
       shell.remove();
     },
   };
