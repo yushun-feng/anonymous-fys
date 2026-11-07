@@ -146,7 +146,7 @@ export function renderGate(root, { onSuccess }) {
             <img
               class="gate-satire-image"
               src="${import.meta.env.BASE_URL}notes-assets/gate/gate-ai-satire-simple.jpg"
-              alt="讽刺插画：表面黑话 PM 用 AI 要结果，开发者擦屁股"
+              alt="讽刺插画：半吊子 PM 喊 ALL IN AI，开发者擦屁股"
               width="1280"
               height="720"
               decoding="async"
