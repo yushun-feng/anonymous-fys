@@ -20,12 +20,13 @@ let shichenTimer = null;
 /** @type {'playground' | 'graphics-lab'} */
 let sidePanelMode = 'playground';
 
-const TOPICS = ['cpp', 'graphics', 'gpu', 'linux', 'daily'];
+const TOPICS = ['cpp', 'graphics', 'gpu', 'linux', 'opensource', 'daily'];
 const TOPIC_LABELS = {
   cpp: 'C++',
   graphics: 'Graphics',
   gpu: 'GPU',
   linux: 'Linux',
+  opensource: '开源',
   daily: '日常',
 };
 
@@ -164,6 +165,14 @@ function parseRoute() {
   if (pathPart === 'daily' || pathPart === 'habits' || pathPart === 'rhythm') {
     return { name: 'daily' };
   }
+  if (
+    pathPart === 'opensource' ||
+    pathPart === 'oss' ||
+    pathPart === 'reading' ||
+    pathPart === 'hellogithub'
+  ) {
+    return { name: 'opensource' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -183,9 +192,10 @@ function layout(content) {
         <a href="#/memory">内存</a>
         <a href="#/pointers">指针</a>
         <a href="#/transform">变换</a>
+        <a href="#/opensource">开源</a>
         <a href="#/daily">日常</a>
       </nav>
-      <p class="tagline">C++ · Graphics · GPU · Linux · 日常 — 公开笔记浏览</p>
+      <p class="tagline">C++ · Graphics · GPU · Linux · 开源 · 日常 — 公开笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
     <footer class="site-footer">
@@ -260,6 +270,9 @@ function renderHome() {
     <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
     <div class="daily-home-slot" data-daily-mount data-daily-compact></div>
     <p class="daily-home-link"><a href="#/daily">打开日常节奏板（日 / 周 / 月 / 年）→</a></p>
+    <section class="opensource-home-teaser">
+      <p class="opensource-home-link"><a href="#/opensource">开源精选阅读架（HelloGitHub 起步 · 按来源浏览）→</a></p>
+    </section>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -339,6 +352,80 @@ function renderDailyPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>日常节奏</span></nav>
     <div class="daily-page-slot site-main-breakout" data-daily-mount></div>
     <p class="daily-credit">可勾选的日/周/月/年微习惯与长期原则；本机进度记忆。笔记见<a href="#/note/daily/2026-self-discipline-checklist">2026 自律清单</a>。</p>
+  `);
+}
+
+/**
+ * Short label for opensource index grouping.
+ * Prefer non-URL `source`; else series folder; else 未标注.
+ * @param {{ source?: string, series?: string }} note
+ */
+function opensourceSourceLabel(note) {
+  const raw = String(note.source || '').trim();
+  if (raw && !/^https?:\/\//i.test(raw)) return raw;
+  if (note.series) return note.series;
+  return '未标注来源';
+}
+
+function renderOpensourcePage() {
+  const notes = loadNotes().filter((n) => n.topic === 'opensource');
+  const roadmap = notes.find((n) => n.id === 'opensource/00-roadmap');
+  const issues = notes.filter((n) => n.id !== 'opensource/00-roadmap');
+
+  /** @type {Map<string, typeof issues>} */
+  const bySource = new Map();
+  for (const n of issues) {
+    const label = opensourceSourceLabel(n);
+    if (!bySource.has(label)) bySource.set(label, []);
+    bySource.get(label)?.push(n);
+  }
+
+  const groups = [...bySource.entries()]
+    .map(([label, group]) => {
+      const items = group
+        .map((n) => {
+          const issueBit = n.issue ? `第 ${escapeHtml(n.issue)} 期` : '';
+          const meta = [issueBit, escapeHtml(n.updated)].filter(Boolean).join(' · ');
+          const ext = n.sourceUrl
+            ? `<a class="opensource-index__ext" href="${escapeHtml(n.sourceUrl)}" rel="noopener noreferrer" target="_blank">原文</a>`
+            : '';
+          return `
+        <li class="note-card opensource-index__item">
+          <a href="#/note/${encodeURIComponent(n.id)}">
+            <span class="note-title">${escapeHtml(n.title)}</span>
+            <span class="note-meta">${meta}</span>
+          </a>
+          ${ext}
+        </li>`;
+        })
+        .join('');
+      return `
+      <section class="topic-section opensource-index__group">
+        <h2>${escapeHtml(label)}</h2>
+        <ul class="note-list">${items}</ul>
+      </section>`;
+    })
+    .join('');
+
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>开源精选</span></nav>
+    <section class="opensource-index">
+      <header class="opensource-index__hero">
+        <p class="opensource-index__eyebrow">OPEN SOURCE · READING</p>
+        <h1 class="opensource-index__brand">开源</h1>
+        <p class="opensource-index__lede">精选阅读架：先收 HelloGitHub 月刊摘录，再按来源扩展其它杂志/列表。正文在 <code>notes/opensource/</code>，本页只做按来源浏览。</p>
+        <p class="opensource-index__actions">
+          ${
+            roadmap
+              ? `<a href="#/note/${encodeURIComponent(roadmap.id)}">阅读架路线 →</a>`
+              : ''
+          }
+          <a href="#/?topic=opensource">首页 Topic 筛选 →</a>
+        </p>
+      </header>
+      ${groups || '<p class="empty">暂无开源摘录。</p>'}
+      <p class="opensource-credit">摘录为原创中文消化，非杂志原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a></p>
+    </section>
   `);
 }
 
@@ -644,6 +731,10 @@ function mountContent() {
     window.location.replace(`${window.location.pathname}${window.location.search}#/daily`);
     return;
   }
+  if (rawPath === 'oss' || rawPath === 'reading' || rawPath === 'hellogithub') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/opensource`);
+    return;
+  }
 
   applyShichenAtmosphere({ route: route.name });
   ensureShichenTicker();
@@ -695,6 +786,9 @@ function mountContent() {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountDailyIfPresent(browse);
+  } else if (route.name === 'opensource') {
+    browse.innerHTML = renderOpensourcePage();
+    void syncSidePanel(null);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
