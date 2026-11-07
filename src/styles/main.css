@@ -1349,9 +1349,45 @@ html[data-route='daily'] .site-header {
   padding: 2rem 1.25rem;
 }
 
+.gate-panel {
+  width: 100%;
+  max-width: 42rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.35rem;
+}
+
+.gate-satire {
+  margin: 0;
+  border: 1px solid rgba(42, 53, 65, 0.75);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: rgba(15, 20, 25, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.gate-satire-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.gate-satire-quote {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid rgba(42, 53, 65, 0.75);
+  color: var(--text);
+  background: rgba(8, 12, 18, 0.55);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
 .gate-form {
   width: 100%;
   max-width: 22rem;
+  align-self: center;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -1360,6 +1396,18 @@ html[data-route='daily'] .site-header {
   border-radius: var(--radius);
   background: rgba(15, 20, 25, 0.82);
   backdrop-filter: blur(14px);
+}
+
+@media (min-width: 720px) {
+  .gate-panel {
+    max-width: 48rem;
+    gap: 1.5rem;
+  }
+
+  .gate-satire-quote {
+    font-size: 0.95rem;
+    padding: 1rem 1.15rem 1.1rem;
+  }
 }
 
 .gate-title {
