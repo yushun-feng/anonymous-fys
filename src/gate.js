@@ -146,12 +146,12 @@ export function renderGate(root, { onSuccess }) {
             <img
               class="gate-satire-image"
               src="${import.meta.env.BASE_URL}notes-assets/gate/gate-ai-satire-simple.jpg"
-              alt="讽刺插画：玩具 demo 很爽；吞吐与扩展、正确性与不变量、复杂度与局部性、所有权与工作集——真功夫被质疑时开发者擦屁股"
+              alt="讽刺插画：玩具 demo 很爽；大数据量处理、逻辑完整、数据结构、内存管理——真功夫被质疑时开发者擦屁股"
               width="1280"
               height="720"
               decoding="async"
             />
-            <figcaption class="gate-satire-caption">玩具 demo 很爽；吞吐与扩展、正确性与不变量、复杂度与局部性、所有权与工作集——质疑真功夫时，总有人在擦屁股。</figcaption>
+            <figcaption class="gate-satire-caption">玩具 demo 很爽；大数据量处理、逻辑完整、数据结构、内存管理——质疑真功夫时，总有人在擦屁股。</figcaption>
           </figure>
           <div class="gate-quote-row">
             <blockquote class="gate-quote">
