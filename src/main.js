@@ -351,7 +351,7 @@ function renderDailyPage() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>日常节奏</span></nav>
     <div class="daily-page-slot site-main-breakout" data-daily-mount></div>
-    <p class="daily-credit">可勾选的日/周/月/年微习惯与长期原则；本机进度记忆。笔记见<a href="#/note/daily/2026-self-discipline-checklist">2026 自律清单</a>。</p>
+    <p class="daily-credit">可勾选的日/周/月/年微习惯与长期原则；本机进度记忆。笔记见<a href="#/note/daily/2026-self-discipline-checklist">2026 自律清单</a>、<a href="#/note/daily/20-minute-rule">20 分钟定律</a>、<a href="#/note/daily/howto-live-better">HowToLiveBetter 阅读地图</a>。</p>
   `);
 }
 
@@ -413,7 +413,7 @@ function renderOpensourcePage() {
       <header class="opensource-index__hero">
         <p class="opensource-index__eyebrow">OPEN SOURCE · READING</p>
         <h1 class="opensource-index__brand">开源</h1>
-        <p class="opensource-index__lede">精选阅读架：先收 HelloGitHub 月刊摘录，再按来源扩展其它杂志/列表。正文在 <code>notes/opensource/</code>，本页只做按来源浏览。</p>
+        <p class="opensource-index__lede">精选阅读架：先收 HelloGitHub 月刊摘录，再按来源扩展其它杂志/列表。正文在 <code>notes/opensource/</code>，本页只做按来源浏览。生活向清单 HowToLiveBetter 落在日常栏，见下方旁注。</p>
         <p class="opensource-index__actions">
           ${
             roadmap
@@ -421,10 +421,11 @@ function renderOpensourcePage() {
               : ''
           }
           <a href="#/?topic=opensource">首页 Topic 筛选 →</a>
+          <a href="#/note/daily/howto-live-better">HowToLiveBetter（日常）→</a>
         </p>
       </header>
       ${groups || '<p class="empty">暂无开源摘录。</p>'}
-      <p class="opensource-credit">摘录为原创中文消化，非杂志原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a></p>
+      <p class="opensource-credit">摘录为原创中文消化，非杂志原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a>。相关生活向列表：<a href="https://github.com/eternity4719/HowToLiveBetter" rel="noopener noreferrer" target="_blank">eternity4719/HowToLiveBetter</a>（站内消化见<a href="#/note/daily/howto-live-better">日常笔记</a>）。</p>
     </section>
   `);
 }

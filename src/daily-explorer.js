@@ -394,10 +394,11 @@ export function mountDailyExplorer(container, options = {}) {
         <div class="daily-ex__hero-copy">
           <p class="daily-ex__eyebrow">DAILY · RHYTHM</p>
           <h2 class="daily-ex__brand">日常</h2>
-          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯、长期原则，以及 20 分钟启动定律。背景为故宫十二时辰全景（按上海本地时间对准当前时辰）。</p>
+          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯、长期原则、20 分钟启动定律，以及人生备选单阅读地图。背景为故宫十二时辰全景（按上海本地时间对准当前时辰）。</p>
           <div class="daily-ex__hero-actions">
             <a class="daily-ex__link" href="#/note/daily/2026-self-discipline-checklist">自律清单笔记 →</a>
             <a class="daily-ex__link" href="#/note/daily/20-minute-rule">20 分钟定律 →</a>
+            <a class="daily-ex__link" href="#/note/daily/howto-live-better">HowToLiveBetter →</a>
             ${compact ? '<a class="daily-ex__link" href="#/daily">打开完整页 →</a>' : ''}
             <button type="button" class="daily-ex__linkish" data-toggle-poster>${showPoster ? '收起海报' : '展开海报'}</button>
           </div>
