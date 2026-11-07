@@ -11,12 +11,13 @@ notes/
 ├── graphics/               # 图形学（foundation/ 课程向 + 根目录专题短文）
 ├── gpu/                    # GPU / 并行计算 / API
 ├── linux/                  # Linux / 系统知识（内存布局、工具链与防护等）
+├── opensource/             # 开源精选阅读（HelloGitHub 等；按来源分子目录）
 └── daily/                  # 日常节奏 / 习惯 / 长期原则（与技术分栏）
 ```
 
-- 每个主题一个文件夹：`cpp/`、`graphics/`、`gpu/`、`linux/`、`daily/`。
+- 每个主题一个文件夹：`cpp/`、`graphics/`、`gpu/`、`linux/`、`opensource/`、`daily/`。
 - 笔记为 Markdown 文件（`.md`），文件名使用短横线小写，例如 `raii-basics.md`。
-- 系列课程可再建子目录（如 `cpp/learncpp/`、`graphics/foundation/`）；浏览页按系列排序。
+- 系列课程可再建子目录（如 `cpp/learncpp/`、`graphics/foundation/`、`opensource/hellogithub/`）；浏览页按系列排序。
 - 配图放在 `public/notes-assets/<topic>/`，正文用相对站点根的 `notes-assets/...` 路径引用。
 - 不要把生成物、截图缓存或站点构建产物放进 `notes/`。
 
@@ -28,7 +29,7 @@ notes/
 ---
 title: 笔记标题
 tags: [tag-a, tag-b]
-topic: cpp          # 必须是 cpp | graphics | gpu | linux | daily，与所在文件夹一致
+topic: cpp          # 必须是 cpp | graphics | gpu | linux | opensource | daily，与所在文件夹一致
 updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 ---
 ```
@@ -39,9 +40,11 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 |------|------|------|
 | `title` | 是 | 显示标题 |
 | `tags` | 是 | 字符串数组；浏览页按 tag 筛选 |
-| `topic` | 是 | `cpp` / `graphics` / `gpu` / `linux` / `daily`，须与父文件夹名一致 |
+| `topic` | 是 | `cpp` / `graphics` / `gpu` / `linux` / `opensource` / `daily`，须与父文件夹名一致 |
 | `updated` | 是 | 最后更新日期 |
-| `source` | 否 | 外部来源 URL（教材章节、YouTube 视频等）；有明确出处时建议填写 |
+| `source` | 否 | 教材/视频等可写 **URL**；开源阅读笔记写 **短名称**（如 `HelloGitHub`），配合 `sourceUrl` |
+| `sourceUrl` | 否 | 原文 URL（开源阅读主题建议填；其它主题可省略） |
+| `issue` | 否 | 月刊/期号（开源阅读主题可选） |
 | `order` | 否 | 浏览列表中的数字排序键；省略时由文件名推断（`ch12-...`、`00-...` 等） |
 
 ## 列表排序
@@ -55,6 +58,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 - **图形学基础（`graphics/foundation/`）**：以 [LearnOpenGL](https://learnopengl.com/) 与 *Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）为主线的**完整中文学习笔记**——概念、坐标/矩阵约定、OpenGL/GLSL 要点、易错、练习指引；理论（FoCG）与实践（LearnOpenGL）在章内交织改写，**勿**整章照搬教材或教程原文。专题速览（如 PBR）可放在 `graphics/` 根下，并与 foundation 路线互链。
 - **Linux / 系统（`linux/`）**：用户态与相关系统知识的**中文速查与心智模型**（进程虚存布局、栈帧、寄存器直觉、防护标志词典、网络协议速览等）。安全相关只写结构与防护动机，**不**写可复现利用步骤。优先配 Mermaid 结构图；可与 `cpp/` 生命周期/堆笔记互链。网络协议可链到站内 [`#/protocols`](#/protocols) 交互演示。
 - **日常（`daily/`）**：节奏、微习惯、长期原则等**非技术**短文；与 C++/图形等分栏。宜短小、可检索；可嵌原图，正文仍应用文字对照方便搜索。勿塞隐私或未公开材料。
+- **开源精选（`opensource/`）**：HelloGitHub 等杂志/列表的**原创中文摘录**（期号 + 若干项目亮点与仓库链接）。按来源分子目录（如 `hellogithub/`）；填 `source` / `sourceUrl` / `issue`。勿整期照搬原文。站内索引 [`#/opensource`](#/opensource)。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。
 - **流程图 / 结构图**：优先用 ` ```mermaid ` 代码块（浏览页会渲染）；若环境无法渲染，可辅以 ASCII。图形学笔记（尤其管线章）宜配阶段流程图。

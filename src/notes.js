@@ -53,6 +53,9 @@ export function parseFrontmatter(raw) {
  *   updated: string,
  *   order: number,
  *   series: string,
+ *   source: string,
+ *   sourceUrl: string,
+ *   issue: string,
  *   body: string,
  * }} Note
  */
@@ -81,6 +84,9 @@ export function loadNotes() {
       updated: String(meta.updated ?? ''),
       order: chapterOrderFrom(relative, meta),
       series,
+      source: String(meta.source ?? ''),
+      sourceUrl: String(meta.sourceUrl ?? ''),
+      issue: String(meta.issue ?? ''),
       body,
     });
   }

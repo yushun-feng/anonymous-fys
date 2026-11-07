@@ -5538,3 +5538,89 @@ html[data-route='daily'] .site-header {
 .daily-ex--compact .daily-ex__timer-blurb {
   display: none;
 }
+
+/* —— Opensource reading index (#/opensource) —— */
+.opensource-home-teaser {
+  margin: 0 0 1rem;
+}
+
+.opensource-home-link {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.opensource-index {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.opensource-index__hero {
+  padding: 1.15rem 1.2rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(23, 30, 38, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.opensource-index__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.opensource-index__brand {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.opensource-index__lede {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  max-width: 42rem;
+  line-height: 1.55;
+}
+
+.opensource-index__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.9rem;
+}
+
+.opensource-index__group h2 {
+  font-size: 1.05rem;
+}
+
+.opensource-index__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+}
+
+.opensource-index__item > a:first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.opensource-index__ext {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.opensource-index__ext:hover {
+  color: var(--accent);
+}
+
+.opensource-credit {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
