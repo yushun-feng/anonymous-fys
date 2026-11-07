@@ -11,6 +11,7 @@ source: https://learncpp.cn/
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 12 章
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[指针与引用](../cherno/03-pointers-references.md)。
 > 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
+> **交互**：[指针操作 `#/pointers`](#/pointers)（取址 / 解引用 / 算术 / 多级）· [说明笔记](../pointer-ops-explorer.md)。
 
 ## 小节地图
 
