@@ -1,9 +1,11 @@
 /**
  * Daily Rhythm Explorer — interactive self-discipline checklist.
  * Cadence tabs (日/周/月/年/长期), checkable items, local progress,
- * poster gallery, and a 20-minute starter timer.
+ * poster gallery, 20-minute starter timer, and 时辰 strip (Asia/Shanghai).
  * Chinese UI. Teaching / personal rhythm — not a productivity SaaS.
  */
+
+import { SHICHEN_LIST, currentShichen } from './shichen.js';
 
 function escapeHtml(text) {
   return String(text)
@@ -368,6 +370,7 @@ export function mountDailyExplorer(container, options = {}) {
     const timerPct =
       timerPhase === 'idle' ? 0 : timerPhase === 'done' ? 100 : Math.round(((TIMER_MS - left) / TIMER_MS) * 100);
     const timerLabel = timerPhase === 'idle' ? '20:00' : timerPhase === 'done' ? '完成' : fmtRemain(left);
+    const shichen = currentShichen();
 
     const rings = CADENCES.map((c) => {
       const p = progressFor(c.id);
@@ -391,7 +394,7 @@ export function mountDailyExplorer(container, options = {}) {
         <div class="daily-ex__hero-copy">
           <p class="daily-ex__eyebrow">DAILY · RHYTHM</p>
           <h2 class="daily-ex__brand">日常</h2>
-          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯、长期原则，以及 20 分钟启动定律。勾选记在本机；每日项按日历日重置。</p>
+          <p class="daily-ex__lede">慢慢吸收的节奏板：日 / 周 / 月 / 年微习惯、长期原则，以及 20 分钟启动定律。背景为故宫十二时辰全景（按上海本地时间对准当前时辰）。</p>
           <div class="daily-ex__hero-actions">
             <a class="daily-ex__link" href="#/note/daily/2026-self-discipline-checklist">自律清单笔记 →</a>
             <a class="daily-ex__link" href="#/note/daily/20-minute-rule">20 分钟定律 →</a>
@@ -405,6 +408,21 @@ export function mountDailyExplorer(container, options = {}) {
           <div class="daily-ex__bar"><i style="width:${all.pct}%"></i></div>
         </div>
       </header>
+
+      ${
+        compact
+          ? ''
+          : `<p class="daily-ex__shichen-meta">此刻（Asia/Shanghai）：<strong>${escapeHtml(shichen.name)}时</strong> · ${escapeHtml(shichen.range)} — 背景已对准该竖条</p>
+            <div class="daily-ex__shichen" role="list" aria-label="十二时辰">
+              ${SHICHEN_LIST.map(
+                (s) => `
+                <div class="daily-ex__shichen-cell${s.index === shichen.index ? ' is-now' : ''}" role="listitem" title="${escapeHtml(s.name)}时 ${escapeHtml(s.range)}">
+                  <strong>${escapeHtml(s.name)}</strong>
+                  <em>${escapeHtml(s.range.split('–')[0] || '')}</em>
+                </div>`,
+              ).join('')}
+            </div>`
+      }
 
       <section class="daily-ex__timer${timerPhase === 'running' ? ' is-running' : ''}${timerPhase === 'done' ? ' is-done' : ''}" aria-label="20 分钟启动计时">
         <div class="daily-ex__timer-copy">
