@@ -142,6 +142,16 @@ export function renderGate(root, { onSuccess }) {
         <header class="gate-manifesto">
           <p class="gate-kicker">developers' lives matter</p>
           <h1 id="gate-title" class="gate-punch">反对的不是AI</h1>
+          <figure class="gate-satire">
+            <img
+              class="gate-satire-image"
+              src="${import.meta.env.BASE_URL}notes-assets/gate/gate-ai-satire-simple.jpg"
+              alt="讽刺插画：外行用 AI 要结果，开发者背锅"
+              width="1280"
+              height="720"
+              decoding="async"
+            />
+          </figure>
           <div class="gate-quote-row">
             <blockquote class="gate-quote">
               <p>${GATE_SATIRE_QUOTE}</p>

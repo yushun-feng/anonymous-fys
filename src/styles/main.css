@@ -1370,7 +1370,7 @@ html.is-gate #app {
 
 .gate-panel {
   width: 100%;
-  max-width: 36rem;
+  max-width: 40rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1381,6 +1381,20 @@ html.is-gate #app {
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+}
+
+.gate-satire {
+  margin: 0;
+  border: 1px solid #fff;
+  background: #000;
+  line-height: 0;
+}
+
+.gate-satire-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: grayscale(0.15) contrast(1.05);
 }
 
 .gate-kicker {
