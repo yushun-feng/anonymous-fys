@@ -11,9 +11,12 @@ import {
 } from './playground.js';
 import { mountPersonalNotes } from './personal-notes.js';
 import { startVisitLogging } from './visit-log.js';
+import { applyShichenAtmosphere } from './shichen.js';
 
 /** @type {{ dispose: () => void } | null} */
 let graphicsLabHandle = null;
+/** Refresh 时辰 focus when the Shanghai wall-clock crosses a slice. */
+let shichenTimer = null;
 /** @type {'playground' | 'graphics-lab'} */
 let sidePanelMode = 'playground';
 
@@ -596,6 +599,14 @@ async function syncSidePanel(note) {
   }
 }
 
+function ensureShichenTicker() {
+  if (shichenTimer) return;
+  shichenTimer = setInterval(() => {
+    const route = document.documentElement.dataset.route || 'home';
+    applyShichenAtmosphere({ route });
+  }, 60_000);
+}
+
 function mountContent() {
   const browse = ensureShell();
   if (!browse) return;
@@ -633,6 +644,10 @@ function mountContent() {
     window.location.replace(`${window.location.pathname}${window.location.search}#/daily`);
     return;
   }
+
+  applyShichenAtmosphere({ route: route.name });
+  ensureShichenTicker();
+
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
@@ -701,6 +716,9 @@ function mount() {
 
   // Access logging runs even on the soft gate (external visitors who bounce).
   startVisitLogging();
+
+  applyShichenAtmosphere({ route: 'home' });
+  ensureShichenTicker();
 
   if (!isUnlocked()) {
     shellReady = false;
