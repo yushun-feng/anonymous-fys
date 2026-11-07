@@ -1341,129 +1341,248 @@ html[data-route='daily'] .site-header {
   color: var(--muted);
 }
 
+/* Soft gate only: 996.ICU-style black manifesto. Unlocked pages keep site chrome. */
+html.is-gate,
+html.is-gate body {
+  background: #000;
+  color: #fff;
+}
+
+html.is-gate body::before,
+html.is-gate body::after {
+  display: none;
+}
+
+html.is-gate #app {
+  background: #000;
+}
+
 .gate {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1.25rem;
+  padding: 2.5rem 1.25rem;
+  background: #000;
+  color: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Noto Sans SC", sans-serif;
 }
 
 .gate-panel {
   width: 100%;
-  max-width: 42rem;
+  max-width: 36rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 1.35rem;
+  gap: 2.25rem;
 }
 
-.gate-satire {
+.gate-manifesto {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.gate-kicker {
   margin: 0;
-  border: 1px solid rgba(42, 53, 65, 0.75);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: rgba(15, 20, 25, 0.82);
-  backdrop-filter: blur(14px);
+  color: #888;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.gate-satire-image {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.gate-satire-quote {
+.gate-punch {
   margin: 0;
-  padding: 0.85rem 1rem 1rem;
-  border-top: 1px solid rgba(42, 53, 65, 0.75);
-  color: var(--text);
-  background: rgba(8, 12, 18, 0.55);
+  color: #fff;
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.gate-quote-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.gate-quote {
+  margin: 0;
+  padding: 0 0 0 0.9rem;
+  border: none;
+  border-left: 2px solid #fff;
+  color: #e8e8e8;
+}
+
+.gate-quote p {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.75;
+  font-weight: 400;
+}
+
+.gate-vote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.65rem;
+}
+
+.gate-vote-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #fff;
+  border-radius: 0;
+  background: #000;
+  color: #fff;
+  font: inherit;
   font-size: 0.9rem;
-  line-height: 1.65;
-  letter-spacing: 0.01em;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.gate-vote-btn:hover {
+  background: #111;
+}
+
+.gate-vote-btn.is-selected {
+  background: #fff;
+  color: #000;
+}
+
+.gate-vote-count {
+  min-width: 1.4em;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid currentColor;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.gate-vote-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: #777;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
 }
 
 .gate-form {
   width: 100%;
   max-width: 22rem;
-  align-self: center;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 1.25rem 1.35rem;
-  border: 1px solid rgba(42, 53, 65, 0.75);
-  border-radius: var(--radius);
-  background: rgba(15, 20, 25, 0.82);
-  backdrop-filter: blur(14px);
-}
-
-@media (min-width: 720px) {
-  .gate-panel {
-    max-width: 48rem;
-    gap: 1.5rem;
-  }
-
-  .gate-satire-quote {
-    font-size: 0.95rem;
-    padding: 1rem 1.15rem 1.1rem;
-  }
-}
-
-.gate-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  gap: 0.55rem;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .gate-hint {
-  margin: 0 0 0.35rem;
-  color: var(--muted);
-  font-size: 0.92rem;
+  margin: 0 0 0.45rem;
+  color: #999;
+  font-size: 0.88rem;
 }
 
 .gate-label {
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: 0.8rem;
+  color: #bbb;
+  letter-spacing: 0.04em;
 }
 
 .gate-input {
   appearance: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
-  color: var(--text);
+  border: 1px solid #fff;
+  border-radius: 0;
+  background: #000;
+  color: #fff;
   font: inherit;
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.75rem;
 }
 
 .gate-input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
+  outline: 1px solid #fff;
+  outline-offset: 2px;
+  border-color: #fff;
 }
 
 .gate-error {
   margin: 0;
-  color: #f07178;
+  color: #ff4d5b;
   font-size: 0.88rem;
 }
 
 .gate-submit {
-  margin-top: 0.35rem;
+  margin-top: 0.45rem;
   appearance: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  color: var(--text);
+  border: 1px solid #fff;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
   font: inherit;
-  font-weight: 600;
-  padding: 0.65rem 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.7rem 0.85rem;
   cursor: pointer;
 }
 
 .gate-submit:hover {
-  border-color: var(--accent);
+  background: #000;
+  color: #fff;
+  border-color: #fff;
+}
+
+@media (min-width: 720px) {
+  .gate-quote-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1.35rem;
+  }
+
+  .gate-quote {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .gate-vote {
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    min-width: 7.5rem;
+  }
+
+  .gate-vote-btn {
+    justify-content: space-between;
+  }
+
+  .gate-vote-hint {
+    max-width: 7.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .gate {
+    align-items: flex-start;
+    padding-top: 3rem;
+  }
+
+  .gate-panel {
+    gap: 1.85rem;
+  }
+
+  .gate-quote p {
+    font-size: 0.92rem;
+  }
 }
 
 @media (max-width: 860px) {
