@@ -17,12 +17,13 @@ let graphicsLabHandle = null;
 /** @type {'playground' | 'graphics-lab'} */
 let sidePanelMode = 'playground';
 
-const TOPICS = ['cpp', 'graphics', 'gpu', 'linux'];
+const TOPICS = ['cpp', 'graphics', 'gpu', 'linux', 'daily'];
 const TOPIC_LABELS = {
   cpp: 'C++',
   graphics: 'Graphics',
   gpu: 'GPU',
   linux: 'Linux',
+  daily: '日常',
 };
 
 /** Active Three.js Yingxian pagoda instance; disposed on every remount. */
@@ -167,7 +168,7 @@ function layout(content) {
         <a href="#/pointers">指针</a>
         <a href="#/transform">变换</a>
       </nav>
-      <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
+      <p class="tagline">C++ · Graphics · GPU · Linux · 日常 — 公开笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
     <footer class="site-footer">
