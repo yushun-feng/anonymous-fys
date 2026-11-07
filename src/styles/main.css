@@ -5269,3 +5269,141 @@ code {
     position: static;
   }
 }
+
+/* ——— Daily: 20-min timer + poster gallery ——— */
+.daily-ex__timer {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 0.9rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--dy-line);
+  border-radius: 12px;
+  background:
+    radial-gradient(500px 180px at 100% 0%, rgba(143, 175, 136, 0.12), transparent 60%),
+    rgba(11, 16, 21, 0.55);
+}
+
+@media (min-width: 720px) {
+  .daily-ex__timer {
+    grid-template-columns: 1.2fr 0.9fr;
+    align-items: center;
+  }
+}
+
+.daily-ex__timer.is-running {
+  border-color: rgba(143, 175, 136, 0.45);
+}
+
+.daily-ex__timer.is-done {
+  border-color: rgba(212, 165, 116, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(212, 165, 116, 0.12);
+}
+
+.daily-ex__timer-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+}
+
+.daily-ex__timer-blurb {
+  margin: 0.35rem 0 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.daily-ex__timer-face-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.daily-ex__timer-face {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--dy-ink);
+  line-height: 1;
+}
+
+.daily-ex__timer.is-done .daily-ex__timer-face {
+  color: var(--dy-amber);
+}
+
+.daily-ex__timer-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.daily-ex__timer-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--dy-moss), var(--dy-amber));
+  transition: width 0.2s linear;
+}
+
+.daily-ex__timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.daily-ex__btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.daily-ex__btn--accent {
+  border-color: rgba(143, 175, 136, 0.5);
+  background: rgba(143, 175, 136, 0.16);
+  color: #cfe3cb;
+}
+
+.daily-ex__btn--accent:hover {
+  border-color: var(--dy-moss);
+}
+
+.daily-ex__timer-ok {
+  font-size: 0.78rem;
+  color: var(--dy-amber);
+}
+
+.daily-ex__poster-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0.55rem;
+}
+
+.daily-ex__poster-tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(11, 16, 21, 0.45);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.daily-ex__poster-tab.is-active {
+  color: var(--dy-amber);
+  border-color: var(--dy-line);
+  background: rgba(212, 165, 116, 0.1);
+}
+
+.daily-ex--compact .daily-ex__timer-blurb {
+  display: none;
+}
