@@ -49,6 +49,10 @@ let memoryMountGen = 0;
 let transformHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let transformMountGen = 0;
+/** Active Pointer Ops Explorer instance; disposed on every remount. */
+let pointerHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let pointerMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -88,6 +92,12 @@ function disposeTransform() {
   transformMountGen += 1;
   transformHandle?.dispose();
   transformHandle = null;
+}
+
+function disposePointer() {
+  pointerMountGen += 1;
+  pointerHandle?.dispose();
+  pointerHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -134,6 +144,9 @@ function parseRoute() {
   if (pathPart === 'transform' || pathPart === 'math' || pathPart === 'linalg') {
     return { name: 'transform' };
   }
+  if (pathPart === 'pointers' || pathPart === 'pointer' || pathPart === 'ptr') {
+    return { name: 'pointers' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -151,6 +164,7 @@ function layout(content) {
         <a href="#/protocols">协议</a>
         <a href="#/linux">Linux</a>
         <a href="#/memory">内存</a>
+        <a href="#/pointers">指针</a>
         <a href="#/transform">变换</a>
       </nav>
       <p class="tagline">C++ · Graphics · GPU · Linux — 公开技术笔记浏览</p>
@@ -222,6 +236,8 @@ function renderHome() {
     <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
     <div class="memory-home-slot" data-memory-mount data-memory-compact></div>
     <p class="memory-home-link"><a href="#/memory">打开内存布局沙箱（栈 / 堆）→</a></p>
+    <div class="pointer-home-slot" data-pointer-mount data-pointer-compact></div>
+    <p class="pointer-home-link"><a href="#/pointers">打开指针操作（槽位 · 箭头 · 智能指针）→</a></p>
     <div class="transform-home-slot" data-transform-mount data-transform-compact></div>
     <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
     <section class="filters">
@@ -287,6 +303,14 @@ function renderTransformPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>变换沙箱</span></nav>
     <div class="transform-page-slot site-main-breakout" data-transform-mount></div>
     <p class="transform-credit">列向量约定下演示 TRS、左乘/右乘与行列式几何意义；定向飞镖看朝向。对接 ch02 与<a href="#/note/graphics/linalg-geometry-map">线代几何导读</a>。</p>
+  `);
+}
+
+function renderPointersPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>指针操作</span></nav>
+    <div class="pointer-page-slot site-main-breakout" data-pointer-mount></div>
+    <p class="pointer-credit">槽位 + 箭头演示取址、解引用、算术与 unique/shared/weak；环引用警示。笔记见<a href="#/note/cpp/pointer-ops-explorer">指针操作交互页</a>；完整虚存见<a href="#/memory">内存沙箱</a>。</p>
   `);
 }
 
@@ -449,6 +473,22 @@ async function mountTransformIfPresent(root) {
   }
 }
 
+async function mountPointerIfPresent(root) {
+  const slot = root.querySelector('[data-pointer-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-pointer-compact');
+  const gen = pointerMountGen;
+  try {
+    const { mountPointerExplorer } = await import('./pointer-explorer.js');
+    if (gen !== pointerMountGen || !slot.isConnected) return;
+    pointerHandle = mountPointerExplorer(slot, { compact });
+  } catch {
+    if (gen !== pointerMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="ptr-explorer__credit">指针操作模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -525,6 +565,7 @@ function mountContent() {
   disposeLinuxSys();
   disposeMemory();
   disposeTransform();
+  disposePointer();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -540,6 +581,10 @@ function mountContent() {
   }
   if (rawPath === 'math' || rawPath === 'linalg') {
     window.location.replace(`${window.location.pathname}${window.location.search}#/transform`);
+    return;
+  }
+  if (rawPath === 'pointer' || rawPath === 'ptr') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/pointers`);
     return;
   }
   if (route.name === 'note') {
@@ -579,6 +624,11 @@ function mountContent() {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountTransformIfPresent(browse);
+  } else if (route.name === 'pointers') {
+    browse.innerHTML = renderPointersPage();
+    void syncSidePanel(null);
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
+    mountPointerIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -588,6 +638,7 @@ function mountContent() {
     mountProtocolIfPresent(browse);
     mountLinuxSysIfPresent(browse);
     mountMemoryIfPresent(browse);
+    mountPointerIfPresent(browse);
     mountTransformIfPresent(browse);
   }
 }

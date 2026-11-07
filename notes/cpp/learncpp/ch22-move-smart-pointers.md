@@ -9,7 +9,7 @@ source: https://learncpp.cn/
 # 第 22 章：移动语义与智能指针
 
 > 学习材料：[learncpp.cn](https://learncpp.cn/) 第 22 章  
-> 相关：[RAII 与所有权](../raii-and-ownership.md)  
+> 相关：[RAII 与所有权](../raii-and-ownership.md) · [指针操作交互页](../pointer-ops-explorer.md)（[`#/pointers`](#/pointers)：unique move / shared 计数 / weak / 环引用）  
 > Cherno 要点已融入下文「Cherno 视角补充」；剧集索引：[智能指针](../cherno/09-smart-pointers.md)、[现代工具与移动](../cherno/15-modern-utilities.md)。
 > 《C++那些事》要点已融入下文「《C++那些事》视角补充」；仓库：[https://github.com/Light-City/CPlusPlusThings](https://github.com/Light-City/CPlusPlusThings)。
 

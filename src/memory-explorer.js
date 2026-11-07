@@ -1526,6 +1526,7 @@ export function mountMemoryExplorer(container, options = {}) {
           <p class="mem-layout__subtitle">常用操作：调用 · 静态/自动变量 · 对齐压缩 · new/move · 大缓冲稀疏写与 memmove/memset/memcpy</p>
         </div>
         <div class="mem-layout__hero-actions">
+          <a class="mem-layout__btn" href="#/pointers">指针操作（句柄 / 箭头）→</a>
           <button type="button" class="mem-layout__btn mem-layout__btn--accent" data-reset>重置布局</button>
           ${demoPlaying ? '<button type="button" class="mem-layout__btn" data-stop-demo>停止演示</button>' : ''}
         </div>

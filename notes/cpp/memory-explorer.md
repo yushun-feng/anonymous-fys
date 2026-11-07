@@ -12,7 +12,7 @@ order: 1
 > **覆盖**：调用/返回、静态、自动变量、结构体对齐/packed、堆 `new`、句柄 move、**大缓冲稀疏写 + `memmove` 紧缩 + `memset` / `memcpy`**、释放。  
 > **形态**：可点击 VAS + 操作面板 + 字节/MiB 色条 + 日志（教学示意）。
 
-相关：[RAII 与所有权](./raii-and-ownership.md) · [LearnCpp 移动与智能指针](./learncpp/ch22-move-smart-pointers.md) · [Linux 内存分段速查](../linux/memory-segmentation-cheatsheet.md)
+相关：[指针操作交互页](./pointer-ops-explorer.md)（[`#/pointers`](#/pointers)） · [RAII 与所有权](./raii-and-ownership.md) · [LearnCpp 移动与智能指针](./learncpp/ch22-move-smart-pointers.md) · [Linux 内存分段速查](../linux/memory-segmentation-cheatsheet.md)
 
 ## 常用操作对照
 
