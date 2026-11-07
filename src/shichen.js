@@ -70,7 +70,8 @@ const BASE_URL =
 const BG_URL = `${String(BASE_URL).replace(/\/?$/, '/')}notes-assets/daily/forbidden-city-shichen.jpg`;
 
 /**
- * Apply panorama CSS vars + data attrs on <html>.
+ * Apply site-wide panorama CSS vars + data attrs on <html>.
+ * Same atmosphere on every route; panels/notes use local scrims for contrast.
  * @param {{ route?: string }} [opts]
  */
 export function applyShichenAtmosphere(opts = {}) {
@@ -80,15 +81,16 @@ export function applyShichenAtmosphere(opts = {}) {
   root.dataset.route = route;
   root.dataset.shichen = s.id;
   root.dataset.shichenName = s.name;
+  root.classList.add('has-shichen-bg');
   root.style.setProperty('--shichen-panorama', `url("${BG_URL}")`);
   root.style.setProperty('--shichen-focus', `${shichenFocusPercent(s.index)}%`);
   root.style.setProperty('--shichen-index', String(s.index));
-  // Soft tint hint from time of day (cool night / warm dusk)
+  // Soft tint hint from time of day (cool night / warm dusk) — global, not route-scoped
   const cool = s.index <= 2 || s.index >= 10;
   const warm = s.index >= 8 && s.index <= 9;
   root.style.setProperty(
     '--shichen-tint',
-    cool ? 'rgba(20, 36, 64, 0.35)' : warm ? 'rgba(90, 40, 20, 0.28)' : 'rgba(12, 22, 28, 0.22)',
+    cool ? 'rgba(20, 36, 64, 0.3)' : warm ? 'rgba(90, 40, 20, 0.24)' : 'rgba(12, 22, 28, 0.18)',
   );
   return s;
 }
