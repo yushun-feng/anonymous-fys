@@ -9,8 +9,13 @@ dist/
 
 # Local-only private media — never push binaries / never deploy to Pages.
 # Only the stockings scaffold docs/placeholders stay trackable.
+# External roots (e.g. D:\视频 via STOCKINGS_ROOT) are outside the repo and must
+# never be copied under public/ or otherwise staged.
 /private/**
 !/private/stockings/
 !/private/stockings/README.md
 !/private/stockings/albums/
 !/private/stockings/albums/.gitkeep
+
+# One-line absolute path override for local stockings media root (e.g. D:\视频).
+.stockings-root.local
