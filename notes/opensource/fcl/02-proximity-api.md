@@ -53,6 +53,8 @@ distance(o1, o2, dreq, dres);
 
 需要接触点 / 法向时在 request 里打开对应选项——会更慢；只要「是否相交」就保持精简。
 
+`CollisionRequest` 常见旋钮（见 `collision_request.h`）：`num_max_contacts`、是否返回 contact、cost source 相关开关、以及 **GJK solver 类型**（`gjk_solver_type`）。默认构造即可起步；要接触信息再打开。
+
 ### 连续碰撞（CCD）
 
 物体上已有**起始**位姿；再提供各自**目标**位姿 `tf_goal_*`，走 `ContinuousCollisionRequest` / `Result` 与 `continuousCollide(...)`。直觉：在插值运动上找是否 / 何时首次接触。

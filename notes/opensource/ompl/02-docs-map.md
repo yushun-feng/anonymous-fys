@@ -78,11 +78,11 @@ flowchart TB
 
 ## Tutorials 怎么刷
 
-[Tutorials](https://ompl.kavrakilab.org/tutorials.html) 按难度分组。建议顺序：
+[Tutorials](https://ompl.kavrakilab.org/tutorials.html) 按难度分组；**站内已全量消化**为 [03–21](#/note/opensource/ompl/00-roadmap)：
 
-1. Beginner：刚体 3D 几何规划 → 合法性检查 → 状态与空间 →（可选）VAMP 机械臂  
-2. 最优 / 约束 / 多层：先读站内高阶导读，再跑对应 tutorial  
-3. Intermediate / Advanced：自写空间、目标、目标函数、新规划器  
+1. Beginner：[03 SE(3)](#/note/opensource/ompl/03-geometric-planning-se3) → [04 合法性](#/note/opensource/ompl/04-state-validation) → [05 状态](#/note/opensource/ompl/05-working-with-states) →（可选）[06 VAMP](#/note/opensource/ompl/06-vamp-planning) → 采样 / 可视化 / 基准 → [10–12](#/note/opensource/ompl/10-optimal-planning) 最优·约束·多层  
+2. Intermediate：[13–18](#/note/opensource/ompl/13-generic-planning)  
+3. Advanced：[19–21](#/note/opensource/ompl/19-new-planner)  
 
 另备：[OMPL Primer PDF](https://ompl.kavrakilab.org/OMPL_Primer.pdf)、[Demos](https://ompl.kavrakilab.org/demos.html)、[FAQ](https://ompl.kavrakilab.org/FAQ.html)。
 

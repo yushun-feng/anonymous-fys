@@ -17,8 +17,8 @@ order: 0
 | 来源 | 子目录 | 状态 |
 |------|--------|------|
 | HelloGitHub 月刊 | [`hellogithub/`](./hellogithub/) | 已摘录若干期 |
-| FCL（Flexible Collision Library） | [`fcl/`](./fcl/) · [`#/note/opensource/fcl/00-roadmap`](#/note/opensource/fcl/00-roadmap) | 路线 + 概览 + 查询管线；GitHub Wiki 空，无页可迁 |
-| OMPL（Open Motion Planning Library） | [`ompl/`](./ompl/) · [`#/note/opensource/ompl/00-roadmap`](#/note/opensource/ompl/00-roadmap) | 路线 + 概览 + 文档地图；仓库未启用 Wiki |
+| FCL（Flexible Collision Library） | [`fcl/`](./fcl/) · [`#/note/opensource/fcl/00-roadmap`](#/note/opensource/fcl/00-roadmap) | 路线 + 概览 + 查询管线 + 形状/宽阶段/OcTree·测试地图；**无**官方 Tutorials / Wiki 页 |
+| OMPL（Open Motion Planning Library） | [`ompl/`](./ompl/) · [`#/note/opensource/ompl/00-roadmap`](#/note/opensource/ompl/00-roadmap) | 路线 + 概览 + 文档地图 + **Tutorials 全量**（Beginner→Advanced，03–21）；仓库未启用 Wiki |
 | （待定）其它杂志 / Awesome 列表 / 周刊 | `notes/opensource/<source-slug>/` | 规划中 |
 
 ## 相关：生活向开源列表（正文在 `daily/`）

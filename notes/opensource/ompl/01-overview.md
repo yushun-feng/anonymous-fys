@@ -60,8 +60,8 @@ Python：仓库亦提供 `pip install ./py-bindings` 路径与 PyPI 包名 `ompl
 
 ## 练习指引
 
-1. 在文档站打开 [Tutorials](https://ompl.kavrakilab.org/tutorials.html)，只看 Beginner 列表，标出你会先跑的两个 demo。  
-2. 画一张图：`StateSpace` → `SpaceInformation` → `Planner`，标出你必须自己写的类。  
-3. 对照 FCL 概览，写一句「合法性检查」里碰撞库与规划库的分工。
+1. 打开站内 [Tutorials 路线表](#/note/opensource/ompl/00-roadmap)，从 [03 SE(3)](#/note/opensource/ompl/03-geometric-planning-se3) 与 [04 合法性](#/note/opensource/ompl/04-state-validation) 各摘一句「你必须自己写的类」。  
+2. 画一张图：`StateSpace` → `SpaceInformation` → `Planner`。  
+3. 对照 [FCL 概览](#/note/opensource/fcl/01-overview)，写一句碰撞库与规划库的分工。
 
-下一章：[官方文档地图](#/note/opensource/ompl/02-docs-map)。
+下一章：[官方文档地图](#/note/opensource/ompl/02-docs-map) · 或直接进 [03 SE(3) 教程](#/note/opensource/ompl/03-geometric-planning-se3)。
