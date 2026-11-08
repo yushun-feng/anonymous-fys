@@ -1,6 +1,7 @@
 /**
  * Full Protocol Explorer–style interactive demo (original implementation).
- * Features: ~14 protocols, OSI highlight, learning progress, step animation, packet table.
+ * Features: ~14 protocols, OSI layer guide (expand + stack highlight),
+ * learning progress, step animation, packet table.
  * Chinese UI. Does not copy third-party assets or code.
  */
 
@@ -8,6 +9,9 @@ import {
   PROTOCOLS,
   CATEGORY_LABELS,
   OSI_LAYERS,
+  OSI_ENCAPSULATION,
+  TCPIP_MAPPING,
+  TCPIP_MERGE_NOTE,
 } from './protocol-explorer-data.js';
 
 const STORAGE_KEY = 'anonymous-fys-proto-progress-v1';
@@ -229,31 +233,141 @@ function renderSequenceDiagram(protocol, stepIndex, animate) {
 }
 
 /**
- * Compact OSI stack strip showing where this protocol sits.
+ * Compact OSI stack strip: home layer + layers used by this protocol.
  * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
  */
 function renderStackModel(protocol) {
-  const layers = [
-    { n: 7, name: '应用' },
-    { n: 6, name: '表示' },
-    { n: 5, name: '会话' },
-    { n: 4, name: '传输' },
-    { n: 3, name: '网络' },
-    { n: 2, name: '链路' },
-    { n: 1, name: '物理' },
-  ];
-  const cells = layers
-    .map((l) => {
-      const on = l.n === protocol.osiLayer;
-      return `<div class="proto-explorer__stack-cell${on ? ' is-active' : ''}"><span>${l.n}</span>${l.name}</div>`;
-    })
-    .join('');
+  const used = new Set(protocol.osiStack || [protocol.osiLayer]);
+  const cells = OSI_LAYERS.map((l) => {
+    const home = l.n === protocol.osiLayer;
+    const on = used.has(l.n);
+    const short = l.name.replace(/层$/, '');
+    const cls = [
+      'proto-explorer__stack-cell',
+      on ? 'is-used' : '',
+      home ? 'is-active' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return `<div class="${cls}" title="${escapeHtml(l.name)}（${escapeHtml(l.nameEn)}）"><span>${l.n}</span>${escapeHtml(short)}</div>`;
+  }).join('');
+  const stackLabel = (protocol.osiStack || [protocol.osiLayer])
+    .slice()
+    .sort((a, b) => b - a)
+    .map((n) => `L${n}`)
+    .join(' · ');
   return `
     <div class="proto-explorer__stack" aria-label="OSI 栈位">
       <span class="proto-explorer__stack-label">栈模型</span>
       <div class="proto-explorer__stack-row">${cells}</div>
-      <span class="proto-explorer__stack-note">${escapeHtml(protocol.osiLabel)}</span>
+      <span class="proto-explorer__stack-note">落点 ${escapeHtml(protocol.osiLabel)} · 路径 ${escapeHtml(stackLabel)}</span>
     </div>`;
+}
+
+/**
+ * @param {import('./protocol-explorer-data.js').PROTOCOLS[number]} protocol
+ * @param {number | null} expandedOsi
+ * @param {{ compact?: boolean }} [opts]
+ */
+function renderOsiGuide(protocol, expandedOsi, opts = {}) {
+  const slim = Boolean(opts.compact);
+  const used = new Set(protocol.osiStack || [protocol.osiLayer]);
+  const rows = OSI_LAYERS.map((layer) => {
+    const home = layer.n === protocol.osiLayer;
+    const onPath = used.has(layer.n);
+    const open = expandedOsi === layer.n;
+    const cls = [
+      'proto-explorer__osi-row',
+      onPath ? 'is-used' : '',
+      home ? 'is-home' : '',
+      open ? 'is-open' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    const detail = open
+      ? `<div class="proto-explorer__osi-detail" id="osi-detail-${layer.n}">
+          <p class="proto-explorer__osi-duty"><strong>职责</strong> ${escapeHtml(layer.responsibility)}</p>
+          <p><strong>PDU</strong> ${escapeHtml(layer.pdu)} — ${escapeHtml(layer.pduHint)}</p>
+          <p><strong>典型协议</strong> ${escapeHtml(layer.examples)}</p>
+          <p class="proto-explorer__osi-digest">${escapeHtml(layer.digests)}</p>
+        </div>`
+      : '';
+    return `
+      <div class="${cls}">
+        <button type="button" class="proto-explorer__osi-btn" data-osi="${layer.n}"
+          aria-expanded="${open ? 'true' : 'false'}" aria-controls="osi-detail-${layer.n}">
+          <span class="proto-explorer__osi-num">L${layer.n}</span>
+          <span class="proto-explorer__osi-names">
+            <span class="proto-explorer__osi-name">${escapeHtml(layer.name)}</span>
+            <span class="proto-explorer__osi-en">${escapeHtml(layer.nameEn)}</span>
+          </span>
+          <span class="proto-explorer__osi-pdu">${escapeHtml(layer.pdu.split('（')[0].split(' / ')[0])}</span>
+          <span class="proto-explorer__osi-chevron" aria-hidden="true">${open ? '▾' : '▸'}</span>
+        </button>
+        ${detail}
+      </div>`;
+  }).join('');
+
+  const concepts = slim
+    ? ''
+    : (() => {
+        const sendSteps = OSI_ENCAPSULATION.sendSteps
+          .map(
+            (s) =>
+              `<li><span class="proto-explorer__encap-l">L${s.layer}</span>${escapeHtml(s.action)}</li>`,
+          )
+          .join('');
+        const recvSteps = OSI_ENCAPSULATION.receiveSteps
+          .map(
+            (s) =>
+              `<li><span class="proto-explorer__encap-l">L${s.layer}</span>${escapeHtml(s.action)}</li>`,
+          )
+          .join('');
+        const mapRows = TCPIP_MAPPING.map((row) => {
+          const osiBits = row.osi.map((n) => `L${n}`).join('+');
+          const lit = row.osi.some((n) => used.has(n));
+          return `
+      <div class="proto-explorer__tcpip-row${lit ? ' is-lit' : ''}">
+        <div class="proto-explorer__tcpip-name">
+          <strong>${escapeHtml(row.tcpip)}</strong>
+          <span>${escapeHtml(row.tcpipEn)}</span>
+        </div>
+        <div class="proto-explorer__tcpip-osi">${escapeHtml(osiBits)}</div>
+        <p>${escapeHtml(row.note)}</p>
+      </div>`;
+        }).join('');
+        return `
+      <div class="proto-explorer__encap">
+        <div class="proto-explorer__encap-col">
+          <h4>${escapeHtml(OSI_ENCAPSULATION.sendTitle)}</h4>
+          <p class="proto-explorer__encap-hint">${escapeHtml(OSI_ENCAPSULATION.sendHint)}</p>
+          <ol class="proto-explorer__encap-list proto-explorer__encap-list--down">${sendSteps}</ol>
+        </div>
+        <div class="proto-explorer__encap-col">
+          <h4>${escapeHtml(OSI_ENCAPSULATION.receiveTitle)}</h4>
+          <p class="proto-explorer__encap-hint">${escapeHtml(OSI_ENCAPSULATION.receiveHint)}</p>
+          <ol class="proto-explorer__encap-list proto-explorer__encap-list--up">${recvSteps}</ol>
+        </div>
+      </div>
+      <div class="proto-explorer__tcpip">
+        <h4>OSI ↔ TCP/IP（4/5 层）</h4>
+        <p class="proto-explorer__encap-hint">${escapeHtml(TCPIP_MERGE_NOTE)}</p>
+        <div class="proto-explorer__tcpip-grid">${mapRows}</div>
+      </div>`;
+      })();
+
+  return `
+    <section class="proto-explorer__osi-guide${slim ? ' proto-explorer__osi-guide--slim' : ''}" aria-label="OSI 模型导读">
+      <div class="proto-explorer__osi-guide-head">
+        <h3 class="proto-explorer__side-title">OSI 模型导读</h3>
+        <p class="proto-explorer__side-hint">
+          点击层展开细节。亮条 = 当前协议 <strong>${escapeHtml(protocol.name)}</strong> 典型路径；
+          描边 = 主要落点（教学近似）。
+        </p>
+      </div>
+      <div class="proto-explorer__osi" role="list">${rows}</div>
+      ${concepts}
+    </section>`;
 }
 
 /**
@@ -267,6 +381,8 @@ export function mountProtocolExplorer(container, options = {}) {
   let category = 'all';
   let protocolId = PROTOCOLS[0].id;
   let stepIndex = 0;
+  /** @type {number | null} expanded OSI layer (L1–L7), or null */
+  let expandedOsi = 7;
   /** @type {Record<string, { status: 'idle'|'in_progress'|'complete', maxStep: number }>} */
   let progress = loadProgress();
   /** @type {ReturnType<typeof setInterval> | null} */
@@ -341,7 +457,9 @@ export function mountProtocolExplorer(container, options = {}) {
     stopPlay();
     protocolId = id;
     stepIndex = 0;
-    bumpProgress(currentProtocol(), 0);
+    const next = currentProtocol();
+    expandedOsi = next.osiLayer;
+    bumpProgress(next, 0);
     render({ animate: true });
   }
 
@@ -413,15 +531,6 @@ export function mountProtocolExplorer(container, options = {}) {
       )
       .join('');
 
-    const osi = OSI_LAYERS.map((layer) => {
-      const active = layer.n === proto.osiLayer;
-      return `
-        <div class="proto-explorer__osi-row${active ? ' is-active' : ''}" data-osi="${layer.n}">
-          <span class="proto-explorer__osi-num">${layer.n}</span>
-          <span class="proto-explorer__osi-name">${escapeHtml(layer.name)}</span>
-        </div>`;
-    }).join('');
-
     const cards = list
       .map((p) => {
         const st = progress[p.id]?.status || 'idle';
@@ -464,7 +573,7 @@ export function mountProtocolExplorer(container, options = {}) {
 
     const facts = `
       <dl class="proto-explorer__facts">
-        <div><dt>层次</dt><dd>${escapeHtml(proto.osiLabel)}（OSI ${proto.osiLayer}）</dd></div>
+        <div><dt>层次</dt><dd>${escapeHtml(proto.osiLabel)}（OSI L${proto.osiLayer} · 路径 ${(proto.osiStack || [proto.osiLayer]).map((n) => `L${n}`).join('→')}）</dd></div>
         <div><dt>默认端口</dt><dd>${escapeHtml(proto.port)}</dd></div>
         <div><dt>传输</dt><dd>${escapeHtml(proto.transport)}</dd></div>
         <div><dt>数据格式</dt><dd>${escapeHtml(proto.dataFormat)}</dd></div>
@@ -481,7 +590,7 @@ export function mountProtocolExplorer(container, options = {}) {
         <div class="proto-explorer__hero-text">
           <p class="proto-explorer__eyebrow">PROTOCOL EXPLORER</p>
           <h2 class="proto-explorer__title">协议探索</h2>
-          <p class="proto-explorer__subtitle">理解互联网如何工作 · 全量 ${PROTOCOLS.length} 种协议教学示意</p>
+          <p class="proto-explorer__subtitle">OSI 七层导读 + ${PROTOCOLS.length} 种协议步进示意 · 先消化分层再跟报文</p>
         </div>
         <div class="proto-explorer__progress" aria-label="学习进度">
           <div class="proto-explorer__progress-head">
@@ -496,14 +605,11 @@ export function mountProtocolExplorer(container, options = {}) {
         </div>
       </header>
 
-      <div class="proto-explorer__layout">
-        <aside class="proto-explorer__sidebar">
-          <h3 class="proto-explorer__side-title">OSI 模型</h3>
-          <div class="proto-explorer__osi" aria-label="OSI 层">${osi}</div>
-          <p class="proto-explorer__side-hint">高亮为当前协议主要落点（教学近似）。</p>
-        </aside>
+      <div class="proto-explorer__layout proto-explorer__layout--osi-first">
+        ${compact ? '' : renderOsiGuide(proto, expandedOsi)}
 
         <div class="proto-explorer__main">
+          ${compact ? renderOsiGuide(proto, expandedOsi, { compact: true }) : ''}
           <div class="proto-explorer__filters" role="tablist" aria-label="协议分类">${catFilters}</div>
 
           <h3 class="proto-explorer__section-title">互联网协议 <span>${list.length}</span></h3>
@@ -577,6 +683,14 @@ export function mountProtocolExplorer(container, options = {}) {
 
     if (opts.animate) flashAnim(step.anim);
 
+    shell.querySelectorAll('[data-osi]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const n = Number(el.getAttribute('data-osi'));
+        if (!Number.isFinite(n)) return;
+        expandedOsi = expandedOsi === n ? null : n;
+        render();
+      });
+    });
     shell.querySelectorAll('[data-cat]').forEach((el) => {
       el.addEventListener('click', () => {
         category = el.getAttribute('data-cat') || 'all';
