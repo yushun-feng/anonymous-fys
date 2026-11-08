@@ -332,6 +332,7 @@ function renderHome() {
   }).join('');
 
   return layout(`
+    ${continueBanner}
     <div class="pagoda-home-slot" data-pagoda-mount data-pagoda-compact></div>
     <p class="pagoda-home-link"><a href="#/pagoda">打开完整应县木塔展台 →</a></p>
     <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
@@ -365,7 +366,6 @@ function renderHome() {
         ${tagPills(allTags, filterTag)}
       </div>
     </section>
-    ${continueBanner}
     <p class="result-count">${filtered.length} 篇笔记</p>
     ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
   `);

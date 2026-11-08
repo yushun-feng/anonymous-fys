@@ -1037,7 +1037,10 @@ html[data-route='daily'] .site-header {
 }
 
 .continue-reading {
-  margin: 0 0 1rem;
+  margin: 0.25rem 0 1.1rem;
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
 }
 
 .continue-reading__link {
