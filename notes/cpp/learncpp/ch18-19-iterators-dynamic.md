@@ -19,6 +19,8 @@ source: https://learncpp.cn/
 
 **现代立场（贯穿本章）**：理解 `new`/`delete` 的机制与危险，但**生产代码优先 RAII 与智能指针**——详见 [第 22 章：移动与智能指针](./ch22-move-smart-pointers.md)、[RAII 与所有权](../raii-and-ownership.md)。动态数组优先 `std::vector`，而非裸 `new[]`。
 
+**排序进阶（选修）**：标准 `std::sort` 之外若想系统对照多种算法 / adapter / 预有序度量，见 [cpp-sort 学习路线](../cpp-sort/00-roadmap.md)（与 [对照 std::sort](../cpp-sort/04-vs-std-sort.md)）。
+
 ## 核心概念
 
 ### 为何需要迭代器
