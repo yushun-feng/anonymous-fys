@@ -1196,6 +1196,12 @@ html[data-route='daily'] .site-header {
   font-size: 0.85rem;
 }
 
+.note-reading-status {
+  margin: 0.55rem 0 0;
+  color: var(--accent);
+  font-size: 0.82rem;
+}
+
 .crumb {
   margin: 0.5rem 0 1.25rem;
   color: var(--muted);

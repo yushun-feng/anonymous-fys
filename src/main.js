@@ -569,6 +569,7 @@ function renderNote(id) {
           ${note.tags.map((t) => `<span class="tag-inline">#${escapeHtml(t)}</span>`).join('')}
           <time datetime="${escapeHtml(note.updated)}">更新 ${escapeHtml(note.updated)}</time>
         </p>
+        <p class="note-reading-status" data-reading-status aria-live="polite">本机阅读进度：记录中…</p>
       </header>
       <div class="markdown-body">${html}</div>
       <div class="personal-notes-slot" data-personal-notes-mount></div>

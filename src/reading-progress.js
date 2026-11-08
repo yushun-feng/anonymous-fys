@@ -165,6 +165,14 @@ export function mountNoteReadingProgress(preferredRoot, note) {
   let disposed = false;
   let timer = 0;
   let target = resolveScrollTarget(preferredRoot);
+  const statusEl = /** @type {HTMLElement | null} */ (
+    preferredRoot.querySelector('[data-reading-status]')
+  );
+
+  /** @param {string} text */
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text;
+  }
 
   const restore = () => {
     if (disposed) return;
@@ -180,10 +188,22 @@ export function mountNoteReadingProgress(preferredRoot, note) {
   });
   const lateRestore = window.setTimeout(restore, 160);
 
+  if (targetY > 40) {
+    setStatus(`本机阅读进度：已回到上次位置（约 ${Math.round(targetY)}px）`);
+  } else {
+    setStatus('本机阅读进度：已记为上次打开 · 滚动会自动保存');
+  }
+
   function persistScroll() {
     if (disposed) return;
     target = resolveScrollTarget(preferredRoot);
-    saveNoteScroll(note.id, readScrollY(target));
+    const y = readScrollY(target);
+    saveNoteScroll(note.id, y);
+    setStatus(
+      y > 40
+        ? `本机阅读进度：已保存滚动位置（约 ${Math.round(y)}px）`
+        : '本机阅读进度：已记为上次打开 · 滚动会自动保存',
+    );
   }
 
   function onScroll() {
