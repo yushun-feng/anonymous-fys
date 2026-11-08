@@ -4,6 +4,10 @@ const SERIES_RANK = {
   cherno: 1,
   foundation: 0,
   hellogithub: 0,
+  annals: 0,
+  houses: 1,
+  biographies: 2,
+  treatises: 3,
 };
 
 /**
