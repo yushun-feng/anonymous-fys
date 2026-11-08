@@ -6,3 +6,11 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Local-only private media — never push binaries / never deploy to Pages.
+# Only the stockings scaffold docs/placeholders stay trackable.
+/private/**
+!/private/stockings/
+!/private/stockings/README.md
+!/private/stockings/albums/
+!/private/stockings/albums/.gitkeep
