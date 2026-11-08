@@ -2,6 +2,7 @@
 const SERIES_RANK = {
   learncpp: 0,
   cherno: 1,
+  'cpp-sort': 2,
   foundation: 0,
   hellogithub: 0,
   annals: 0,

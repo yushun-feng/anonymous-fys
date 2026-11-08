@@ -10,7 +10,7 @@ source: https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb
 
 对应 [The Cherno — C++ 播放列表](https://www.youtube.com/playlist?list=PLlrATfBNZ98dudnM48yfGUldqGD0S4FFb) 的**剧集索引**：正文讲解已并入 [LearnCpp 各章](../learncpp/00-roadmap.md) 的「Cherno 视角补充」，本目录只保留薄交叉链接，避免双份长文。
 
-互补：[LearnCpp 路线](../learncpp/00-roadmap.md) · [`../raii-and-ownership.md`](../raii-and-ownership.md)
+互补：[LearnCpp 路线](../learncpp/00-roadmap.md) · [cpp-sort 学习路线](../cpp-sort/00-roadmap.md) · [`../raii-and-ownership.md`](../raii-and-ownership.md)
 
 ## 怎么用
 
