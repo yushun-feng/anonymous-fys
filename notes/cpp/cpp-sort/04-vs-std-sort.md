@@ -86,4 +86,4 @@ cpp-sort：
 2. 需要稳定时：`std::stable_sort` vs `cppsort::merge_sort`，用故意相等键的结构体验证保序。  
 3. 写一段「默认 `std::sort`，仅在 `#ifdef` 或策略标签下换 cpp-sort」的薄封装，体会依赖边界。
 
-回到路线：[00-roadmap](#/note/cpp/cpp-sort/00-roadmap)。
+下一阶段进入 Wiki 全文消化：[05 Home 通用约定](#/note/cpp/cpp-sort/05-home-general) → [06 Quickstart](#/note/cpp/cpp-sort/06-quickstart)。路线总表：[00-roadmap](#/note/cpp/cpp-sort/00-roadmap)。

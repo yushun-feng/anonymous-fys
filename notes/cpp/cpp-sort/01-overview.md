@@ -10,8 +10,8 @@ sourceUrl: https://github.com/Morwenn/cpp-sort
 
 # cpp-sort 概览
 
-> 出处：[Morwenn/cpp-sort](https://github.com/Morwenn/cpp-sort) · [Wiki Quickstart](https://github.com/Morwenn/cpp-sort/wiki/Quickstart)  
-> 说明：原创中文消化；细节与版本差异以上游为准。路线见 [00](#/note/cpp/cpp-sort/00-roadmap)。
+> 出处：[Morwenn/cpp-sort](https://github.com/Morwenn/cpp-sort) · [Wiki Quickstart](https://github.com/Morwenn/cpp-sort/wiki/Quickstart) · [Wiki Home](https://github.com/Morwenn/cpp-sort/wiki/Home)  
+> 说明：原创中文消化；细节与版本差异以上游为准。本系列已覆盖 Wiki 全部内容页，总表见 [00](#/note/cpp/cpp-sort/00-roadmap)。
 
 ## 它解决什么问题
 
