@@ -51,4 +51,4 @@ C++ 接口；跨 Linux / Windows 是上游明确目标。
 2. 对照 `collide` / `distance` / `continuousCollide` 三个 request 结构，列出你会改的字段（只要布尔碰撞 vs 要接触点）。  
 3. 打开 Doxygen Classes，搜 `BroadPhaseCollisionManager`，记下默认推荐的实现名。
 
-下一章：[邻近查询与宽阶段](#/note/opensource/fcl/02-proximity-api)。
+下一章：[邻近查询与宽阶段](#/note/opensource/fcl/02-proximity-api) · 加深：[03 形状](#/note/opensource/fcl/03-shapes-and-geometry) · [04 宽阶段](#/note/opensource/fcl/04-broadphase-managers) · [05 测试地图](#/note/opensource/fcl/05-octree-and-tests)。

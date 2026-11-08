@@ -60,7 +60,7 @@ updated: 2026-10-31 # ISO 日期 YYYY-MM-DD
 - **图形学基础（`graphics/foundation/`）**：以 [LearnOpenGL](https://learnopengl.com/) 与 *Fundamentals of Computer Graphics*（第 5 版，简称 FoCG）为主线的**完整中文学习笔记**——概念、坐标/矩阵约定、OpenGL/GLSL 要点、易错、练习指引；理论（FoCG）与实践（LearnOpenGL）在章内交织改写，**勿**整章照搬教材或教程原文。专题速览（如 PBR）可放在 `graphics/` 根下，并与 foundation 路线互链。
 - **Linux / 系统（`linux/`）**：用户态与相关系统知识的**中文速查与心智模型**（进程虚存布局、栈帧、寄存器直觉、防护标志词典、网络协议速览等）。安全相关只写结构与防护动机，**不**写可复现利用步骤。优先配 Mermaid 结构图；可与 `cpp/` 生命周期/堆笔记互链。网络协议可链到站内 [`#/protocols`](#/protocols) 交互演示。
 - **日常（`daily/`）**：节奏、微习惯、长期原则等**非技术**短文；与 C++/图形等分栏。宜短小、可检索；可嵌原图，正文仍应用文字对照方便搜索。勿塞隐私或未公开材料。
-- **开源精选（`opensource/`）**：HelloGitHub 等杂志/列表的**原创中文摘录**（期号 + 若干项目亮点与仓库链接），以及个别上游库导读（如 `fcl/`、`ompl/`：路线 + 概览；若 GitHub Wiki 有内容则迁为中文 digest，否则改写 README / 官方文档站并在路线页标明 Wiki 覆盖）。按来源分子目录；填短名称 `source`（供 [`#/opensource`](#/opensource) 分组）+ `sourceUrl` / 可选 `issue`。互链用 `#/note/opensource/...`。勿整期或整仓照搬原文。
+- **开源精选（`opensource/`）**：HelloGitHub 等杂志/列表的**原创中文摘录**（期号 + 若干项目亮点与仓库链接），以及个别上游库导读（如 `fcl/`、`ompl/`：路线 + 概览；若 GitHub Wiki / 官方 Tutorials 有内容则迁为中文 digest——OMPL 已覆盖 [Tutorials](https://ompl.kavrakilab.org/tutorials.html) 全页；FCL 无 Tutorials/Wiki 页则加深 README + 头文件 + `test/` 地图）。按来源分子目录；填短名称 `source`（供 [`#/opensource`](#/opensource) 分组）+ `sourceUrl` / 可选 `issue`。互链用 `#/note/opensource/...`。勿整期或整仓照搬原文。
 - **AI 史（`ai/`）**：以 [AI 史记](https://zsjunai.github.io/history-of-ai/)（[zsjunai/history-of-ai](https://github.com/zsjunai/history-of-ai)，CC BY-SA 4.0）为上游。站内保留五体目录：`annals/` 本纪导读、`houses/` / `biographies/` / `treatises/` 索引；大事年表结构化数据在 `src/ai-timeline-data.js`，浏览页 [`#/ai`](#/ai)。**勿**整篇镜像上游本纪/列传长文；事件短句可在署名与 ShareAlike 下导入。见 `notes/ai/ATTRIBUTION.md`。
 - 其他主题笔记宜短小、可检索：一题一文，避免无关杂记。
 - 代码块标明语言：`cpp`、`glsl`、`hlsl` 等，站点会做高亮。
