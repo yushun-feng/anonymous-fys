@@ -50,6 +50,16 @@ jobs:
           VITE_GOATCOUNTER_CODE: ${{ secrets.VITE_GOATCOUNTER_CODE }}
         run: npm run build
 
+      # Hard gate: private/stockings must never ship to Pages.
+      - name: Guard against private assets in dist
+        run: |
+          set -euo pipefail
+          if find dist \( -iname '*stockings*' -o -path '*/private/*' -o -path '*/__local/*' \) | grep -q .; then
+            echo "::error::Private/local stockings paths leaked into dist — refusing Pages upload"
+            find dist \( -iname '*stockings*' -o -path '*/private/*' -o -path '*/__local/*' \) || true
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -71,6 +71,8 @@ let aiMountGen = 0;
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
 let personalNotesHandle = null;
+/** Active local-only stockings gallery; disposed on every remount / navigate-away. */
+let stockingsHandle = null;
 
 function disposePagoda() {
   pagodaMountGen += 1;
@@ -131,6 +133,11 @@ function disposePersonalNotes() {
   personalNotesHandle = null;
 }
 
+function disposeStockings() {
+  stockingsHandle?.dispose();
+  stockingsHandle = null;
+}
+
 function parseRoute() {
   const raw = window.location.hash.replace(/^#/, '');
   const pathPart = raw.split('?')[0].replace(/^\//, '');
@@ -186,6 +193,10 @@ function parseRoute() {
   }
   if (pathPart === 'ai' || pathPart === 'ai-history' || pathPart === 'history-of-ai') {
     return { name: 'ai' };
+  }
+  // Local-only private gallery — never linked from public nav/home.
+  if (pathPart === 'stockings') {
+    return { name: 'stockings' };
   }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
@@ -389,6 +400,25 @@ function renderAiPage() {
     <nav class="crumb"><a href="#/">首页</a> / <span>AI 史记</span></nav>
     <div class="ai-page-slot site-main-breakout" data-ai-mount></div>
     <p class="ai-credit">结构化大事年表改编自 <a href="https://github.com/zsjunai/history-of-ai" rel="noopener noreferrer" target="_blank">zsjunai/history-of-ai</a>（<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">CC BY-SA 4.0</a>）；本纪/世家/列传/书长文外链上游，站内为导读与索引。详见 <a href="#/note/ai/ATTRIBUTION">署名说明</a>。</p>
+  `);
+}
+
+/** Local-dev gallery shell; production Pages never links here and shows unavailable copy. */
+function renderStockingsPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>Stockings（本地）</span></nav>
+    <div class="stockings-page-slot site-main-breakout" data-stockings-mount></div>
+  `);
+}
+
+function renderStockingsUnavailable() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>不可用</span></nav>
+    <section class="stockings-unavailable">
+      <h1>仅本地可用</h1>
+      <p>此路由只在本机 <code>npm run dev</code> 下工作，不会部署到 GitHub Pages，也不会从公开导航进入。</p>
+      <p><a href="#/">← 返回首页</a></p>
+    </section>
   `);
 }
 
@@ -662,6 +692,26 @@ async function mountAiIfPresent(root) {
   }
 }
 
+async function mountStockingsIfPresent(root) {
+  const slot = root.querySelector('[data-stockings-mount]');
+  if (!slot) return;
+  // Production builds replace import.meta.env.DEV with false — dynamic import is dropped.
+  if (!import.meta.env.DEV) {
+    slot.innerHTML =
+      '<p class="stockings-unavailable">Stockings 相册仅本地开发可用。</p>';
+    return;
+  }
+  try {
+    const { mountStockingsGallery } = await import('./stockings-gallery.js');
+    if (!slot.isConnected) return;
+    stockingsHandle = mountStockingsGallery(/** @type {HTMLElement} */ (slot));
+  } catch {
+    if (!slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="stockings-unavailable">本地相册模块加载失败。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -750,6 +800,7 @@ function mountContent() {
   disposeDaily();
   disposeAi();
   disposePersonalNotes();
+  disposeStockings();
 
   const route = parseRoute();
   // Normalize legacy showcase hashes → #/pagoda.
@@ -841,6 +892,15 @@ function mountContent() {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountAiIfPresent(browse);
+  } else if (route.name === 'stockings') {
+    void syncSidePanel(null);
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
+    if (import.meta.env.DEV) {
+      browse.innerHTML = renderStockingsPage();
+      void mountStockingsIfPresent(browse);
+    } else {
+      browse.innerHTML = renderStockingsUnavailable();
+    }
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
