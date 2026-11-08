@@ -204,10 +204,10 @@ async function loadAlbums(body, isCancelled, setLightbox) {
  */
 function renderCover(cover, coverKind) {
   if (!cover) return '<span class="loc-gallery__album-placeholder">空</span>';
-  // Cover URL is already a poster JPEG when the album lead item is a video.
-  return `<img src="${escapeAttr(cover)}" alt="" loading="lazy" decoding="async" ${
+  // Cover URL is a poster JPEG when the album lead item is a video (204 until cached).
+  return `<img src="${escapeAttr(cover)}" alt="" loading="lazy" decoding="async" data-gal-poster-img ${
     coverKind === 'video' ? 'class="loc-gallery__album-cover--video"' : ''
-  } />`;
+  } onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'loc-gallery__album-placeholder',textContent:'视频'}))" />`;
 }
 
 /**
@@ -296,7 +296,7 @@ async function openAlbum(body, albumId, isCancelled, setLightbox) {
                 <button type="button" class="loc-gallery__thumb loc-gallery__thumb--video" data-gal-open="${idx}" aria-label="打开 ${escapeAttr(it.name)}">
                   ${
                     it.poster
-                      ? `<img src="${escapeAttr(it.poster)}" alt="" loading="lazy" decoding="async" />`
+                      ? `<img src="${escapeAttr(it.poster)}" alt="" loading="lazy" decoding="async" data-gal-poster-img data-gal-poster-retry="${escapeAttr(it.poster)}" />`
                       : '<span class="loc-gallery__thumb-fallback">视频</span>'
                   }
                   <span class="loc-gallery__thumb-play" aria-hidden="true">▶</span>
@@ -321,6 +321,7 @@ async function openAlbum(body, albumId, isCancelled, setLightbox) {
     `;
     const lbHandle = wireLightbox(viewer, entries);
     setLightbox(lbHandle);
+    wirePosterRetries(viewer);
     wireBack(viewer, list, () => setLightbox(null));
   } catch {
     if (isCancelled()) return;
@@ -338,6 +339,32 @@ function releaseVideos(root) {
     v.pause();
     v.removeAttribute('src');
     v.load();
+  });
+}
+
+/**
+ * Poster endpoint returns 204 until ffmpeg finishes in the background.
+ * Soft-retry a few times so thumbs appear without blocking video connections.
+ * @param {ParentNode} root
+ */
+function wirePosterRetries(root) {
+  root.querySelectorAll('img[data-gal-poster-retry]').forEach((img) => {
+    const url = img.getAttribute('data-gal-poster-retry') || '';
+    let tries = 0;
+    const bump = () => {
+      tries += 1;
+      if (tries > 4 || !url) {
+        img.replaceWith(Object.assign(document.createElement('span'), {
+          className: 'loc-gallery__thumb-fallback',
+          textContent: '视频',
+        }));
+        return;
+      }
+      window.setTimeout(() => {
+        img.src = `${url}${url.includes('?') ? '&' : '?'}r=${tries}`;
+      }, 1200 * tries);
+    };
+    img.addEventListener('error', bump);
   });
 }
 
@@ -360,10 +387,28 @@ function wireLightbox(viewer, entries) {
     const it = entries[index];
     releaseVideos(stage);
     if (it.kind === 'video') {
-      stage.innerHTML = `<video class="loc-gallery__lb-media" controls playsinline preload="metadata" title="${escapeAttr(it.name)}"></video>`;
+      stage.innerHTML = `
+        <video class="loc-gallery__lb-media" controls playsinline preload="auto" title="${escapeAttr(it.name)}"></video>
+        <p class="loc-gallery__lb-status" data-gal-lb-status>加载中…</p>`;
       const video = /** @type {HTMLVideoElement} */ (stage.querySelector('video'));
+      const status = /** @type {HTMLElement | null} */ (stage.querySelector('[data-gal-lb-status]'));
+      const clearStatus = () => {
+        if (status) status.hidden = true;
+      };
+      video.addEventListener('loadeddata', clearStatus, { once: true });
+      video.addEventListener('playing', clearStatus, { once: true });
+      video.addEventListener('error', () => {
+        if (status) {
+          status.hidden = false;
+          status.textContent =
+            '无法播放（编码可能不被浏览器支持，或文件读失败）。可试 WebM/H.264 MP4，并确认 GALLERY_ROOT 路径正确（Windows 建议 D:/视频）。';
+        }
+      });
+      // Dev server is `/`; keep root-absolute `/__local/...` (not Pages base-relative).
       video.src = it.src;
-      void video.play().catch(() => {});
+      void video.play().catch(() => {
+        /* autoplay may be blocked; controls still work once buffered */
+      });
     } else {
       stage.innerHTML = `<img class="loc-gallery__lb-media" src="${escapeAttr(it.src)}" alt="${escapeAttr(it.name)}" decoding="async" />`;
     }
@@ -712,6 +757,13 @@ video.loc-gallery__lb-media {
   text-align: center;
   max-width: 90vw;
   word-break: break-all;
+}
+.loc-gallery__lb-status {
+  margin: 0.5rem 0 0;
+  color: #ccc;
+  font-size: 0.85rem;
+  text-align: center;
+  max-width: 36rem;
 }
 .loc-gallery__lb-close,
 .loc-gallery__lb-nav {
