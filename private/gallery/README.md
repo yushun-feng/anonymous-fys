@@ -70,9 +70,11 @@ private/gallery/albums/<相册名>/*.{jpg,png,webp,gif,heic,avif,mp4,webm,mov,mk
 支持的扩展名：
 
 - 图片：`jpg` `jpeg` `png` `webp` `gif` `heic` `avif`
-- 视频：`mp4` `webm` `mov` `mkv` `m4v` `ogv`（画廊用 `<video controls>` 播放）
+- 视频：`mp4` `webm` `mov` `mkv` `m4v` `ogv`（网格用 ffmpeg 缓存帧作预览；点进灯箱用 `<video controls>` 播放）
 
-刷新 `#/gallery` 即可浏览。空相册也会列出，但没有封面。
+刷新 `#/gallery` 即可浏览。空相册也会列出，但没有封面。灯箱支持 ←/→ 与按钮翻看相邻图片/视频。
+
+视频预览图缓存在相册内 `.gallery-cache/*.poster.jpg`（仍在 `GALLERY_ROOT` 下，不进 git）。需要本机 **ffmpeg**。
 
 ## 粘贴链接下载（Twitter / 抖音）
 

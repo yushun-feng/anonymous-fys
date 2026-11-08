@@ -7,6 +7,7 @@ import {
   fetchGalleryVideo,
   resolveFetchOutDir,
 } from './local-gallery-fetch.js';
+import { ensureVideoPoster, isPosterCacheName } from './local-gallery-poster.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -87,7 +88,7 @@ export function localGalleryPlugin() {
             res.end('Not found');
             return;
           }
-          const items = listMedia(albumDir);
+          const items = listMedia(albumDir, albumId);
           sendJson(res, {
             id: albumId,
             items,
@@ -97,11 +98,25 @@ export function localGalleryPlugin() {
           return;
         }
 
+        // Lazy poster JPEG: /__local/gallery/albums/<id>/poster/<videofile>
+        const posterMatch = /^albums\/([^/]+)\/poster\/(.+)$/i.exec(subPath);
+        if (posterMatch) {
+          void handlePoster(req, res, layout, posterMatch[1], posterMatch[2]);
+          return;
+        }
+
         // Media file: /__local/gallery/albums/<id>/<file>
         const albumFileMatch = /^albums\/([^/]+)\/(.+)$/i.exec(subPath);
         if (albumFileMatch) {
           const albumId = albumFileMatch[1];
           const fileRel = albumFileMatch[2];
+          // Do not serve cache internals as album media via this path.
+          if (fileRel.split(/[/\\]/).some((p) => isPosterCacheName(p) || p === '.gallery-cache')) {
+            res.statusCode = 404;
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.end('Not found');
+            return;
+          }
           const albumDir = resolveAlbumDir(layout, albumId);
           if (!albumDir) {
             res.statusCode = 404;
@@ -255,7 +270,7 @@ function buildIndex(layout) {
   }
 
   const dirs = readdirSync(layout.albumsParent, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
+    .filter((d) => d.isDirectory() && !d.name.startsWith('.') && !isPosterCacheName(d.name))
     .map((d) => d.name)
     .sort((a, b) => a.localeCompare(b, 'en'));
 
@@ -264,14 +279,16 @@ function buildIndex(layout) {
   }
 
   for (const spec of albumSpecs) {
-    const items = listMedia(spec.dir);
+    const items = listMedia(spec.dir, spec.id);
     const coverItem = pickCover(items);
     payload.albums.push({
       id: spec.id,
       title: spec.title,
       count: items.length,
       cover: coverItem
-        ? `${LOCAL_PREFIX}/albums/${encodeURIComponent(spec.id)}/${encodeURIComponent(coverItem.name)}`
+        ? coverItem.kind === 'video' && coverItem.poster
+          ? coverItem.poster
+          : `${LOCAL_PREFIX}/albums/${encodeURIComponent(spec.id)}/${encodeURIComponent(coverItem.name)}`
         : null,
       coverKind: coverItem ? coverItem.kind : null,
     });
@@ -286,18 +303,22 @@ function folderDisplayName(absPath) {
 }
 
 /**
- * @param {{ name: string, kind: 'image' | 'video' }[]} items
+ * @param {{ name: string, kind: 'image' | 'video', poster?: string | null }[]} items
  */
 function pickCover(items) {
   return items.find((it) => it.kind === 'image') || items[0] || null;
 }
 
-/** @param {string} dir */
-function listMedia(dir) {
+/**
+ * @param {string} dir
+ * @param {string} [albumId]
+ */
+function listMedia(dir, albumId) {
   if (!existsSync(dir)) return [];
-  /** @type {{ name: string, kind: 'image' | 'video' }[]} */
+  /** @type {{ name: string, kind: 'image' | 'video', poster?: string | null }[]} */
   const items = [];
   for (const name of readdirSync(dir)) {
+    if (isPosterCacheName(name) || name.startsWith('.')) continue;
     const abs = join(dir, name);
     try {
       if (!statSync(abs).isFile()) continue;
@@ -306,9 +327,58 @@ function listMedia(dir) {
     }
     const ext = extname(name).toLowerCase();
     if (IMAGE_EXT.has(ext)) items.push({ name, kind: 'image' });
-    else if (VIDEO_EXT.has(ext)) items.push({ name, kind: 'video' });
+    else if (VIDEO_EXT.has(ext)) {
+      /** @type {{ name: string, kind: 'image' | 'video', poster?: string | null }} */
+      const item = { name, kind: 'video' };
+      if (albumId) {
+        item.poster = `${LOCAL_PREFIX}/albums/${encodeURIComponent(albumId)}/poster/${encodeURIComponent(name)}`;
+      }
+      items.push(item);
+    }
   }
   return items.sort((a, b) => a.name.localeCompare(b.name, 'en'));
+}
+
+/**
+ * Generate-or-serve a cached JPEG poster for a video (ffmpeg, ≤480px wide).
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {{ root: string, albumsParent: string, mode: string }} layout
+ * @param {string} albumId
+ * @param {string} videoName
+ */
+async function handlePoster(req, res, layout, albumId, videoName) {
+  const albumDir = resolveAlbumDir(layout, albumId);
+  if (!albumDir) {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('Not found');
+    return;
+  }
+  const videoPath = safeResolveUnder(albumDir, videoName);
+  if (!videoPath || !existsSync(videoPath) || !statSync(videoPath).isFile()) {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('Not found');
+    return;
+  }
+  const ext = extname(videoPath).toLowerCase();
+  if (!VIDEO_EXT.has(ext)) {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('Not a video');
+    return;
+  }
+
+  const posterPath = await ensureVideoPoster(videoPath);
+  if (!posterPath) {
+    // No ffmpeg / decode failure — UI keeps play tile without a poster image.
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  // Cache once built — busted when video mtime forces rebuild in ensureVideoPoster.
+  streamFile(req, res, posterPath, { cacheControl: 'private, max-age=86400' });
 }
 
 /**
@@ -328,8 +398,9 @@ function safeResolveUnder(root, subPath) {
  * @param {import('http').IncomingMessage} req
  * @param {import('http').ServerResponse} res
  * @param {string} filePath
+ * @param {{ cacheControl?: string }} [opts]
  */
-function streamFile(req, res, filePath) {
+function streamFile(req, res, filePath, opts = {}) {
   const ext = extname(filePath).toLowerCase();
   const type = MIME[ext] || 'application/octet-stream';
   const stat = statSync(filePath);
@@ -337,7 +408,7 @@ function streamFile(req, res, filePath) {
   const range = req.headers.range;
 
   res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', opts.cacheControl || 'no-store');
   res.setHeader('Content-Type', type);
 
   if (range) {
