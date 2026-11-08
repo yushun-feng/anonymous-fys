@@ -2,13 +2,18 @@ import { createReadStream, existsSync, readFileSync, readdirSync, statSync } fro
 import { extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
+import {
+  classifyGalleryFetchUrl,
+  fetchGalleryVideo,
+  resolveFetchOutDir,
+} from './local-gallery-fetch.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
-const DEFAULT_STOCKINGS_ROOT = resolve(REPO_ROOT, 'private', 'stockings');
-const LOCAL_PREFIX = '/__local/stockings';
-/** Optional gitignored one-line path override (same idea as STOCKINGS_ROOT). */
-const LOCAL_ROOT_FILE = resolve(REPO_ROOT, '.stockings-root.local');
+const DEFAULT_GALLERY_ROOT = resolve(REPO_ROOT, 'private', 'gallery');
+const LOCAL_PREFIX = '/__local/gallery';
+/** Optional gitignored one-line path override (same idea as GALLERY_ROOT). */
+const LOCAL_ROOT_FILE = resolve(REPO_ROOT, '.gallery-root.local');
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.avif']);
 const VIDEO_EXT = new Set(['.mp4', '.webm', '.mov', '.mkv', '.m4v', '.ogv']);
@@ -31,18 +36,19 @@ const MIME = {
 };
 
 /**
- * Dev-only middleware + production build guard for local stockings media.
+ * Dev-only middleware + production build guard for local private gallery media.
  * Never copies private / external media into `dist`; refuses emit if paths leak.
- * Media roots (private/stockings or STOCKINGS_ROOT e.g. D:\\视频) are never bundled.
+ * Media roots (private/gallery or GALLERY_ROOT e.g. D:\\视频) are never bundled.
  */
-export function localStockingsPlugin() {
+export function localGalleryPlugin() {
   return {
-    name: 'local-stockings',
+    name: 'local-gallery',
     apply: undefined, // both serve + build (guard on build)
     configureServer(server) {
-      const root = resolveStockingsRoot(server.config.envDir || REPO_ROOT, server.config.mode);
-      const layout = resolveAlbumLayout(root);
-      logRootOnce(root, layout);
+      const envDir = server.config.envDir || REPO_ROOT;
+      const mode = server.config.mode;
+      const bootRoot = resolveGalleryRoot(envDir, mode);
+      logRootOnce(bootRoot, resolveAlbumLayout(bootRoot));
 
       server.middlewares.use((req, res, next) => {
         const rawUrl = req.url || '';
@@ -56,13 +62,21 @@ export function localStockingsPlugin() {
           /^\/+/,
           '',
         );
+        // Re-resolve each request so newly downloaded album folders appear.
+        const root = resolveGalleryRoot(envDir, mode);
+        const layout = resolveAlbumLayout(root);
+
+        if (subPath === 'fetch' || subPath === 'fetch/') {
+          void handleFetch(req, res, layout);
+          return;
+        }
 
         if (!subPath || subPath === 'index.json') {
           sendJson(res, buildIndex(layout));
           return;
         }
 
-        // Synthetic per-album listing: /__local/stockings/albums/<id>/index.json
+        // Synthetic per-album listing: /__local/gallery/albums/<id>/index.json
         const albumIndexMatch = /^albums\/([^/]+)\/index\.json$/i.exec(subPath);
         if (albumIndexMatch) {
           const albumId = albumIndexMatch[1];
@@ -83,7 +97,7 @@ export function localStockingsPlugin() {
           return;
         }
 
-        // Media file: /__local/stockings/albums/<id>/<file>
+        // Media file: /__local/gallery/albums/<id>/<file>
         const albumFileMatch = /^albums\/([^/]+)\/(.+)$/i.exec(subPath);
         if (albumFileMatch) {
           const albumId = albumFileMatch[1];
@@ -115,7 +129,7 @@ export function localStockingsPlugin() {
       for (const fileName of Object.keys(bundle)) {
         if (isPrivateLeakPath(fileName)) {
           throw new Error(
-            `[local-stockings] Refusing to emit private path into production bundle: ${fileName}`,
+            `[local-gallery] Refusing to emit private path into production bundle: ${fileName}`,
           );
         }
       }
@@ -128,17 +142,17 @@ export function localStockingsPlugin() {
 }
 
 /**
- * Resolve media root: STOCKINGS_ROOT env → .stockings-root.local → private/stockings.
+ * Resolve media root: GALLERY_ROOT env → .gallery-root.local → private/gallery.
  * Intended Windows path for this machine: D:\\视频
  * @param {string} envDir
  * @param {string} mode
  */
-function resolveStockingsRoot(envDir, mode) {
-  const fromShell = (process.env.STOCKINGS_ROOT || '').trim();
+function resolveGalleryRoot(envDir, mode) {
+  const fromShell = (process.env.GALLERY_ROOT || '').trim();
   if (fromShell) return resolve(fromShell);
 
   const env = loadEnv(mode || 'development', envDir || REPO_ROOT, '');
-  const fromDotenv = (env.STOCKINGS_ROOT || '').trim();
+  const fromDotenv = (env.GALLERY_ROOT || '').trim();
   if (fromDotenv) return resolve(fromDotenv);
 
   if (existsSync(LOCAL_ROOT_FILE)) {
@@ -149,7 +163,7 @@ function resolveStockingsRoot(envDir, mode) {
     if (line) return resolve(line);
   }
 
-  return DEFAULT_STOCKINGS_ROOT;
+  return DEFAULT_GALLERY_ROOT;
 }
 
 /**
@@ -188,7 +202,7 @@ function logRootOnce(root, layout) {
   didLogRoot = true;
   const exists = existsSync(root);
   console.info(
-    `[local-stockings] media root: ${root} (${exists ? 'found' : 'missing'}) · layout=${layout.mode}`,
+    `[local-gallery] media root: ${root} (${exists ? 'found' : 'missing'}) · layout=${layout.mode}`,
   );
 }
 
@@ -203,7 +217,7 @@ function assertNoPrivateInDist(outDir) {
   });
   if (leaked.length) {
     throw new Error(
-      `[local-stockings] Private assets leaked into dist:\n${leaked.map((p) => `  - ${p}`).join('\n')}`,
+      `[local-gallery] Private assets leaked into dist:\n${leaked.map((p) => `  - ${p}`).join('\n')}`,
     );
   }
 }
@@ -212,8 +226,8 @@ function assertNoPrivateInDist(outDir) {
 function isPrivateLeakPath(relPath) {
   const n = relPath.replace(/\\/g, '/').toLowerCase();
   return (
-    n.includes('private/stockings') ||
-    n.includes('__local/stockings') ||
+    n.includes('private/gallery') ||
+    n.includes('__local/gallery') ||
     /(^|\/)private(\/|$)/.test(n)
   );
 }
@@ -353,12 +367,92 @@ function streamFile(req, res, filePath) {
 /**
  * @param {import('http').ServerResponse} res
  * @param {unknown} data
+ * @param {number} [status]
  */
-function sendJson(res, data) {
-  res.statusCode = 200;
+function sendJson(res, data, status = 200) {
+  res.statusCode = status;
   res.setHeader('Content-Type', MIME['.json']);
   res.setHeader('Cache-Control', 'no-store');
   res.end(JSON.stringify(data, null, 2));
+}
+
+/**
+ * POST /__local/gallery/fetch  { "url": "https://..." }
+ * Downloads via yt-dlp into GALLERY_ROOT/twitter|douyin (never into the git tree on purpose
+ * when GALLERY_ROOT points outside the repo, e.g. D:\\视频).
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {{ root: string, albumsParent: string, mode: string }} layout
+ */
+async function handleFetch(req, res, layout) {
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    sendJson(res, {
+      ok: true,
+      hint: 'POST JSON { "url": "<twitter|douyin link>" }. Needs yt-dlp on PATH.',
+      root: layout.root,
+    });
+    return;
+  }
+  if (req.method !== 'POST') {
+    sendJson(res, { ok: false, error: 'Use POST' }, 405);
+    return;
+  }
+
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch {
+    sendJson(res, { ok: false, error: 'Invalid JSON body' }, 400);
+    return;
+  }
+
+  const classified = classifyGalleryFetchUrl(body?.url);
+  if (!classified.ok) {
+    sendJson(res, { ok: false, error: classified.error }, 400);
+    return;
+  }
+
+  const outDir = resolveFetchOutDir(layout, classified.source);
+  console.info(`[local-gallery] fetch ${classified.source} → ${outDir}`);
+  const result = await fetchGalleryVideo({
+    url: classified.url,
+    source: classified.source,
+    outDir,
+  });
+  if (!result.ok) {
+    sendJson(res, result, 502);
+    return;
+  }
+  sendJson(res, result);
+}
+
+/**
+ * @param {import('http').IncomingMessage} req
+ */
+function readJsonBody(req) {
+  return new Promise((resolvePromise, reject) => {
+    /** @type {Buffer[]} */
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > 64 * 1024) {
+        reject(new Error('body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(Buffer.from(c));
+    });
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks).toString('utf8') || '{}';
+        resolvePromise(JSON.parse(raw));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    req.on('error', reject);
+  });
 }
 
 /**

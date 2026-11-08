@@ -71,8 +71,8 @@ let aiMountGen = 0;
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
 let personalNotesHandle = null;
-/** Active local-only stockings gallery; disposed on every remount / navigate-away. */
-let stockingsHandle = null;
+/** Active local-only private gallery; disposed on every remount / navigate-away. */
+let localGalleryHandle = null;
 
 function disposePagoda() {
   pagodaMountGen += 1;
@@ -133,9 +133,9 @@ function disposePersonalNotes() {
   personalNotesHandle = null;
 }
 
-function disposeStockings() {
-  stockingsHandle?.dispose();
-  stockingsHandle = null;
+function disposeLocalGallery() {
+  localGalleryHandle?.dispose();
+  localGalleryHandle = null;
 }
 
 function parseRoute() {
@@ -195,8 +195,8 @@ function parseRoute() {
     return { name: 'ai' };
   }
   // Local-only private gallery — never linked from public nav/home.
-  if (pathPart === 'stockings') {
-    return { name: 'stockings' };
+  if (pathPart === 'gallery') {
+    return { name: 'gallery' };
   }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
@@ -404,17 +404,17 @@ function renderAiPage() {
 }
 
 /** Local-dev gallery shell; production Pages never links here and shows unavailable copy. */
-function renderStockingsPage() {
+function renderLocalGalleryPage() {
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>Stockings（本地）</span></nav>
-    <div class="stockings-page-slot site-main-breakout" data-stockings-mount></div>
+    <nav class="crumb"><a href="#/">首页</a> / <span>本地相册</span></nav>
+    <div class="local-gallery-page-slot site-main-breakout" data-gal-mount></div>
   `);
 }
 
-function renderStockingsUnavailable() {
+function renderLocalGalleryUnavailable() {
   return layout(`
     <nav class="crumb"><a href="#/">首页</a> / <span>不可用</span></nav>
-    <section class="stockings-unavailable">
+    <section class="local-gallery-unavailable">
       <h1>仅本地可用</h1>
       <p>此路由只在本机 <code>npm run dev</code> 下工作，不会部署到 GitHub Pages，也不会从公开导航进入。</p>
       <p><a href="#/">← 返回首页</a></p>
@@ -692,23 +692,23 @@ async function mountAiIfPresent(root) {
   }
 }
 
-async function mountStockingsIfPresent(root) {
-  const slot = root.querySelector('[data-stockings-mount]');
+async function mountLocalGalleryIfPresent(root) {
+  const slot = root.querySelector('[data-gal-mount]');
   if (!slot) return;
   // Production builds replace import.meta.env.DEV with false — dynamic import is dropped.
   if (!import.meta.env.DEV) {
     slot.innerHTML =
-      '<p class="stockings-unavailable">Stockings 相册仅本地开发可用。</p>';
+      '<p class="local-gallery-unavailable">本地相册仅开发模式可用。</p>';
     return;
   }
   try {
-    const { mountStockingsGallery } = await import('./stockings-gallery.js');
+    const { mountLocalGallery } = await import('./local-gallery.js');
     if (!slot.isConnected) return;
-    stockingsHandle = mountStockingsGallery(/** @type {HTMLElement} */ (slot));
+    localGalleryHandle = mountLocalGallery(/** @type {HTMLElement} */ (slot));
   } catch {
     if (!slot.isConnected) return;
     slot.innerHTML =
-      '<p class="stockings-unavailable">本地相册模块加载失败。</p>';
+      '<p class="local-gallery-unavailable">本地相册模块加载失败。</p>';
   }
 }
 
@@ -800,7 +800,7 @@ function mountContent() {
   disposeDaily();
   disposeAi();
   disposePersonalNotes();
-  disposeStockings();
+  disposeLocalGallery();
 
   const route = parseRoute();
   // Normalize legacy showcase hashes → #/pagoda.
@@ -892,14 +892,14 @@ function mountContent() {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     mountAiIfPresent(browse);
-  } else if (route.name === 'stockings') {
+  } else if (route.name === 'gallery') {
     void syncSidePanel(null);
     document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
     if (import.meta.env.DEV) {
-      browse.innerHTML = renderStockingsPage();
-      void mountStockingsIfPresent(browse);
+      browse.innerHTML = renderLocalGalleryPage();
+      void mountLocalGalleryIfPresent(browse);
     } else {
-      browse.innerHTML = renderStockingsUnavailable();
+      browse.innerHTML = renderLocalGalleryUnavailable();
     }
   } else {
     browse.innerHTML = renderHome();

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
-import { localStockingsPlugin } from './scripts/vite-local-stockings.js';
+import { localGalleryPlugin } from './scripts/vite-local-gallery.js';
 
 // GitHub project Pages asset prefix (repo name).
 const PAGES_BASE = '/anonymous-fys/';
@@ -17,11 +17,11 @@ export default defineConfig(({ command, mode }) => ({
   },
   server: {
     fs: {
-      // Repo root for notes/public; private media is served only via localStockingsPlugin.
+      // Repo root for notes/public; private media is served only via localGalleryPlugin.
       allow: ['.'],
     },
   },
-  plugins: [localStockingsPlugin()],
+  plugins: [localGalleryPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
