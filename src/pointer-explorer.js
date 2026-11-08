@@ -3,6 +3,7 @@
  * Raw pointers (& / * / nullptr / arithmetic / multilevel) +
  * unique/shared/weak with use_count, move, and cycle warning.
  * Chinese UI. Simplified slot model — not a full VAS (see #/memory).
+ * 中间沙盘为 React Flow 岛（@xyflow/react），逻辑仍在本模块。
  */
 
 function escapeHtml(text) {
@@ -188,6 +189,20 @@ export function mountPointerExplorer(container, options = {}) {
   shell.className = `ptr-explorer${compact ? ' ptr-explorer--compact' : ''}`;
   shell.setAttribute('aria-label', '指针操作交互演示');
   let disposed = false;
+  /** @type {{ update: () => void, unmount: () => void } | null} */
+  let flowApi = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let flashClearTimer = null;
+
+  function scheduleFlashClear() {
+    if (!state.flashId) return;
+    if (flashClearTimer) clearTimeout(flashClearTimer);
+    flashClearTimer = setTimeout(() => {
+      state.flashId = null;
+      flashClearTimer = null;
+      flowApi?.update();
+    }, 750);
+  }
 
   function pushLog(op, detail) {
     logNo += 1;
@@ -262,39 +277,172 @@ export function mountPointerExplorer(container, options = {}) {
     return null;
   }
 
+  /** @param {string} ref */
+  function resolveSlotRef(ref) {
+    const n = ref.trim();
+    if (n === 'x') return 'x';
+    const arr = /^arr\[(\d+)\]$/i.exec(n);
+    if (arr) {
+      const i = Number(arr[1]);
+      if (i >= 0 && i <= 2) return `arr${i}`;
+    }
+    if (n === 'p' || n === 'pp') return n;
+    return null;
+  }
+
+  /**
+   * @param {string} ptrId
+   * @param {string} targetId
+   * @returns {boolean}
+   */
+  function bindPtr(ptrId, targetId) {
+    const p = slotById(ptrId);
+    const t = slotById(targetId);
+    if (!p || (p.kind !== 'raw' && p.kind !== 'raw2')) {
+      setExpr(`${ptrId} = &…`, `未知或不可绑定的指针槽：${ptrId}`, 'warn');
+      return false;
+    }
+    if (!t) {
+      setExpr(`${ptrId} = &…`, `找不到目标：${targetId}`, 'warn');
+      return false;
+    }
+    if (ptrId === 'pp' && targetId === 'p') {
+      const rawP = slotById('p');
+      if (rawP && !rawP.pointsTo) {
+        setExpr('pp = &p', '建议先让 p 指向有效对象，再绑多级', 'warn');
+      }
+    }
+    p.pointsTo = targetId;
+    state.flashId = ptrId;
+    state.danger = null;
+    const tgtLabel = t.name || targetId;
+    setExpr(`${p.name} = &${tgtLabel}`, `${p.name} → ${fmtAddr(t.addr)}（${t.decl}）`, 'ok');
+    pushLog('BIND', `${p.name} = &${tgtLabel}  →  ${fmtAddr(t.addr)}`);
+    return true;
+  }
+
   // ——— Raw ops ———
   function bindP(targetId) {
-    const p = slotById('p');
-    const t = slotById(targetId);
-    if (!p || !t) return;
-    p.pointsTo = targetId;
-    state.flashId = 'p';
-    state.danger = null;
-    setExpr(`p = &${t.name}`, `${p.name} → ${fmtAddr(t.addr)}（${t.decl}）`, 'ok');
-    pushLog('BIND', `p = &${t.name}  →  ${fmtAddr(t.addr)}`);
+    bindPtr('p', targetId);
   }
 
   function bindPp() {
-    const pp = slotById('pp');
-    const p = slotById('p');
-    if (!pp || !p) return;
-    if (!p.pointsTo) {
-      setExpr('pp = &p', '建议先让 p 指向有效对象，再绑多级', 'warn');
+    bindPtr('pp', 'p');
+  }
+
+  /** @param {string} [ptrId] */
+  function nullPtr(ptrId = 'p') {
+    const p = slotById(ptrId);
+    if (!p || (p.kind !== 'raw' && p.kind !== 'raw2')) {
+      setExpr(`${ptrId} = nullptr`, `未知指针槽：${ptrId}`, 'warn');
+      return false;
     }
-    pp.pointsTo = 'p';
-    state.flashId = 'pp';
-    setExpr('pp = &p', `pp → ${fmtAddr(p.addr)}（int*）`, 'ok');
-    pushLog('BIND', `pp = &p  →  ${fmtAddr(p.addr)}`);
+    p.pointsTo = null;
+    state.flashId = ptrId;
+    state.danger = null;
+    setExpr(`${p.name} = nullptr`, '空指针：不指向任何对象', 'warn');
+    pushLog('NULL', `${p.name} = nullptr`);
+    return true;
   }
 
   function nullP() {
-    const p = slotById('p');
-    if (!p) return;
-    p.pointsTo = null;
-    state.flashId = 'p';
+    nullPtr('p');
+  }
+
+  /**
+   * @param {string} ref 如 x、arr[1]
+   * @param {number} val
+   * @returns {boolean}
+   */
+  function writeSlotValue(ref, val) {
+    const id = resolveSlotRef(ref);
+    const s = id ? slotById(id) : null;
+    if (!s || s.kind !== 'value') {
+      setExpr(`${ref} = ${val}`, `无法直接赋值：${ref}`, 'warn');
+      return false;
+    }
+    s.value = val;
+    state.flashId = s.id;
     state.danger = null;
-    setExpr('p = nullptr', '空指针：不指向任何对象', 'warn');
-    pushLog('NULL', 'p = nullptr');
+    setExpr(`${s.name} = ${val}`, s.id === 'x' ? `直接改 x；若 p=&x，则 *p 同步可见` : `${s.name} 现为 ${val}`, 'ok');
+    pushLog('ASSIGN', `${s.name} = ${val}`);
+    return true;
+  }
+
+  /**
+   * @param {string} line
+   * @returns {boolean}
+   */
+  function executeRawExpr(line) {
+    let s = line.trim().replace(/\s+/g, ' ').replace(/−/g, '-');
+    if (!s) return false;
+
+    if (/^reset$/i.test(s)) {
+      resetPanel('raw');
+      return true;
+    }
+
+    let m = /^(p|pp)\s*=\s*(?:nullptr|null|0)$/i.exec(s);
+    if (m) return nullPtr(m[1]);
+
+    m = /^(p|pp)\s*=\s*&\s*([A-Za-z_\d]+(?:\[\d+\])?)$/.exec(s);
+    if (m) {
+      const targetId = resolveSlotRef(m[2]);
+      if (!targetId) {
+        setExpr(s, `不支持的目标：&${m[2]}（可用 x、arr[0..2]、p）`, 'warn');
+        return false;
+      }
+      return bindPtr(m[1], targetId);
+    }
+
+    m = /^\*\s*(p|pp)\s*=\s*(-?\d+)$/.exec(s) || /^\*(p|pp)\s*=\s*(-?\d+)$/.exec(s);
+    if (m) {
+      if (m[1] !== 'p') {
+        setExpr(s, '本沙箱仅支持 *p = 整数 写入', 'warn');
+        return false;
+      }
+      derefWrite(Number(m[2]));
+      return true;
+    }
+
+    m = /^(x|arr\[\d+\])\s*=\s*(-?\d+)$/i.exec(s);
+    if (m) return writeSlotValue(m[1], Number(m[2]));
+
+    if (/^\*\*\s*pp$/i.test(s) || /^\*\*pp$/i.test(s)) {
+      evalStarStarPp();
+      return true;
+    }
+    if (/^\*\s*p$/i.test(s) || /^\*p$/i.test(s)) {
+      evalStarP();
+      return true;
+    }
+    if (/^p$/i.test(s)) {
+      evalP();
+      return true;
+    }
+
+    m =
+      /^p\s*(?:\+\+|(?:\+=\s*1)|\+\s*1)$/i.exec(s) ||
+      /^p\s*=\s*p\s*\+\s*1$/i.exec(s);
+    if (m) {
+      arith(1);
+      return true;
+    }
+
+    m =
+      /^p\s*(?:--|(?:-=\s*1)|-\s*1)$/i.exec(s) ||
+      /^p\s*=\s*p\s*-\s*1$/i.exec(s);
+    if (m) {
+      arith(-1);
+      return true;
+    }
+
+    setExpr(
+      s,
+      '无法识别。支持：p = &x | &arr[0] | pp = &p | p = nullptr | *p = n | x = n | *p | **pp | p | p++ / p + 1 | reset',
+      'warn',
+    );
+    return false;
   }
 
   function derefWrite(val) {
@@ -321,12 +469,7 @@ export function mountPointerExplorer(container, options = {}) {
   }
 
   function writeX(val) {
-    const x = slotById('x');
-    if (!x) return;
-    x.value = val;
-    state.flashId = 'x';
-    setExpr(`x = ${val}`, `直接改 x；若 p=&x，则 *p 同步可见`, 'ok');
-    pushLog('ASSIGN', `x = ${val}`);
+    writeSlotValue('x', val);
   }
 
   function evalStarP() {
@@ -568,7 +711,7 @@ export function mountPointerExplorer(container, options = {}) {
     setTimeout(() => {
       if (disposed || !h.alive) return;
       recountShared(h.id);
-      render();
+      refreshView();
     }, 900);
   }
 
@@ -690,12 +833,12 @@ export function mountPointerExplorer(container, options = {}) {
     const tick = () => {
       if (!demoQueue.length) {
         stopDemo();
-        render();
+        refreshView();
         return;
       }
       const step = demoQueue.shift();
       runStep(step);
-      render();
+      refreshView();
     };
     tick();
     demoTimer = setInterval(tick, 1100);
@@ -772,10 +915,14 @@ export function mountPointerExplorer(container, options = {}) {
             return `
               <button type="button" class="ptr-explorer__slot ${kindClass}${isSel ? ' is-selected' : ''}${isRel ? ' is-related' : ''}${flash}"
                 data-slot="${escapeHtml(s.id)}" aria-pressed="${isSel ? 'true' : 'false'}">
-                <span class="ptr-explorer__slot-decl">${escapeHtml(s.decl)}</span>
-                <span class="ptr-explorer__slot-name">${escapeHtml(s.name)}</span>
-                ${slotValueHtml(s)}
-                <span class="ptr-explorer__slot-addr">${fmtAddr(s.addr)}</span>
+                <span class="ptr-explorer__port ptr-explorer__port--in" data-port="in" aria-hidden="true"></span>
+                <span class="ptr-explorer__port ptr-explorer__port--out" data-port="out" aria-hidden="true"></span>
+                <span class="ptr-explorer__slot-head">${escapeHtml(s.decl)}</span>
+                <div class="ptr-explorer__slot-body">
+                  <span class="ptr-explorer__slot-name">${escapeHtml(s.name)}</span>
+                  ${slotValueHtml(s)}
+                  <span class="ptr-explorer__slot-addr">${fmtAddr(s.addr)}</span>
+                </div>
               </button>`;
           })
           .join('')}
@@ -802,13 +949,17 @@ export function mountPointerExplorer(container, options = {}) {
                   ? `weak→${heapById(h.weakEdge)?.label || '?'}`
                   : '';
             return `
-              <button type="button" class="ptr-explorer__heap-card${dead ? ' is-freed' : ''}${isRel ? ' is-related' : ''}"
+              <button type="button" class="ptr-explorer__heap-card ptr-explorer__node${dead ? ' is-freed' : ''}${isRel ? ' is-related' : ''}"
                 data-heap="${escapeHtml(h.id)}">
-                <strong>${escapeHtml(h.label)}</strong>
-                <span>${fmtAddr(h.addr)}</span>
-                <span class="ptr-explorer__rc">use_count=${h.useCount}${h.weakCount ? ` · weak=${h.weakCount}` : ''}</span>
-                ${edge ? `<span class="ptr-explorer__edge">${escapeHtml(edge)}</span>` : ''}
-                ${dead ? '<span class="ptr-explorer__freed-tag">已释放</span>' : ''}
+                <span class="ptr-explorer__port ptr-explorer__port--in" data-port="in" aria-hidden="true"></span>
+                <span class="ptr-explorer__port ptr-explorer__port--out" data-port="out" aria-hidden="true"></span>
+                <span class="ptr-explorer__slot-head">${escapeHtml(h.label)} · 堆</span>
+                <div class="ptr-explorer__slot-body">
+                  <span class="ptr-explorer__heap-addr">${fmtAddr(h.addr)}</span>
+                  <span class="ptr-explorer__rc">use_count=${h.useCount}${h.weakCount ? ` · weak=${h.weakCount}` : ''}</span>
+                  ${edge ? `<span class="ptr-explorer__edge">${escapeHtml(edge)}</span>` : ''}
+                  ${dead ? '<span class="ptr-explorer__freed-tag">已释放</span>' : ''}
+                </div>
               </button>`;
           })
           .join('')}
@@ -855,11 +1006,13 @@ export function mountPointerExplorer(container, options = {}) {
         arrows.push({ from: h.id, to: h.weakEdge, style: 'weak', label: 'weak' });
       }
     }
-    // Null broken stubs for empty raw/unique/shared
+    const linkTargets = new Set(arrows.filter((a) => a.to).map((a) => a.to));
+    // Null broken stubs for empty raw/unique/shared（若已被别的句柄指向，只保留槽内 nullptr 文案）
     for (const s of state.slots) {
       if (
         (s.kind === 'raw' || s.kind === 'raw2' || s.kind === 'unique' || s.kind === 'shared') &&
-        !s.pointsTo
+        !s.pointsTo &&
+        !linkTargets.has(s.id)
       ) {
         arrows.push({ from: s.id, to: '', style: 'null', label: 'null' });
       }
@@ -867,100 +1020,173 @@ export function mountPointerExplorer(container, options = {}) {
     return arrows;
   }
 
-  function drawArrows() {
-    const svg = shell.querySelector('[data-arrows]');
-    const board = shell.querySelector('[data-board]');
-    if (!svg || !board) return;
-    const br = board.getBoundingClientRect();
-    svg.setAttribute('viewBox', `0 0 ${Math.max(1, br.width)} ${Math.max(1, br.height)}`);
-    svg.setAttribute('width', String(br.width));
-    svg.setAttribute('height', String(br.height));
-
+  function buildFlowPayload() {
     const arrows = collectArrows();
-    const sel = state.selected;
-    const related = sel ? relatedIds(sel) : null;
-
-    const parts = [];
-    parts.push(`
-      <defs>
-        <marker id="ptr-arrow-head" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="currentColor"></path>
-        </marker>
-        <marker id="ptr-arrow-head-danger" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#e85d5d"></path>
-        </marker>
-      </defs>`);
-
-    for (const a of arrows) {
-      const fromEl =
-        board.querySelector(`[data-slot="${a.from}"]`) ||
-        board.querySelector(`[data-heap="${a.from}"]`);
-      if (!fromEl) continue;
-      const fr = fromEl.getBoundingClientRect();
-      const x1 = fr.right - br.left - 4;
-      const y1 = fr.top + fr.height / 2 - br.top;
-
-      const dim = related && !related.has(a.from) && !(a.to && related.has(a.to));
-      const lit = related && (related.has(a.from) || (a.to && related.has(a.to)));
-
-      if (a.style === 'null') {
-        const x2 = x1 + 36;
-        const y2 = y1;
-        parts.push(`
-          <g class="ptr-explorer__arrow is-null${dim ? ' is-dim' : ''}${lit ? ' is-lit' : ''}">
-            <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-dasharray="4 4" />
-            <line x1="${x2 - 6}" y1="${y2 - 6}" x2="${x2 + 6}" y2="${y2 + 6}" />
-            <line x1="${x2 - 6}" y1="${y2 + 6}" x2="${x2 + 6}" y2="${y2 - 6}" />
-          </g>`);
-        continue;
-      }
-
-      const toEl =
-        board.querySelector(`[data-slot="${a.to}"]`) ||
-        board.querySelector(`[data-heap="${a.to}"]`);
-      if (!toEl) continue;
-      const tr = toEl.getBoundingClientRect();
-      const x2 = tr.left - br.left + 6;
-      const y2 = tr.top + tr.height / 2 - br.top;
-      const mx = (x1 + x2) / 2;
-      const cls = `is-${a.style}${dim ? ' is-dim' : ''}${lit ? ' is-lit' : ''}${a.style === 'dangling' || a.style === 'cycle' ? ' is-warn' : ''}`;
-      const marker =
-        a.style === 'dangling' || a.style === 'cycle' ? 'url(#ptr-arrow-head-danger)' : 'url(#ptr-arrow-head)';
-      const dash =
-        a.style === 'weak' || a.style === 'dangling' || a.style === 'null'
-          ? 'stroke-dasharray="5 4"'
-          : a.style === 'unique'
-            ? 'stroke-dasharray="0"'
-            : '';
-      parts.push(`
-        <g class="ptr-explorer__arrow ${cls}">
-          <path d="M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}" fill="none" ${dash}
-            marker-end="${marker}" />
-          ${a.label ? `<text x="${mx}" y="${(y1 + y2) / 2 - 6}">${escapeHtml(a.label)}</text>` : ''}
-        </g>`);
-    }
-    svg.innerHTML = parts.join('');
-  }
-
-  function render() {
-    const cycle = detectCycle();
-    const dangerBanner =
-      state.danger === 'null-deref'
-        ? '<div class="ptr-explorer__banner is-danger" role="alert">教学警示：空指针解引用属于未定义行为 — 此处只标红，不模拟崩溃细节。</div>'
-        : state.danger === 'dangling'
-          ? '<div class="ptr-explorer__banner is-danger" role="alert">教学警示：悬空指针 — 地址可能「还在」，对象已无。</div>'
-          : state.danger === 'expired'
-            ? '<div class="ptr-explorer__banner is-warn" role="alert">weak_ptr 已过期：lock() 得到空指针。</div>'
-            : state.danger === 'cycle' || cycle
-              ? `<div class="ptr-explorer__banner is-danger" role="alert">${escapeHtml(cycle?.msg || '环引用：shared↔shared 计数无法归零')}</div>`
-              : '';
-
+    const isRaw = state.panel === 'raw';
     const rawSlots = state.slots.filter((s) => s.kind === 'value' || s.kind === 'raw' || s.kind === 'raw2');
+    const valueSlots = rawSlots.filter((s) => s.kind === 'value');
+    const ptrSlots = rawSlots.filter((s) => s.kind === 'raw' || s.kind === 'raw2');
     const smartSlots = state.slots.filter(
       (s) => s.kind === 'unique' || s.kind === 'shared' || s.kind === 'weak',
     );
-    const valueSlots = rawSlots.filter((s) => s.kind === 'value');
-    const ptrSlots = rawSlots.filter((s) => s.kind === 'raw' || s.kind === 'raw2');
+
+    /** @param {typeof state.slots[0]} s */
+    function slotItem(s) {
+      return {
+        id: s.id,
+        entity: 'slot',
+        kind: s.kind,
+        decl: s.decl,
+        name: s.name,
+        addr: fmtAddr(s.addr),
+        valueHtml: slotValueHtml(s),
+        showNullStub: false,
+      };
+    }
+
+    /** @param {typeof state.heap[0]} h */
+    function heapItem(h) {
+      const edge = h.strongEdge
+        ? `strong→${heapById(h.strongEdge)?.label || '?'}`
+        : h.weakEdge
+          ? `weak→${heapById(h.weakEdge)?.label || '?'}`
+          : '';
+      return {
+        id: h.id,
+        entity: 'heap',
+        kind: 'shared',
+        decl: `${h.label} · 堆`,
+        name: h.label,
+        addr: fmtAddr(h.addr),
+        valueHtml: '',
+        rcLine: `use_count=${h.useCount}${h.weakCount ? ` · weak=${h.weakCount}` : ''}`,
+        edgeLine: edge,
+        dead: !h.alive,
+        showNullStub: false,
+      };
+    }
+
+    const columns = isRaw
+      ? [
+          { title: '指针槽', items: ptrSlots.map(slotItem) },
+          { title: '值槽（栈）', items: valueSlots.map(slotItem) },
+        ]
+      : [
+          { title: '句柄槽', items: smartSlots.filter((s) => s.role !== 'cycle').map(slotItem) },
+          { title: '环引用句柄', items: smartSlots.filter((s) => s.role === 'cycle').map(slotItem) },
+          {
+            title: '堆对象',
+            items: state.heap.length
+              ? state.heap.map(heapItem)
+              : [
+                  {
+                    id: '_heap_empty',
+                    entity: 'slot',
+                    kind: 'value',
+                    decl: '堆',
+                    name: '—',
+                    addr: '—',
+                    valueHtml:
+                      '<span class="ptr-explorer__panel-hint">堆区空（智能指针创建后出现）</span>',
+                    showNullStub: false,
+                  },
+                ],
+          },
+        ];
+
+    return {
+      columns,
+      selected: state.selected,
+      related: state.selected ? relatedIds(state.selected) : null,
+      flashId: state.flashId,
+      arrows,
+      onSelect: (id) => {
+        selectSlot(id);
+      },
+    };
+  }
+
+  function selectSlot(id) {
+    if (String(id).startsWith('_')) return;
+    state.selected = state.selected === id ? null : id;
+    flowApi?.update();
+  }
+
+  function patchChrome() {
+    const exprEl = shell.querySelector('.ptr-explorer__expr');
+    if (exprEl) {
+      exprEl.className = `ptr-explorer__expr is-${state.expr.kind}`;
+      const code = exprEl.querySelector('code');
+      const para = exprEl.querySelector('p');
+      if (code) code.textContent = state.expr.code;
+      if (para) para.textContent = state.expr.result;
+    }
+    const tbody = shell.querySelector('.ptr-explorer__table tbody');
+    if (tbody) {
+      tbody.innerHTML = log.length
+        ? [...log]
+            .reverse()
+            .map(
+              (row) =>
+                `<tr><td>${row.no}</td><td><span class="ptr-explorer__op">${escapeHtml(row.op)}</span></td><td>${escapeHtml(row.detail)}</td></tr>`,
+            )
+            .join('')
+        : '<tr><td colspan="3">尚无操作</td></tr>';
+    }
+    const stopBtn = shell.querySelector('[data-demo-stop]');
+    if (stopBtn) stopBtn.toggleAttribute('disabled', !demoPlaying);
+    syncDangerBanner();
+  }
+
+  function dangerBannerHtml() {
+    const cycle = detectCycle();
+    if (state.danger === 'null-deref') {
+      return '<div class="ptr-explorer__banner is-danger" role="alert">教学警示：空指针解引用属于未定义行为 — 此处只标红，不模拟崩溃细节。</div>';
+    }
+    if (state.danger === 'dangling') {
+      return '<div class="ptr-explorer__banner is-danger" role="alert">教学警示：悬空指针 — 地址可能「还在」，对象已无。</div>';
+    }
+    if (state.danger === 'expired') {
+      return '<div class="ptr-explorer__banner is-warn" role="alert">weak_ptr 已过期：lock() 得到空指针。</div>';
+    }
+    if (state.danger === 'cycle' || cycle) {
+      return `<div class="ptr-explorer__banner is-danger" role="alert">${escapeHtml(cycle?.msg || '环引用：shared↔shared 计数无法归零')}</div>`;
+    }
+    return '';
+  }
+
+  function syncDangerBanner() {
+    const slot = shell.querySelector('[data-ptr-danger-banner]');
+    if (!slot) return;
+    slot.innerHTML = dangerBannerHtml();
+  }
+
+  async function syncFlowBoard() {
+    if (disposed) return;
+    const host = shell.querySelector('[data-pointer-flow]');
+    if (!host) return;
+    try {
+      const { mountPointerFlow } = await import('./pointer-flow/mount-pointer-flow.jsx');
+      if (!flowApi) flowApi = mountPointerFlow(host, buildFlowPayload);
+      else flowApi.update();
+    } catch (err) {
+      console.error('[pointer-explorer] React Flow 岛加载失败', err);
+      host.innerHTML =
+        '<p class="ptr-explorer__panel-hint">React Flow 未就绪：请在项目根目录运行 <code>npm install --legacy-peer-deps</code> 后刷新。</p>';
+    }
+  }
+
+  function refreshView() {
+    patchChrome();
+    flowApi?.update();
+    scheduleFlashClear();
+  }
+
+  /** @param {{ rebuild?: boolean }} [opts] */
+  function render(opts = {}) {
+    const flowHost = shell.querySelector('[data-pointer-flow]');
+    const keepFlow = Boolean(flowHost && flowApi && !opts.rebuild);
+    if (keepFlow && flowHost) flowHost.remove();
 
     const isRaw = state.panel === 'raw';
 
@@ -1010,7 +1236,7 @@ export function mountPointerExplorer(container, options = {}) {
         <button type="button" class="ptr-explorer__chip" data-demo-stop ${demoPlaying ? '' : 'disabled'}>停止演示</button>
       </div>
 
-      ${dangerBanner}
+      <div data-ptr-danger-banner>${dangerBannerHtml()}</div>
 
       <div class="ptr-explorer__grid">
         <aside class="ptr-explorer__panel ptr-explorer__panel--controls">
@@ -1034,7 +1260,39 @@ export function mountPointerExplorer(container, options = {}) {
               <button type="button" class="ptr-explorer__btn" data-act="arith-plus">p + 1</button>
               <button type="button" class="ptr-explorer__btn" data-act="arith-minus">p − 1</button>
               <button type="button" class="ptr-explorer__btn" data-act="reset">重置</button>
-            </div>`
+            </div>
+            <form class="ptr-explorer__manual" data-raw-exec-form>
+              <p class="ptr-explorer__panel-title">手动输入</p>
+              <div class="ptr-explorer__manual-row">
+                <input
+                  type="text"
+                  class="ptr-explorer__manual-input"
+                  data-raw-expr
+                  placeholder="p = &amp;x、*p = 42、arr[1] = 5"
+                  list="ptr-raw-expr-hints"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+                <button type="submit" class="ptr-explorer__btn ptr-explorer__btn--accent">执行</button>
+              </div>
+              <p class="ptr-explorer__panel-hint ptr-explorer__panel-hint--manual">
+                与左侧按钮同语义；回车执行。可用 <code>x</code>、<code>arr[0..2]</code>、<code>p</code>、<code>pp</code>。
+              </p>
+            </form>
+            <datalist id="ptr-raw-expr-hints">
+              <option value="p = &amp;x"></option>
+              <option value="p = &amp;arr[0]"></option>
+              <option value="pp = &amp;p"></option>
+              <option value="p = nullptr"></option>
+              <option value="*p = 42"></option>
+              <option value="x = 99"></option>
+              <option value="arr[1] = 8"></option>
+              <option value="*p"></option>
+              <option value="**pp"></option>
+              <option value="p"></option>
+              <option value="p + 1"></option>
+              <option value="p - 1"></option>
+            </datalist>`
               : `
             <div class="ptr-explorer__btn-row">
               <button type="button" class="ptr-explorer__btn" data-act="unique-make">make_unique</button>
@@ -1060,26 +1318,11 @@ export function mountPointerExplorer(container, options = {}) {
         </aside>
 
         <div class="ptr-explorer__center">
-          <div class="ptr-explorer__board" data-board>
-            <svg class="ptr-explorer__arrows" data-arrows aria-hidden="true"></svg>
-            <div class="ptr-explorer__cols">
-              ${
-                isRaw
-                  ? `
-                <div class="ptr-explorer__col">${renderSlots(valueSlots, '值槽（栈）')}</div>
-                <div class="ptr-explorer__col">${renderSlots(ptrSlots, '指针槽')}</div>`
-                  : `
-                <div class="ptr-explorer__col">${renderSlots(
-                  smartSlots.filter((s) => s.role !== 'cycle'),
-                  '句柄槽',
-                )}</div>
-                <div class="ptr-explorer__col">${renderSlots(
-                  smartSlots.filter((s) => s.role === 'cycle'),
-                  '环引用句柄',
-                )}</div>
-                <div class="ptr-explorer__col">${renderHeap()}</div>`
-              }
-            </div>
+          <p class="ptr-explorer__board-hint">
+            拖动画布：空白处左键、或 <kbd>Space</kbd>+左键（在卡片上也可）、滚轮；列标题与槽位一起移动。点槽选高亮。
+          </p>
+          <div class="ptr-explorer__board ptr-explorer__board--flow" data-board>
+            <div class="ptr-explorer__flow-host" data-pointer-flow></div>
           </div>
           <p class="ptr-explorer__legend">
             <span class="ptr-explorer__swatch is-raw">原始</span>
@@ -1122,10 +1365,17 @@ export function mountPointerExplorer(container, options = {}) {
     `;
 
     bind();
-    requestAnimationFrame(() => {
-      drawArrows();
-      requestAnimationFrame(drawArrows);
-    });
+    const board = shell.querySelector('[data-board]');
+    if (keepFlow && flowHost && board) {
+      board.appendChild(flowHost);
+      flowApi.update();
+      scheduleFlashClear();
+    } else {
+      flowApi?.unmount();
+      flowApi = null;
+      void syncFlowBoard();
+      scheduleFlashClear();
+    }
   }
 
   function bind() {
@@ -1134,7 +1384,7 @@ export function mountPointerExplorer(container, options = {}) {
         const panel = btn.getAttribute('data-panel');
         if (panel === 'smart' || panel === 'raw') {
           resetPanel(panel);
-          render();
+          render({ rebuild: true });
         }
       });
     });
@@ -1146,28 +1396,13 @@ export function mountPointerExplorer(container, options = {}) {
     });
     shell.querySelector('[data-demo-stop]')?.addEventListener('click', () => {
       stopDemo();
-      render();
-    });
-
-    shell.querySelectorAll('[data-slot]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-slot');
-        state.selected = state.selected === id ? null : id;
-        render();
-      });
-    });
-    shell.querySelectorAll('[data-heap]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-heap');
-        state.selected = state.selected === id ? null : id;
-        render();
-      });
+      refreshView();
     });
 
     const act = (name, fn) => {
       shell.querySelector(`[data-act="${name}"]`)?.addEventListener('click', () => {
         fn();
-        render();
+        refreshView();
       });
     };
 
@@ -1192,13 +1427,20 @@ export function mountPointerExplorer(container, options = {}) {
     act('weak-lock', () => weakLock());
     act('cycle', () => cycleShared());
     act('cycle-break', () => cycleBreakWeak());
+
+    shell.querySelector('[data-raw-exec-form]')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (state.panel !== 'raw') return;
+      const input = /** @type {HTMLInputElement | null} */ (shell.querySelector('[data-raw-expr]'));
+      const line = input?.value.trim() || '';
+      if (!line) return;
+      executeRawExpr(line);
+      refreshView();
+    });
   }
 
   pushLog('INIT', '指针槽位沙箱就绪 — 原始指针 / 智能指针分栏');
   render();
-
-  const onResize = () => drawArrows();
-  window.addEventListener('resize', onResize);
 
   container.appendChild(shell);
 
@@ -1206,7 +1448,9 @@ export function mountPointerExplorer(container, options = {}) {
     dispose() {
       disposed = true;
       stopDemo();
-      window.removeEventListener('resize', onResize);
+      if (flashClearTimer) clearTimeout(flashClearTimer);
+      flowApi?.unmount();
+      flowApi = null;
       shell.remove();
     },
   };

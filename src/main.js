@@ -1,3 +1,7 @@
+import '@fontsource/cascadia-mono/latin-400.css';
+import '@fontsource/cascadia-mono/latin-500.css';
+import '@fontsource/cascadia-mono/latin-ext-400.css';
+import '@fontsource/cascadia-mono/latin-ext-500.css';
 import 'highlight.js/styles/github-dark.min.css';
 import 'katex/dist/katex.min.css';
 import { loadNotes, getNoteById } from './notes.js';
@@ -254,6 +258,23 @@ function tagPills(tags, activeTag) {
     .join('');
 }
 
+/** Tags for the home filter: scoped to topic, sorted by note count then name. */
+function homeFilterTags(notes, filterTopic) {
+  const pool = filterTopic ? notes.filter((n) => n.topic === filterTopic) : notes;
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  for (const n of pool) {
+    for (const tag of n.tags) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    }
+  }
+  const sorted = [...counts.keys()].sort((a, b) => {
+    const byCount = (counts.get(b) || 0) - (counts.get(a) || 0);
+    return byCount !== 0 ? byCount : a.localeCompare(b);
+  });
+  return sorted;
+}
+
 function renderHome() {
   const notes = loadNotes();
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -261,7 +282,10 @@ function renderHome() {
   const filterTag = params.get('tag') || '';
   const progress = loadReadingProgress();
 
-  const allTags = [...new Set(notes.flatMap((n) => n.tags))].sort();
+  const scopedTags = homeFilterTags(notes, filterTopic);
+  const tagSummaryHint = filterTag
+    ? `当前 #${escapeHtml(filterTag)} · 共 ${scopedTags.length} 个`
+    : `可选 · 共 ${scopedTags.length} 个`;
 
   const filtered = notes.filter((n) => {
     if (filterTopic && n.topic !== filterTopic) return false;
@@ -315,7 +339,7 @@ function renderHome() {
             id: n.id,
             title: escapeHtml(n.title),
             topic: n.topic,
-            metaHtml: `${escapeHtml(n.updated)} · ${n.tags.map((t) => `#${escapeHtml(t)}`).join(' ')}`,
+            metaHtml: escapeHtml(n.updated),
           },
           marksForNote(n.id, n.topic, progress),
         ),
@@ -331,37 +355,55 @@ function renderHome() {
       </section>`;
   }).join('');
 
+  const notesGridClass = filterTopic ? 'home-notes' : 'home-notes home-notes--grid';
+
   return layout(`
-    ${continueBanner}
-    <section class="filters">
-      <div class="filter-row">
-        <span class="filter-label">Topic</span>
-        <button type="button" class="topic-chip${!filterTopic ? ' is-active' : ''}" data-topic="">全部</button>
-        ${topicFilters}
+    <div class="home-layout">
+      <aside class="home-aside" aria-label="筛选与展台">
+        <section class="filters home-aside__filters">
+          <div class="filter-row home-aside__topics">
+            <span class="filter-label">Topic</span>
+            <button type="button" class="topic-chip${!filterTopic ? ' is-active' : ''}" data-topic="">全部</button>
+            ${topicFilters}
+          </div>
+          <details class="tags-filter"${filterTag ? ' open' : ''}>
+            <summary class="tags-filter__summary">
+              <span class="filter-label">Tags</span>
+              <span class="tags-filter__hint">${tagSummaryHint}</span>
+            </summary>
+            <div class="tags-filter__panel">
+              <p class="tags-filter__lede">按标签细筛；选定 Topic 时只显示该栏下的标签。</p>
+              <div class="filter-row tags-row">
+                <button type="button" class="tag-pill${!filterTag ? ' is-active' : ''}" data-tag="">全部</button>
+                ${tagPills(scopedTags, filterTag)}
+              </div>
+            </div>
+          </details>
+        </section>
+        <nav class="home-showcases home-aside__showcases" aria-label="交互展台入口">
+          <p class="home-showcases__label">交互展台</p>
+          <ul class="home-showcases__list home-showcases__list--stack">
+            <li><a href="#/pagoda">木塔</a></li>
+            <li><a href="#/shader">Shader</a></li>
+            <li><a href="#/protocols">协议</a></li>
+            <li><a href="#/linux">Linux</a></li>
+            <li><a href="#/memory">内存</a></li>
+            <li><a href="#/pointers">指针</a></li>
+            <li><a href="#/transform">变换</a></li>
+            <li><a href="#/ai">AI</a></li>
+            <li><a href="#/opensource">开源</a></li>
+            <li><a href="#/daily">日常</a></li>
+          </ul>
+        </nav>
+      </aside>
+      <div class="home-main">
+        ${continueBanner}
+        <p class="result-count">${filtered.length} 篇笔记</p>
+        <div class="${notesGridClass}">
+          ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
+        </div>
       </div>
-      <div class="filter-row tags-row">
-        <span class="filter-label">Tags</span>
-        <button type="button" class="tag-pill${!filterTag ? ' is-active' : ''}" data-tag="">全部</button>
-        ${tagPills(allTags, filterTag)}
-      </div>
-    </section>
-    <p class="result-count">${filtered.length} 篇笔记</p>
-    ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
-    <nav class="home-showcases" aria-label="交互展台入口">
-      <p class="home-showcases__label">交互展台</p>
-      <ul class="home-showcases__list">
-        <li><a href="#/pagoda">木塔</a></li>
-        <li><a href="#/shader">Shader</a></li>
-        <li><a href="#/protocols">协议</a></li>
-        <li><a href="#/linux">Linux</a></li>
-        <li><a href="#/memory">内存</a></li>
-        <li><a href="#/pointers">指针</a></li>
-        <li><a href="#/transform">变换</a></li>
-        <li><a href="#/ai">AI</a></li>
-        <li><a href="#/opensource">开源</a></li>
-        <li><a href="#/daily">日常</a></li>
-      </ul>
-    </nav>
+    </div>
   `);
 }
 
@@ -560,21 +602,204 @@ function renderNote(id) {
 
   const html = renderMarkdown(note.body);
   return layout(`
-    <nav class="crumb"><a href="#/">首页</a> / <span>${escapeHtml(TOPIC_LABELS[note.topic] || note.topic)}</span></nav>
-    <article class="note-article">
-      <header class="note-header">
-        <h1>${escapeHtml(note.title)}</h1>
-        <p class="note-meta">
-          <span class="topic-badge">${escapeHtml(note.topic)}</span>
-          ${note.tags.map((t) => `<span class="tag-inline">#${escapeHtml(t)}</span>`).join('')}
-          <time datetime="${escapeHtml(note.updated)}">更新 ${escapeHtml(note.updated)}</time>
-        </p>
-        <p class="note-reading-status" data-reading-status aria-live="polite">本机阅读进度：记录中…</p>
-      </header>
-      <div class="markdown-body">${html}</div>
-      <div class="personal-notes-slot" data-personal-notes-mount></div>
-    </article>
+    <nav class="crumb note-layout-crumb"><a href="#/">首页</a> / <span>${escapeHtml(TOPIC_LABELS[note.topic] || note.topic)}</span></nav>
+    <div class="note-layout">
+      <aside class="note-rail" aria-label="阅读定位">
+        <p class="note-reading-status note-rail__status" data-reading-status aria-live="polite">本机阅读进度：记录中…</p>
+        <nav class="note-toc" aria-label="本页目录">
+          <p class="note-toc__label">当前</p>
+          <p class="note-toc__here" data-note-toc-here>—</p>
+          <p class="note-toc__more note-toc__more--before" data-toc-more-before hidden>…</p>
+          <ul class="note-toc__list" data-note-toc-list></ul>
+          <p class="note-toc__more note-toc__more--after" data-toc-more-after hidden>…</p>
+        </nav>
+      </aside>
+      <article class="note-article note-article--main" data-note-scroll tabindex="-1">
+        <header class="note-header">
+          <h1>${escapeHtml(note.title)}</h1>
+          <p class="note-meta">
+            <span class="topic-badge">${escapeHtml(note.topic)}</span>
+            ${note.tags.map((t) => `<span class="tag-inline">#${escapeHtml(t)}</span>`).join('')}
+            <time datetime="${escapeHtml(note.updated)}">更新 ${escapeHtml(note.updated)}</time>
+          </p>
+        </header>
+        <div class="markdown-body">${html}</div>
+        <div class="personal-notes-slot" data-personal-notes-mount></div>
+      </article>
+    </div>
   `);
+}
+
+/** @type {{ dispose: () => void } | null} */
+let noteTocHandle = null;
+
+function disposeNoteToc() {
+  noteTocHandle?.dispose();
+  noteTocHandle = null;
+}
+
+const NOTE_TOC_NEAR_RADIUS = 6;
+
+/**
+ * TOC + scroll spy; left rail stays pinned (no inner scrollbar).
+ * @param {HTMLElement} root browse pane
+ * @returns {{ dispose: () => void }}
+ */
+function bindNoteToc(root) {
+  const browse = root;
+  const articleScroll = root.querySelector('[data-note-scroll]');
+  const list = root.querySelector('[data-note-toc-list]');
+  const moreBefore = root.querySelector('[data-toc-more-before]');
+  const moreAfter = root.querySelector('[data-toc-more-after]');
+  const tocNav = root.querySelector('.note-toc');
+  const here = root.querySelector('[data-note-toc-here]');
+  const body = root.querySelector('.note-article .markdown-body');
+  if (!list || !body) {
+    return { dispose() {} };
+  }
+
+  const rawHeadings = [...body.querySelectorAll('h1, h2, h3')];
+  if (!rawHeadings.length) {
+    tocNav?.setAttribute('hidden', '');
+    return { dispose() {} };
+  }
+  tocNav?.removeAttribute('hidden');
+
+  const used = new Set();
+  /** @type {{ id: string, level: number, el: HTMLElement }[]} */
+  const sections = [];
+
+  rawHeadings.forEach((el) => {
+    const level = Number(el.tagName.charAt(1));
+    let id = el.id;
+    if (!id) {
+      let base =
+        (el.textContent || 'section')
+          .trim()
+          .slice(0, 48)
+          .replace(/\s+/g, '-')
+          .replace(/[^\w\u4e00-\u9fff-]/g, '')
+          .toLowerCase() || 'section';
+      id = base;
+      let n = 0;
+      while (used.has(id)) {
+        n += 1;
+        id = `${base}-${n}`;
+      }
+      el.id = id;
+    }
+    used.add(id);
+    sections.push({ id, level, el });
+  });
+
+  list.innerHTML = sections
+    .map(({ id, level }) => {
+      const label = escapeHtml((body.querySelector(`#${CSS.escape(id)}`)?.textContent || '').trim());
+      return `<li data-level="${level}" data-toc-id="${escapeHtml(id)}"><a href="#${escapeHtml(id)}">${label}</a></li>`;
+    })
+    .join('');
+
+  /** @type {Map<string, HTMLLIElement>} */
+  const liById = new Map();
+  list.querySelectorAll('li[data-toc-id]').forEach((li) => {
+    const id = li.getAttribute('data-toc-id');
+    if (id) liById.set(id, /** @type {HTMLLIElement} */ (li));
+  });
+
+  let disposed = false;
+  let raf = 0;
+  let activeId = '';
+  let activeIndex = 0;
+
+  function pickActiveSection() {
+    const probe = Math.min(window.innerHeight * 0.26, 220);
+    let active = sections[0];
+    let index = 0;
+    sections.forEach((sec, i) => {
+      if (sec.el.getBoundingClientRect().top <= probe) {
+        active = sec;
+        index = i;
+      }
+    });
+    return { section: active, index };
+  }
+
+  function updateTocWindow(index) {
+    const start = Math.max(0, index - NOTE_TOC_NEAR_RADIUS);
+    const end = Math.min(sections.length, index + NOTE_TOC_NEAR_RADIUS + 1);
+    if (moreBefore) {
+      moreBefore.hidden = start === 0;
+    }
+    if (moreAfter) {
+      moreAfter.hidden = end >= sections.length;
+    }
+    sections.forEach((sec, i) => {
+      const li = liById.get(sec.id);
+      if (!li) return;
+      const show = i >= start && i < end;
+      li.hidden = !show;
+      li.classList.toggle('is-active', sec.id === activeId);
+    });
+  }
+
+  function refresh() {
+    if (disposed) return;
+    const { section: active, index } = pickActiveSection();
+    if (active.id !== activeId) {
+      activeId = active.id;
+      activeIndex = index;
+      if (here) here.textContent = (active.el.textContent || '').trim();
+    } else {
+      activeIndex = index;
+    }
+    updateTocWindow(activeIndex);
+  }
+
+  function scheduleRefresh() {
+    window.cancelAnimationFrame(raf);
+    raf = window.requestAnimationFrame(refresh);
+  }
+
+  list.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+      if (!href?.startsWith('#')) return;
+      const id = href.slice(1);
+      const target = body.querySelector(`#${CSS.escape(id)}`);
+      if (!target) return;
+      event.preventDefault();
+      const scroller = articleScroll;
+      if (scroller) {
+        const cr = scroller.getBoundingClientRect();
+        const hr = target.getBoundingClientRect();
+        const top = hr.top - cr.top + scroller.scrollTop - 12;
+        scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      } else {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  articleScroll?.addEventListener('scroll', scheduleRefresh, { passive: true });
+  browse.addEventListener('scroll', scheduleRefresh, { passive: true });
+  window.addEventListener('scroll', scheduleRefresh, { passive: true });
+  window.addEventListener('resize', scheduleRefresh);
+
+  requestAnimationFrame(() => {
+    refresh();
+    requestAnimationFrame(refresh);
+  });
+
+  return {
+    dispose() {
+      disposed = true;
+      window.cancelAnimationFrame(raf);
+      articleScroll?.removeEventListener('scroll', scheduleRefresh);
+      browse.removeEventListener('scroll', scheduleRefresh);
+      window.removeEventListener('scroll', scheduleRefresh);
+      window.removeEventListener('resize', scheduleRefresh);
+    },
+  };
 }
 
 function setHomeFilters({ topic, tag }) {
@@ -866,6 +1091,7 @@ function mountContent() {
   disposeAi();
   disposePersonalNotes();
   disposeReadingProgress();
+  disposeNoteToc();
   disposeLocalGallery();
 
   const route = parseRoute();
@@ -913,6 +1139,7 @@ function mountContent() {
 
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
+    noteTocHandle = bindNoteToc(browse);
     bindCodeBlockActions(browse);
     void runMermaidIn(browse);
     const note = getNoteById(route.id);

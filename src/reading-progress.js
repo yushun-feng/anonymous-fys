@@ -127,6 +127,10 @@ export function saveNoteScroll(noteId, scrollY) {
  * @param {HTMLElement | null} preferred
  */
 function resolveScrollTarget(preferred) {
+  const article = preferred?.querySelector('[data-note-scroll]');
+  if (article && article.scrollHeight > article.clientHeight + 4) {
+    return { kind: /** @type {const} */ ('element'), el: /** @type {HTMLElement} */ (article) };
+  }
   if (preferred && preferred.scrollHeight > preferred.clientHeight + 4) {
     return { kind: /** @type {const} */ ('element'), el: preferred };
   }

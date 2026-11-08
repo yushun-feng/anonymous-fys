@@ -1,5 +1,5 @@
 /**
- * Right-side code playground: in-browser JS/TS runner + local WASM C++ (browsercc).
+ * Right-side code playground: local WASM C++ (browsercc) + lazy Pyodide Python.
  * Mount once after unlock so hash navigations do not wipe editor state.
  */
 
@@ -15,10 +15,11 @@ import {
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, foldGutter, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-import { javascript } from '@codemirror/lang-javascript';
 import { cpp } from '@codemirror/lang-cpp';
+import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { runCppLocalWasm } from './cpp-local-runner.js';
+import { runPythonLocal } from './python-local-runner.js';
 
 const WIDTH_KEY = 'anonymous-fys-playground-width';
 const COLLAPSED_KEY = 'anonymous-fys-playground-collapsed';
@@ -31,20 +32,12 @@ const DEFAULT_WIDTH = 400;
 
 /** Optional remote fallback when local WASM toolchain fails or is unwanted. */
 const WANDBOX_COMPILE_URL = 'https://wandbox.org/api/compile.json';
-const WANDBOX_COMPILER = 'gcc-13.2.0';
-const WANDBOX_OPTIONS = 'warning,c++2b';
+const WANDBOX_CPP_COMPILER = 'gcc-13.2.0';
+const WANDBOX_CPP_OPTIONS = 'warning,c++2b';
+const WANDBOX_PYTHON_COMPILER = 'python-3.11.2';
 const WANDBOX_TIMEOUT_MS = 25000;
 
 const SAMPLES = {
-  js: `// 浏览器内运行（沙箱 iframe）
-console.log('hello from JS');
-const nums = [1, 2, 3].map((n) => n * 2);
-console.log('nums =', nums);`,
-  ts: `// TypeScript 经 Sucrase 转译后在沙箱中运行
-type Point = { x: number; y: number };
-const p: Point = { x: 3, y: 4 };
-const len = Math.hypot(p.x, p.y);
-console.log('length =', len.toFixed(2));`,
   cpp: `#include <iostream>
 #include <vector>
 #include <numeric>
@@ -55,10 +48,23 @@ int main() {
     std::cout << "sum = " << sum << "\\n";
     return 0;
 }`,
+  python: `# 浏览器内 Pyodide 运行（首次需下载运行时）
+nums = [1, 2, 3, 4]
+print("sum =", sum(nums))`,
 };
 
 /** @type {{ root: HTMLElement, view: EditorView, output: HTMLElement, lang: string, langCompartment: Compartment } | null} */
 let state = null;
+
+const PLAYGROUND_COLLAPSE_BTN = `
+  <button type="button" class="playground-collapse-btn" data-pg-collapse title="收起侧栏" aria-label="收起侧栏">
+    <svg class="playground-collapse-btn__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M9 4.5v15" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M13.25 12H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M15.75 9.25 18.25 12l-2.5 2.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>`;
 
 function readStoredWidth() {
   try {
@@ -97,11 +103,12 @@ function setCollapsed(collapsed) {
 function readLang() {
   try {
     const lang = sessionStorage.getItem(LANG_KEY);
-    if (lang === 'js' || lang === 'ts' || lang === 'cpp') return lang;
+    if (lang === 'cpp' || lang === 'python') return lang;
+    if (lang === 'js' || lang === 'ts') return 'cpp';
   } catch {
     /* ignore */
   }
-  return 'js';
+  return 'cpp';
 }
 
 function writeLang(lang) {
@@ -134,8 +141,8 @@ function writeCode(lang, code) {
  * @param {string} lang
  */
 function languageSupport(lang) {
-  if (lang === 'cpp') return cpp();
-  return javascript({ typescript: lang === 'ts' });
+  if (lang === 'python') return python();
+  return cpp();
 }
 
 /**
@@ -173,12 +180,14 @@ function godboltClientStateUrl(source) {
 }
 
 /**
- * Compile & run C++ via Wandbox; stream textual results through onLog.
+ * Compile & run via Wandbox (C++ or Python).
  * @param {string} code
+ * @param {string} compiler
+ * @param {string} options
  * @param {(line: { level: string, text: string }) => void} onLog
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
-async function runCppViaWandbox(code, onLog) {
+async function runViaWandbox(code, compiler, options, onLog) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), WANDBOX_TIMEOUT_MS);
   try {
@@ -187,8 +196,8 @@ async function runCppViaWandbox(code, onLog) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         code,
-        compiler: WANDBOX_COMPILER,
-        options: WANDBOX_OPTIONS,
+        compiler,
+        options,
         save: false,
       }),
       signal: controller.signal,
@@ -237,7 +246,7 @@ async function runCppViaWandbox(code, onLog) {
       onLog({ level: 'error', text: `退出码：${status || '?'}` });
       return { ok: false, error: compilerDiag ? 'compile' : `exit-${status || '?'}` };
     }
-    onLog({ level: 'info', text: `✓ 完成（${WANDBOX_COMPILER}）` });
+    onLog({ level: 'info', text: `✓ 完成（${compiler}）` });
     return { ok: true };
   } catch (err) {
     const aborted =
@@ -251,100 +260,6 @@ async function runCppViaWandbox(code, onLog) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-/**
- * @param {string} code
- * @param {(line: { level: string, text: string }) => void} onLog
- * @returns {Promise<{ ok: boolean, error?: string }>}
- */
-function runInSandbox(code, onLog) {
-  return new Promise((resolve) => {
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-scripts');
-    iframe.setAttribute('title', 'playground-sandbox');
-    iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
-
-    const channel = `pg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    let settled = false;
-
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener('message', onMessage);
-      iframe.remove();
-      resolve(result);
-    };
-
-    const onMessage = (event) => {
-      if (event.source !== iframe.contentWindow) return;
-      const data = event.data;
-      if (!data || data.channel !== channel) return;
-      if (data.type === 'log') {
-        onLog({ level: data.level || 'log', text: String(data.text ?? '') });
-      } else if (data.type === 'done') {
-        finish({ ok: true });
-      } else if (data.type === 'error') {
-        onLog({ level: 'error', text: String(data.text ?? '运行出错') });
-        finish({ ok: false, error: String(data.text ?? '') });
-      }
-    };
-
-    window.addEventListener('message', onMessage);
-
-    const srcdoc = `<!doctype html><html><head><meta charset="utf-8"></head><body>
-<script>
-(function () {
-  var channel = ${JSON.stringify(channel)};
-  function send(msg) {
-    parent.postMessage(Object.assign({ channel: channel }, msg), '*');
-  }
-  function fmt(args) {
-    return Array.prototype.map.call(args, function (a) {
-      try {
-        if (typeof a === 'string') return a;
-        if (a instanceof Error) return a.stack || a.message;
-        return JSON.stringify(a, null, 2);
-      } catch (e) {
-        return String(a);
-      }
-    }).join(' ');
-  }
-  ['log','info','warn','error','debug'].forEach(function (level) {
-    var orig = console[level] ? console[level].bind(console) : function () {};
-    console[level] = function () {
-      send({ type: 'log', level: level, text: fmt(arguments) });
-      try { orig.apply(null, arguments); } catch (e) {}
-    };
-  });
-  window.onerror = function (msg, src, line, col, err) {
-    send({ type: 'error', text: (err && err.stack) || String(msg) + ' @' + line + ':' + col });
-    return true;
-  };
-  window.onunhandledrejection = function (ev) {
-    var r = ev && ev.reason;
-    send({ type: 'error', text: (r && r.stack) || String(r) });
-  };
-  try {
-    (0, eval)(${JSON.stringify(code)});
-    send({ type: 'done' });
-  } catch (err) {
-    send({ type: 'error', text: (err && err.stack) || String(err) });
-  }
-})();
-<\/script>
-</body></html>`;
-
-    iframe.srcdoc = srcdoc;
-    document.body.appendChild(iframe);
-
-    setTimeout(() => {
-      if (!settled) {
-        onLog({ level: 'warn', text: '运行超时（同步代码过久或未结束）。' });
-        finish({ ok: false, error: 'timeout' });
-      }
-    }, 8000);
-  });
 }
 
 function appendOutputLine(outputEl, level, text) {
@@ -393,14 +308,13 @@ function setModeUi(root, lang) {
   const hint = root.querySelector('[data-pg-hint]');
 
   const isCpp = lang === 'cpp';
+  const isPython = lang === 'python';
   if (openGodboltBtn) openGodboltBtn.hidden = !isCpp;
-  if (wandboxBtn) wandboxBtn.hidden = !isCpp;
+  if (wandboxBtn) wandboxBtn.hidden = !(isCpp || isPython);
   if (hint) {
     hint.textContent = isCpp
-      ? 'C++ 在浏览器内用 Clang WASM（browsercc）本地编译为 WASI 并运行，stdout/stderr 显示在下方；首次需下载工具链。可选远程备用。'
-      : lang === 'ts'
-        ? 'TypeScript 由 Sucrase 在浏览器内转译后于沙箱 iframe 执行。'
-        : 'JavaScript 在沙箱 iframe 中执行（无 DOM / 无网络）。';
+      ? 'C++ 在浏览器内用 Clang WASM（browsercc）本地编译为 WASI 并运行；首次需下载工具链。可选远程备用。'
+      : 'Python 在浏览器内用 Pyodide 运行；首次需下载运行时。可选 Wandbox 远程备用。';
   }
 }
 
@@ -437,7 +351,7 @@ function createEditor(host, lang, doc, onDocChange) {
           '&': {
             height: '100%',
             fontSize: '0.8rem',
-            border: '1px solid var(--border)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: 'var(--radius)',
           },
           '.cm-scroller': {
@@ -495,12 +409,11 @@ export function mountPlayground(pane) {
       <header class="playground-header">
         <div class="playground-title-row">
           <h2 class="playground-title">Playground</h2>
-          <button type="button" class="playground-icon-btn" data-pg-collapse title="收起面板" aria-label="收起面板">⟨</button>
+          ${PLAYGROUND_COLLAPSE_BTN}
         </div>
         <div class="playground-tabs" role="tablist" aria-label="语言">
-          <button type="button" class="playground-tab" role="tab" data-pg-lang="js" aria-selected="false">JS</button>
-          <button type="button" class="playground-tab" role="tab" data-pg-lang="ts" aria-selected="false">TS</button>
           <button type="button" class="playground-tab" role="tab" data-pg-lang="cpp" aria-selected="false">C++</button>
+          <button type="button" class="playground-tab" role="tab" data-pg-lang="python" aria-selected="false">Python</button>
         </div>
       </header>
       <p class="playground-hint" data-pg-hint></p>
@@ -533,7 +446,7 @@ export function mountPlayground(pane) {
     btn.addEventListener('click', () => {
       if (!state) return;
       writeCode(state.lang, getEditorCode());
-      const next = btn.getAttribute('data-pg-lang') || 'js';
+      const next = btn.getAttribute('data-pg-lang') || 'cpp';
       state.lang = next;
       writeLang(next);
       setEditorLanguage(next);
@@ -546,7 +459,7 @@ export function mountPlayground(pane) {
   const runBtn = /** @type {HTMLButtonElement | null} */ (pane.querySelector('[data-pg-run]'));
   const wandboxBtn = /** @type {HTMLButtonElement | null} */ (pane.querySelector('[data-pg-wandbox]'));
 
-  const setCppBusy = (busy) => {
+  const setRunBusy = (busy) => {
     if (runBtn) runBtn.disabled = busy;
     if (wandboxBtn) wandboxBtn.disabled = busy;
   };
@@ -556,47 +469,37 @@ export function mountPlayground(pane) {
     clearOutput(state.output);
     const code = getEditorCode();
     writeCode(state.lang, code);
-    setCppBusy(true);
+    setRunBusy(true);
     try {
       if (state.lang === 'cpp') {
         await runCppLocalWasm(code, ({ level, text }) => appendOutputLine(state.output, level, text));
         return;
       }
-      appendOutputLine(state.output, 'info', `▶ 运行 ${state.lang.toUpperCase()}…`);
-      let runnable = code;
-      if (state.lang === 'ts') {
-        try {
-          const { transform } = await import('sucrase');
-          runnable = transform(code, {
-            transforms: ['typescript'],
-            disableESTransforms: true,
-          }).code;
-        } catch (err) {
-          appendOutputLine(
-            state.output,
-            'error',
-            `转译失败：${err instanceof Error ? err.message : String(err)}`,
-          );
-          return;
-        }
+      if (state.lang === 'python') {
+        await runPythonLocal(code, ({ level, text }) => appendOutputLine(state.output, level, text));
       }
-      await runInSandbox(runnable, ({ level, text }) => appendOutputLine(state.output, level, text));
     } finally {
-      setCppBusy(false);
+      setRunBusy(false);
     }
   });
 
   wandboxBtn?.addEventListener('click', async () => {
-    if (!state || state.lang !== 'cpp' || !wandboxBtn) return;
+    if (!state || !wandboxBtn) return;
+    if (state.lang !== 'cpp' && state.lang !== 'python') return;
     clearOutput(state.output);
     const code = getEditorCode();
-    writeCode('cpp', code);
-    setCppBusy(true);
+    writeCode(state.lang, code);
+    setRunBusy(true);
     try {
-      appendOutputLine(state.output, 'info', `▶ 远程备用：Wandbox ${WANDBOX_COMPILER}…`);
-      await runCppViaWandbox(code, ({ level, text }) => appendOutputLine(state.output, level, text));
+      const compiler =
+        state.lang === 'cpp' ? WANDBOX_CPP_COMPILER : WANDBOX_PYTHON_COMPILER;
+      const options = state.lang === 'cpp' ? WANDBOX_CPP_OPTIONS : '';
+      appendOutputLine(state.output, 'info', `▶ 远程备用：Wandbox ${compiler}…`);
+      await runViaWandbox(code, compiler, options, ({ level, text }) =>
+        appendOutputLine(state.output, level, text),
+      );
     } finally {
-      setCppBusy(false);
+      setRunBusy(false);
     }
   });
 
@@ -634,16 +537,14 @@ export function mountPlayground(pane) {
 /**
  * Load code into the playground (e.g. from a note code block).
  * @param {string} code
- * @param {'js' | 'ts' | 'cpp' | string} lang
+ * @param {'cpp' | 'python' | string} lang
  */
 export function loadIntoPlayground(code, lang) {
   if (!state) return;
-  let next = 'js';
+  let next = 'cpp';
   const key = (lang || '').toLowerCase();
-  if (key === 'ts' || key === 'typescript') next = 'ts';
+  if (key === 'python' || key === 'py' || key === 'py3') next = 'python';
   else if (key === 'cpp' || key === 'c++' || key === 'cxx' || key === 'c') next = 'cpp';
-  else if (key === 'js' || key === 'javascript' || key === 'mjs') next = 'js';
-  else if (key === 'tsx') next = 'ts';
 
   writeCode(state.lang, getEditorCode());
   state.lang = next;
@@ -670,10 +571,8 @@ export function bindCodeBlockActions(browseRoot) {
     if (pre.querySelector('.playground-send')) return;
     const lang = (pre.getAttribute('data-lang') || '').toLowerCase();
     const glslLike = ['glsl', 'vert', 'frag', 'vs', 'fs', 'vertex', 'fragment'].includes(lang);
-    const supported =
-      !lang ||
-      glslLike ||
-      ['js', 'javascript', 'mjs', 'ts', 'typescript', 'tsx', 'cpp', 'c++', 'cxx', 'c'].includes(lang);
+    const pgLangs = ['cpp', 'c++', 'cxx', 'c', 'python', 'py', 'py3'];
+    const supported = !lang || glslLike || pgLangs.includes(lang);
     if (!supported) return;
 
     const btn = document.createElement('button');

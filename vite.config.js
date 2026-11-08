@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import react from '@vitejs/plugin-react';
 import { localGalleryPlugin } from './scripts/vite-local-gallery.js';
 
 // GitHub project Pages asset prefix (repo name).
@@ -21,7 +22,7 @@ export default defineConfig(({ command, mode }) => ({
       allow: ['.'],
     },
   },
-  plugins: [localGalleryPlugin()],
+  plugins: [react(), localGalleryPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

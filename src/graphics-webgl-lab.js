@@ -341,7 +341,14 @@ export function mountGraphicsWebglLab(pane) {
       <header class="playground-header">
         <div class="playground-title-row">
           <h2 class="playground-title">WebGL 练习</h2>
-          <button type="button" class="playground-icon-btn" data-gw-collapse title="收起面板" aria-label="收起面板">⟨</button>
+          <button type="button" class="playground-collapse-btn" data-gw-collapse title="收起侧栏" aria-label="收起侧栏">
+            <svg class="playground-collapse-btn__icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M9 4.5v15" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M13.25 12H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M15.75 9.25 18.25 12l-2.5 2.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
         <div class="playground-tabs" role="tablist" aria-label="预设">
           ${Object.values(PRESETS)

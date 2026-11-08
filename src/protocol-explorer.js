@@ -362,7 +362,7 @@ function renderOsiGuide(protocol, expandedOsi, opts = {}) {
         <h3 class="proto-explorer__side-title">OSI 模型导读</h3>
         <p class="proto-explorer__side-hint">
           点击层展开细节。亮条 = 当前协议 <strong>${escapeHtml(protocol.name)}</strong> 典型路径；
-          描边 = 主要落点（教学近似）。
+          描边 = 主要落点（教学近似）。层较多时可在本栏滚轮浏览。
         </p>
       </div>
       <div class="proto-explorer__osi" role="list">${rows}</div>

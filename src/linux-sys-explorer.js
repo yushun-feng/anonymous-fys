@@ -534,21 +534,42 @@ export function mountLinuxSysExplorer(container, options = {}) {
       <div class="linux-sys__domains" role="tablist" aria-label="演示主题">${domainTabs}</div>
 
       <div class="linux-sys__layout">
-        <aside class="linux-sys__sidebar">
+        <aside class="linux-sys__sidebar" aria-label="场景与阶段">
           <h3 class="linux-sys__side-title">阶段条</h3>
           <div class="linux-sys__stages">${stages}</div>
           <p class="linux-sys__side-hint">高亮为当前场景主要阶段（教学近似）。</p>
+          <h3 class="linux-sys__side-title linux-sys__side-title--scenarios">场景 <span>${list.length}</span></h3>
+          <div class="linux-sys__filters linux-sys__filters--side">${catFilters}</div>
+          <div class="linux-sys__scenario-nav">${cards}</div>
         </aside>
 
-        <div class="linux-sys__main">
-          <div class="linux-sys__filters">${catFilters}</div>
-          <h3 class="linux-sys__section-title">场景 <span>${list.length}</span></h3>
-          <div class="linux-sys__cards">${cards}</div>
+        <div class="linux-sys__main" data-showcase-scroll tabindex="-1">
+          <section class="linux-sys__stage-live" data-linux-stage-live aria-label="交互示意">
+            <div class="linux-sys__stage-live__head">
+              <div class="linux-sys__stage-live__titles">
+                <p class="linux-sys__active-badge">当前 · ${escapeHtml(sc.name)}</p>
+                <p class="linux-sys__step-kicker">步骤 ${stepIndex + 1} / ${sc.steps.length}</p>
+                <h4 class="linux-sys__step-title">${escapeHtml(step.title)}</h4>
+                <p class="linux-sys__step-summary linux-sys__step-summary--live">${escapeHtml(step.summary)}</p>
+              </div>
+              <div class="linux-sys__controls linux-sys__controls--live">
+                <button type="button" class="linux-sys__btn" data-reset-step>重置步骤</button>
+                <button type="button" class="linux-sys__btn" data-prev ${stepIndex === 0 ? 'disabled' : ''}>上一步</button>
+                <button type="button" class="linux-sys__btn linux-sys__btn--accent" data-play>${playing ? '暂停' : '自动播放'}</button>
+                <button type="button" class="linux-sys__btn" data-next ${stepIndex >= sc.steps.length - 1 ? 'disabled' : ''}>下一步</button>
+              </div>
+            </div>
+            ${renderProcessModel(sc, stepIndex)}
+            <div class="linux-sys__topology">${nodes}</div>
+            <div class="linux-sys__flow-lane" data-flow-lane>
+              <span class="linux-sys__flow-legend">${escapeHtml(sc.flowLegend)}</span>
+              <span class="linux-sys__packet-dot" aria-hidden="true"></span>
+            </div>
+          </section>
 
           <article class="linux-sys__detail" aria-live="polite">
-            <div class="linux-sys__detail-head">
+            <div class="linux-sys__detail-head linux-sys__detail-head--meta">
               <div>
-                <p class="linux-sys__active-badge">当前</p>
                 <h3 class="linux-sys__scene-name">${escapeHtml(sc.name)}</h3>
                 <p class="linux-sys__full-name">${escapeHtml(sc.fullName)}</p>
               </div>
@@ -556,52 +577,37 @@ export function mountLinuxSysExplorer(container, options = {}) {
             </div>
             <p class="linux-sys__blurb">${escapeHtml(sc.blurb)}</p>
 
-            ${renderProcessModel(sc, stepIndex)}
-
-            <div class="linux-sys__stage-grid">
-              <div>
-                <div class="linux-sys__topology">${nodes}</div>
-                <div class="linux-sys__flow-lane" data-flow-lane>
-                  <span class="linux-sys__flow-legend">${escapeHtml(sc.flowLegend)}</span>
-                  <span class="linux-sys__packet-dot" aria-hidden="true"></span>
-                </div>
-                ${renderSequenceDiagram(sc, stepIndex, Boolean(opts.animate))}
-              </div>
-              ${renderSidePanel(sc, step)}
-            </div>
-
-            <div class="linux-sys__step-panel">
-              <p class="linux-sys__step-kicker">步骤 ${stepIndex + 1} / ${sc.steps.length}</p>
-              <h4 class="linux-sys__step-title">${escapeHtml(step.title)}</h4>
-              <p class="linux-sys__step-summary">${escapeHtml(step.summary)}</p>
+            <section class="linux-sys__reading" aria-label="步骤详解">
               <p class="linux-sys__step-body">${escapeHtml(step.body)}</p>
-            </div>
-
-            <div class="linux-sys__controls">
-              <button type="button" class="linux-sys__btn" data-reset-step>重置步骤</button>
-              <button type="button" class="linux-sys__btn" data-prev ${stepIndex === 0 ? 'disabled' : ''}>上一步</button>
-              <button type="button" class="linux-sys__btn linux-sys__btn--accent" data-play>${playing ? '暂停' : '自动播放'}</button>
-              <button type="button" class="linux-sys__btn" data-next ${stepIndex >= sc.steps.length - 1 ? 'disabled' : ''}>下一步</button>
-            </div>
-
-            <ol class="linux-sys__step-list">${stepList}</ol>
-
-            <section class="linux-sys__events" aria-label="${escapeHtml(meta.eventTitle)}">
-              <div class="linux-sys__events-head">
-                <h4 class="linux-sys__events-title">${escapeHtml(meta.eventTitle)}</h4>
-                <span class="linux-sys__events-legend">${escapeHtml(sc.flowLegend)}</span>
-              </div>
-              <div class="linux-sys__table-wrap">
-                <table class="linux-sys__table">
-                  <thead>
-                    <tr>
-                      <th>No.</th><th>时间</th><th>从</th><th>到</th><th>阶段</th><th>信息</th>
-                    </tr>
-                  </thead>
-                  ${renderEventTable(events)}
-                </table>
-              </div>
             </section>
+
+            <ol class="linux-sys__step-list linux-sys__step-list--compact">${stepList}</ol>
+
+            <details class="linux-sys__viz-fold">
+              <summary class="linux-sys__viz-fold__summary">时序图、侧栏示意与${escapeHtml(meta.eventTitle)}</summary>
+              <div class="linux-sys__viz-fold__body">
+                <div class="linux-sys__stage-grid">
+                  <div>${renderSequenceDiagram(sc, stepIndex, Boolean(opts.animate))}</div>
+                  ${renderSidePanel(sc, step)}
+                </div>
+                <section class="linux-sys__events" aria-label="${escapeHtml(meta.eventTitle)}">
+                  <div class="linux-sys__events-head">
+                    <h4 class="linux-sys__events-title">${escapeHtml(meta.eventTitle)}</h4>
+                    <span class="linux-sys__events-legend">${escapeHtml(sc.flowLegend)}</span>
+                  </div>
+                  <div class="linux-sys__table-wrap">
+                    <table class="linux-sys__table">
+                      <thead>
+                        <tr>
+                          <th>No.</th><th>时间</th><th>从</th><th>到</th><th>阶段</th><th>信息</th>
+                        </tr>
+                      </thead>
+                      ${renderEventTable(events)}
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </details>
           </article>
         </div>
       </div>
@@ -609,7 +615,10 @@ export function mountLinuxSysExplorer(container, options = {}) {
       <p class="linux-sys__credit">教学示意：启动 / FHS / 权限结构与动机；非特定发行版实机转储。安全内容不含利用步骤。</p>
     `;
 
-    if (opts.animate) flashAnim(step.anim);
+    if (opts.animate) {
+      flashAnim(step.anim);
+      shell.querySelector('[data-flow-lane]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     shell.querySelectorAll('[data-domain]').forEach((el) => {
       el.addEventListener('click', () => switchDomain(/** @type {DomainId} */ (el.getAttribute('data-domain'))));

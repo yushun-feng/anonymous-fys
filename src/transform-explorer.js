@@ -229,36 +229,52 @@ export function mountTransformExplorer(container, options = {}) {
       <button type="button" class="xf-explorer__chip" data-script="det-reflect">⑤ 镜像翻转 det&lt;0</button>
     </div>
 
-    <div class="xf-explorer__grid">
-      <aside class="xf-explorer__panel xf-explorer__panel--controls">
-        <p class="xf-explorer__panel-title">增量矩阵 A（TRS）</p>
-        <p class="xf-explorer__panel-hint">拖滑条粗调，右侧数字框精输；± 步进，快捷值一键吸附。勾选精调或按住 Shift 拖滑条可把步进缩小 10 倍。</p>
-        <label class="xf-explorer__fine">
-          <input type="checkbox" data-fine />
-          精调（步进 ÷10）
-        </label>
-        <div class="xf-explorer__sliders" data-a-sliders></div>
-        <div class="xf-explorer__side-row">
-          <span class="xf-explorer__side-label">预览</span>
-          <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="both" checked /> 并列</label>
-          <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="left" /> 仅左乘</label>
-          <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="right" /> 仅右乘</label>
-        </div>
-        <div class="xf-explorer__btn-row">
-          <button type="button" class="xf-explorer__btn xf-explorer__btn--left" data-apply="left">采用左乘 A·M</button>
-          <button type="button" class="xf-explorer__btn xf-explorer__btn--right" data-apply="right">采用右乘 M·A</button>
-          <button type="button" class="xf-explorer__btn" data-reset-a>重置 A 为绕 Y 45°</button>
-          <button type="button" class="xf-explorer__btn" data-reset-m>M ← I</button>
+    <div class="xf-explorer__workspace">
+      <aside class="xf-explorer__panel xf-explorer__log" aria-label="操作日志">
+        <p class="xf-explorer__panel-title">操作日志</p>
+        <div class="xf-explorer__table-wrap">
+          <table class="xf-explorer__table">
+            <thead><tr><th>#</th><th>操作</th><th>说明</th></tr></thead>
+            <tbody data-log-body></tbody>
+          </table>
         </div>
       </aside>
 
       <div class="xf-explorer__center">
-        <div class="xf-explorer__viewport" data-viewport tabindex="0" aria-label="三维视口"></div>
-        <p class="xf-explorer__legend">
-          <span class="xf-explorer__swatch xf-explorer__swatch--main">当前 M</span>
-          <span class="xf-explorer__swatch xf-explorer__swatch--left">预览 A·M（左·世界）</span>
-          <span class="xf-explorer__swatch xf-explorer__swatch--right">预览 M·A（右·物体）</span>
-        </p>
+        <div class="xf-explorer__center-stage">
+          <div class="xf-explorer__viewport" data-viewport tabindex="0" aria-label="三维视口"></div>
+          <p class="xf-explorer__legend">
+            <span class="xf-explorer__swatch xf-explorer__swatch--main">当前 M</span>
+            <span class="xf-explorer__swatch xf-explorer__swatch--left">预览 A·M（左·世界）</span>
+            <span class="xf-explorer__swatch xf-explorer__swatch--right">预览 M·A（右·物体）</span>
+          </p>
+        </div>
+
+        <aside class="xf-explorer__panel xf-explorer__panel--controls xf-explorer__dock" aria-label="增量矩阵调节">
+          <div class="xf-explorer__dock-head">
+            <div class="xf-explorer__dock-intro">
+              <p class="xf-explorer__panel-title">增量矩阵 A（TRS）</p>
+              <p class="xf-explorer__panel-hint xf-explorer__panel-hint--dock">滑条粗调、数字框精输；Shift 或精调可 ÷10 步进。</p>
+            </div>
+            <label class="xf-explorer__fine">
+              <input type="checkbox" data-fine />
+              精调（÷10）
+            </label>
+            <div class="xf-explorer__side-row xf-explorer__side-row--dock">
+              <span class="xf-explorer__side-label">预览</span>
+              <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="both" checked /> 并列</label>
+              <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="left" /> 仅左乘</label>
+              <label class="xf-explorer__radio"><input type="radio" name="xf-preview" value="right" /> 仅右乘</label>
+            </div>
+            <div class="xf-explorer__btn-row xf-explorer__btn-row--dock">
+              <button type="button" class="xf-explorer__btn xf-explorer__btn--left" data-apply="left">采用左乘 A·M</button>
+              <button type="button" class="xf-explorer__btn xf-explorer__btn--right" data-apply="right">采用右乘 M·A</button>
+              <button type="button" class="xf-explorer__btn" data-reset-a>重置 A</button>
+              <button type="button" class="xf-explorer__btn" data-reset-m>M ← I</button>
+            </div>
+          </div>
+          <div class="xf-explorer__sliders" data-a-sliders></div>
+        </aside>
       </div>
 
       <aside class="xf-explorer__panel xf-explorer__panel--detail">
@@ -275,16 +291,6 @@ export function mountTransformExplorer(container, options = {}) {
         <p class="xf-explorer__mat-label xf-explorer__mat-label--right">右乘结果 M·A</p>
         <div data-mat-right></div>
       </aside>
-    </div>
-
-    <div class="xf-explorer__log">
-      <p class="xf-explorer__panel-title">操作日志</p>
-      <div class="xf-explorer__table-wrap">
-        <table class="xf-explorer__table">
-          <thead><tr><th>#</th><th>操作</th><th>说明</th></tr></thead>
-          <tbody data-log-body></tbody>
-        </table>
-      </div>
     </div>
     <p class="xf-explorer__credit">教学示意；尖端 = 局部 +Z。约定见 <a href="#/note/graphics/foundation/ch02-vectors-transforms">ch02</a>；几何直觉地图见 <a href="#/note/graphics/linalg-geometry-map">导读</a>（推荐纸书《线性代数的几何意义》作延伸，本站不摘录正文）。</p>
   `;
@@ -479,8 +485,10 @@ export function mountTransformExplorer(container, options = {}) {
     }
 
     if (logBody) {
+      const LOG_UI_MAX = 14;
       logBody.innerHTML = [...log]
         .reverse()
+        .slice(0, LOG_UI_MAX)
         .map(
           (row) =>
             `<tr><td>${row.no}</td><td><span class="xf-explorer__op">${escapeHtml(row.op)}</span></td><td>${escapeHtml(row.detail)}</td></tr>`,
