@@ -5,6 +5,8 @@ const SERIES_RANK = {
   'cpp-sort': 2,
   foundation: 0,
   hellogithub: 0,
+  fcl: 10,
+  ompl: 11,
   annals: 0,
   houses: 1,
   biographies: 2,

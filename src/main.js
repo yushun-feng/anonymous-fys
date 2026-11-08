@@ -288,7 +288,7 @@ function renderHome() {
     <div class="ai-home-slot" data-ai-mount data-ai-compact></div>
     <p class="ai-home-link"><a href="#/ai">打开 AI 史记时间线（时代 · 事件 · 五体索引）→</a></p>
     <section class="opensource-home-teaser">
-      <p class="opensource-home-link"><a href="#/opensource">开源精选阅读架（HelloGitHub 起步 · 按来源浏览）→</a></p>
+      <p class="opensource-home-link"><a href="#/opensource">开源精选阅读架（HelloGitHub · FCL · OMPL · 按来源浏览）→</a></p>
     </section>
     <section class="filters">
       <div class="filter-row">
@@ -438,7 +438,7 @@ function renderOpensourcePage() {
       <header class="opensource-index__hero">
         <p class="opensource-index__eyebrow">OPEN SOURCE · READING</p>
         <h1 class="opensource-index__brand">开源</h1>
-        <p class="opensource-index__lede">精选阅读架：先收 HelloGitHub 月刊摘录，再按来源扩展其它杂志/列表。正文在 <code>notes/opensource/</code>，本页只做按来源浏览。生活向清单 HowToLiveBetter 落在日常栏，见下方旁注。</p>
+        <p class="opensource-index__lede">精选阅读架：HelloGitHub 月刊摘录，以及 FCL / OMPL 等上游库中文导读；按 frontmatter <code>source</code> 分组。正文在 <code>notes/opensource/</code>。生活向清单 HowToLiveBetter 落在日常栏，见下方旁注。</p>
         <p class="opensource-index__actions">
           ${
             roadmap
@@ -450,7 +450,7 @@ function renderOpensourcePage() {
         </p>
       </header>
       ${groups || '<p class="empty">暂无开源摘录。</p>'}
-      <p class="opensource-credit">摘录为原创中文消化，非杂志原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a>。相关生活向列表：<a href="https://github.com/eternity4719/HowToLiveBetter" rel="noopener noreferrer" target="_blank">eternity4719/HowToLiveBetter</a>（站内消化见<a href="#/note/daily/howto-live-better">日常笔记</a>）。</p>
+      <p class="opensource-credit">摘录为原创中文消化，非杂志/Wiki 原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a>。库导读：<a href="https://github.com/flexible-collision-library/fcl" rel="noopener noreferrer" target="_blank">FCL</a> · <a href="https://github.com/ompl/ompl" rel="noopener noreferrer" target="_blank">OMPL</a>。相关生活向列表：<a href="https://github.com/eternity4719/HowToLiveBetter" rel="noopener noreferrer" target="_blank">eternity4719/HowToLiveBetter</a>（站内消化见<a href="#/note/daily/howto-live-better">日常笔记</a>）。</p>
     </section>
   `);
 }
