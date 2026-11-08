@@ -10,6 +10,14 @@ import {
   bindCodeBlockActions,
 } from './playground.js';
 import { mountPersonalNotes } from './personal-notes.js';
+import {
+  mountNoteReadingProgress,
+  loadReadingProgress,
+  getLastNoteId,
+  marksForNote,
+  noteListItemHtml,
+  continueReadingBannerHtml,
+} from './reading-progress.js';
 import { startVisitLogging } from './visit-log.js';
 import { applyShichenAtmosphere } from './shichen.js';
 
@@ -71,6 +79,8 @@ let aiMountGen = 0;
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
 let personalNotesHandle = null;
+/** Active note reading-progress tracker; disposed on every remount / navigate-away. */
+let readingProgressHandle = null;
 /** Active local-only private gallery; disposed on every remount / navigate-away. */
 let localGalleryHandle = null;
 
@@ -131,6 +141,11 @@ function disposeAi() {
 function disposePersonalNotes() {
   personalNotesHandle?.dispose();
   personalNotesHandle = null;
+}
+
+function disposeReadingProgress() {
+  readingProgressHandle?.dispose();
+  readingProgressHandle = null;
 }
 
 function disposeLocalGallery() {
@@ -244,6 +259,7 @@ function renderHome() {
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const filterTopic = params.get('topic') || '';
   const filterTag = params.get('tag') || '';
+  const progress = loadReadingProgress();
 
   const allTags = [...new Set(notes.flatMap((n) => n.tags))].sort();
 
@@ -258,23 +274,59 @@ function renderHome() {
     return `<button type="button" class="topic-chip${active}" data-topic="${topic}">${TOPIC_LABELS[topic] || topic}</button>`;
   }).join('');
 
+  const continueId = filterTopic
+    ? getLastNoteId(filterTopic)
+    : getLastNoteId();
+  const continueNote = continueId ? notes.find((n) => n.id === continueId) : null;
+  const continueInView =
+    continueNote &&
+    (!filterTopic || continueNote.topic === filterTopic) &&
+    (!filterTag || continueNote.tags.includes(filterTag))
+      ? continueNote
+      : null;
+  const continueBanner = continueReadingBannerHtml(
+    continueInView
+      ? {
+          id: continueInView.id,
+          title: escapeHtml(continueInView.title),
+          topic: continueInView.topic,
+        }
+      : null,
+    filterTopic
+      ? `${escapeHtml(TOPIC_LABELS[filterTopic] || filterTopic)} · 本机上次`
+      : '全局 · 本机上次',
+  );
+
   const byTopic = TOPICS.map((topic) => {
     const group = filtered.filter((n) => n.topic === topic);
     if (!group.length) return '';
+    const topicLastId = progress.lastByTopic[topic] || null;
+    const topicContinue = topicLastId
+      ? group.find((n) => n.id === topicLastId)
+      : null;
+    const topicContinueLink =
+      !filterTopic && topicContinue
+        ? `<a class="topic-continue" href="#/note/${encodeURIComponent(topicContinue.id)}">继续 · ${escapeHtml(topicContinue.title)}</a>`
+        : '';
     const items = group
-      .map(
-        (n) => `
-      <li class="note-card">
-        <a href="#/note/${encodeURIComponent(n.id)}">
-          <span class="note-title">${escapeHtml(n.title)}</span>
-          <span class="note-meta">${escapeHtml(n.updated)} · ${n.tags.map((t) => `#${escapeHtml(t)}`).join(' ')}</span>
-        </a>
-      </li>`,
+      .map((n) =>
+        noteListItemHtml(
+          {
+            id: n.id,
+            title: escapeHtml(n.title),
+            topic: n.topic,
+            metaHtml: `${escapeHtml(n.updated)} · ${n.tags.map((t) => `#${escapeHtml(t)}`).join(' ')}`,
+          },
+          marksForNote(n.id, n.topic, progress),
+        ),
       )
       .join('');
     return `
       <section class="topic-section">
-        <h2>${TOPIC_LABELS[topic] || topic}</h2>
+        <div class="topic-section__head">
+          <h2>${TOPIC_LABELS[topic] || topic}</h2>
+          ${topicContinueLink}
+        </div>
         <ul class="note-list">${items}</ul>
       </section>`;
   }).join('');
@@ -313,6 +365,7 @@ function renderHome() {
         ${tagPills(allTags, filterTag)}
       </div>
     </section>
+    ${continueBanner}
     <p class="result-count">${filtered.length} 篇笔记</p>
     ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
   `);
@@ -426,6 +479,19 @@ function renderOpensourcePage() {
   const notes = loadNotes().filter((n) => n.topic === 'opensource');
   const roadmap = notes.find((n) => n.id === 'opensource/00-roadmap');
   const issues = notes.filter((n) => n.id !== 'opensource/00-roadmap');
+  const progress = loadReadingProgress();
+  const continueId = getLastNoteId('opensource');
+  const continueNote = continueId ? notes.find((n) => n.id === continueId) : null;
+  const continueBanner = continueReadingBannerHtml(
+    continueNote
+      ? {
+          id: continueNote.id,
+          title: escapeHtml(continueNote.title),
+          topic: continueNote.topic,
+        }
+      : null,
+    '开源 · 本机上次',
+  );
 
   /** @type {Map<string, typeof issues>} */
   const bySource = new Map();
@@ -444,14 +510,17 @@ function renderOpensourcePage() {
           const ext = n.sourceUrl
             ? `<a class="opensource-index__ext" href="${escapeHtml(n.sourceUrl)}" rel="noopener noreferrer" target="_blank">原文</a>`
             : '';
-          return `
-        <li class="note-card opensource-index__item">
-          <a href="#/note/${encodeURIComponent(n.id)}">
-            <span class="note-title">${escapeHtml(n.title)}</span>
-            <span class="note-meta">${meta}</span>
-          </a>
-          ${ext}
-        </li>`;
+          return noteListItemHtml(
+            {
+              id: n.id,
+              title: escapeHtml(n.title),
+              topic: n.topic,
+              metaHtml: meta,
+              extraClass: 'opensource-index__item',
+              afterLinkHtml: ext,
+            },
+            marksForNote(n.id, n.topic, progress),
+          );
         })
         .join('');
       return `
@@ -479,6 +548,7 @@ function renderOpensourcePage() {
           <a href="#/note/daily/howto-live-better">HowToLiveBetter（日常）→</a>
         </p>
       </header>
+      ${continueBanner}
       ${groups || '<p class="empty">暂无开源摘录。</p>'}
       <p class="opensource-credit">摘录为原创中文消化，非杂志/Wiki 原文镜像。HelloGitHub：<a href="https://github.com/521xueweihan/HelloGitHub" rel="noopener noreferrer" target="_blank">521xueweihan/HelloGitHub</a> · <a href="https://hellogithub.com" rel="noopener noreferrer" target="_blank">hellogithub.com</a>。库导读：<a href="https://github.com/flexible-collision-library/fcl" rel="noopener noreferrer" target="_blank">FCL</a> · <a href="https://github.com/ompl/ompl" rel="noopener noreferrer" target="_blank">OMPL</a>。相关生活向列表：<a href="https://github.com/eternity4719/HowToLiveBetter" rel="noopener noreferrer" target="_blank">eternity4719/HowToLiveBetter</a>（站内消化见<a href="#/note/daily/howto-live-better">日常笔记</a>）。</p>
     </section>
@@ -800,6 +870,7 @@ function mountContent() {
   disposeDaily();
   disposeAi();
   disposePersonalNotes();
+  disposeReadingProgress();
   disposeLocalGallery();
 
   const route = parseRoute();
@@ -837,12 +908,25 @@ function mountContent() {
   applyShichenAtmosphere({ route: route.name });
   ensureShichenTicker();
 
+  // Leaving a note: reset list/page scroll so home isn't mid-pane.
+  // Note routes restore their own saved scrollY via mountNoteReadingProgress.
+  // Document scroll is the usual root (browse-pane grows with content).
+  if (route.name !== 'note') {
+    browse.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
+
   if (route.name === 'note') {
     browse.innerHTML = renderNote(route.id);
     bindCodeBlockActions(browse);
     void runMermaidIn(browse);
     const note = getNoteById(route.id);
     void syncSidePanel(note);
+    if (note) {
+      readingProgressHandle = mountNoteReadingProgress(browse, note);
+    } else {
+      browse.scrollTop = 0;
+    }
     const slot = browse.querySelector('[data-personal-notes-mount]');
     if (note && slot) {
       personalNotesHandle = mountPersonalNotes(/** @type {HTMLElement} */ (slot), note);
