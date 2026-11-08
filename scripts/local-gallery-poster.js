@@ -27,30 +27,47 @@ export function isPosterCacheName(name) {
 }
 
 /**
+ * Return cached poster path if fresh, else null (does not spawn ffmpeg).
+ * @param {string} videoAbs
+ */
+export function getCachedPosterPath(videoAbs) {
+  const cached = posterCachePath(videoAbs);
+  try {
+    if (!existsSync(cached) || !statSync(cached).isFile() || statSync(cached).size <= 0) {
+      return null;
+    }
+    if (statSync(cached).mtimeMs < statSync(videoAbs).mtimeMs) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Ensure a small JPEG poster exists for videoAbs; return absolute path or null.
  * Uses ffmpeg (seek ~1s, scale ≤480w). Safe to call many times — cache + coalesce.
+ * Prefer getCachedPosterPath + background ensure for HTTP handlers so video
+ * Range requests are not starved by long ffmpeg work holding connections.
  * @param {string} videoAbs
  * @returns {Promise<string | null>}
  */
 export function ensureVideoPoster(videoAbs) {
-  const cached = posterCachePath(videoAbs);
-  try {
-    if (existsSync(cached) && statSync(cached).isFile() && statSync(cached).size > 0) {
-      // Rebuild if video is newer than poster.
-      if (statSync(cached).mtimeMs >= statSync(videoAbs).mtimeMs) return Promise.resolve(cached);
-    }
-  } catch {
-    /* fall through to generate */
-  }
+  const hit = getCachedPosterPath(videoAbs);
+  if (hit) return Promise.resolve(hit);
 
   const existing = inFlight.get(videoAbs);
   if (existing) return existing;
 
+  const cached = posterCachePath(videoAbs);
   const job = (async () => {
     await acquireSlot();
     try {
+      // Re-check after waiting for a slot.
+      const again = getCachedPosterPath(videoAbs);
+      if (again) return again;
+
       mkdirSync(dirname(cached), { recursive: true });
-      const tmp = `${cached}.${process.pid}.tmp.jpg`;
+      const tmp = `${cached}.${process.pid}.${Date.now()}.tmp.jpg`;
       const ok =
         (await runFfmpegPoster(videoAbs, tmp, 1)) || (await runFfmpegPoster(videoAbs, tmp, 0));
       if (!ok) {

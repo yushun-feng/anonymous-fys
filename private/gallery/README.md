@@ -30,13 +30,15 @@ npm run dev
 在仓库根创建 `.env.local`（已被 gitignore）：
 
 ```env
-GALLERY_ROOT=D:\视频
+GALLERY_ROOT=D:/视频
 ```
+
+（推荐正斜杠；若写 `D:\视频` 请勿给值加引号，避免 `\v` 被当成转义。）
 
 或创建 `.gallery-root.local`，内容一行：
 
 ```text
-D:\视频
+D:/视频
 ```
 
 然后：

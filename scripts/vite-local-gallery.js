@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, join, normalize, relative, resolve, sep } from 'node:path';
+import { extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import {
@@ -7,7 +7,11 @@ import {
   fetchGalleryVideo,
   resolveFetchOutDir,
 } from './local-gallery-fetch.js';
-import { ensureVideoPoster, isPosterCacheName } from './local-gallery-poster.js';
+import {
+  ensureVideoPoster,
+  getCachedPosterPath,
+  isPosterCacheName,
+} from './local-gallery-poster.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -53,16 +57,26 @@ export function localGalleryPlugin() {
 
       server.middlewares.use((req, res, next) => {
         const rawUrl = req.url || '';
-        if (!rawUrl.startsWith(LOCAL_PREFIX)) {
+        // Strip query (?import etc.) before prefix check — browsers may append cache busters.
+        const pathOnly = rawUrl.split('?', 1)[0];
+        if (!pathOnly.startsWith(LOCAL_PREFIX)) {
           next();
           return;
         }
 
-        const url = new URL(rawUrl, 'http://local.dev');
-        const subPath = decodeURIComponent(url.pathname.slice(LOCAL_PREFIX.length)).replace(
-          /^\/+/,
-          '',
-        );
+        let subPath = '';
+        try {
+          const url = new URL(pathOnly, 'http://local.dev');
+          subPath = safeDecodeURIComponent(url.pathname.slice(LOCAL_PREFIX.length)).replace(
+            /^\/+/,
+            '',
+          );
+        } catch {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          res.end('Bad URL');
+          return;
+        }
         // Re-resolve each request so newly downloaded album folders appear.
         const root = resolveGalleryRoot(envDir, mode);
         const layout = resolveAlbumLayout(root);
@@ -164,21 +178,29 @@ export function localGalleryPlugin() {
  */
 function resolveGalleryRoot(envDir, mode) {
   const fromShell = (process.env.GALLERY_ROOT || '').trim();
-  if (fromShell) return resolve(fromShell);
+  if (fromShell) return resolve(normalizeRootInput(fromShell));
 
   const env = loadEnv(mode || 'development', envDir || REPO_ROOT, '');
   const fromDotenv = (env.GALLERY_ROOT || '').trim();
-  if (fromDotenv) return resolve(fromDotenv);
+  if (fromDotenv) return resolve(normalizeRootInput(fromDotenv));
 
   if (existsSync(LOCAL_ROOT_FILE)) {
     const line = readFileSync(LOCAL_ROOT_FILE, 'utf8')
       .split(/\r?\n/)
       .map((l) => l.trim())
       .find((l) => l && !l.startsWith('#'));
-    if (line) return resolve(line);
+    if (line) return resolve(normalizeRootInput(line));
   }
 
   return DEFAULT_GALLERY_ROOT;
+}
+
+/**
+ * Windows .env tip: prefer D:/视频 — quoted "D:\\视频" can mangle \\v as an escape.
+ * @param {string} raw
+ */
+function normalizeRootInput(raw) {
+  return raw.trim().replace(/^["']|["']$/g, '');
 }
 
 /**
@@ -340,14 +362,16 @@ function listMedia(dir, albumId) {
 }
 
 /**
- * Generate-or-serve a cached JPEG poster for a video (ffmpeg, ≤480px wide).
+ * Serve cached JPEG poster immediately; never block HTTP on ffmpeg.
+ * Cache miss → 204 + background generate so video Range requests keep connections free
+ * (otherwise many slow posters starve playback and the lightbox spins forever).
  * @param {import('http').IncomingMessage} req
  * @param {import('http').ServerResponse} res
  * @param {{ root: string, albumsParent: string, mode: string }} layout
  * @param {string} albumId
  * @param {string} videoName
  */
-async function handlePoster(req, res, layout, albumId, videoName) {
+function handlePoster(req, res, layout, albumId, videoName) {
   const albumDir = resolveAlbumDir(layout, albumId);
   if (!albumDir) {
     res.statusCode = 404;
@@ -370,31 +394,46 @@ async function handlePoster(req, res, layout, albumId, videoName) {
     return;
   }
 
-  const posterPath = await ensureVideoPoster(videoPath);
-  if (!posterPath) {
-    // No ffmpeg / decode failure — UI keeps play tile without a poster image.
-    res.statusCode = 204;
-    res.end();
+  const cached = getCachedPosterPath(videoPath);
+  if (cached) {
+    streamFile(req, res, cached, { cacheControl: 'private, max-age=86400' });
     return;
   }
-  // Cache once built — busted when video mtime forces rebuild in ensureVideoPoster.
-  streamFile(req, res, posterPath, { cacheControl: 'private, max-age=86400' });
+
+  // Kick off ffmpeg in the background; do not await.
+  void ensureVideoPoster(videoPath).catch(() => {});
+  res.statusCode = 204;
+  res.setHeader('Cache-Control', 'no-store');
+  res.end();
+}
+
+/** @param {string} s */
+function safeDecodeURIComponent(s) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 }
 
 /**
+ * Resolve subPath under root without path traversal (Windows-safe via path.relative).
  * @param {string} root
  * @param {string} subPath
  */
 function safeResolveUnder(root, subPath) {
   const cleaned = normalize(subPath).replace(/^(\.\.(\/|\\|$))+/, '');
   const abs = resolve(root, cleaned);
-  const rootWithSep = root.endsWith(sep) ? root : root + sep;
-  if (abs !== root && !abs.startsWith(rootWithSep)) return null;
+  const rel = relative(root, abs);
+  if (rel.startsWith('..') || isAbsolute(rel)) return null;
   return abs;
 }
 
+/** Max bytes for an open-ended Range (bytes=N-) so multi-GB files don't stall first paint. */
+const OPEN_RANGE_CHUNK = 2 * 1024 * 1024;
+
 /**
- * Stream a local file; supports Range for video seeking.
+ * Stream a local file; supports Range for video seeking. Handles HEAD, abort, errors.
  * @param {import('http').IncomingMessage} req
  * @param {import('http').ServerResponse} res
  * @param {string} filePath
@@ -403,36 +442,88 @@ function safeResolveUnder(root, subPath) {
 function streamFile(req, res, filePath, opts = {}) {
   const ext = extname(filePath).toLowerCase();
   const type = MIME[ext] || 'application/octet-stream';
-  const stat = statSync(filePath);
-  const size = stat.size;
-  const range = req.headers.range;
+  let size;
+  try {
+    size = statSync(filePath).size;
+  } catch {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('Not found');
+    return;
+  }
 
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Cache-Control', opts.cacheControl || 'no-store');
   res.setHeader('Content-Type', type);
+  // Help Chromium treat local mp4 as seekable media.
+  res.setHeader('Content-Disposition', 'inline');
 
-  if (range) {
-    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
-    if (m) {
-      const start = m[1] ? Number(m[1]) : 0;
-      const end = m[2] ? Number(m[2]) : size - 1;
-      if (start >= size || end >= size || start > end) {
-        res.statusCode = 416;
-        res.setHeader('Content-Range', `bytes */${size}`);
-        res.end();
-        return;
-      }
-      res.statusCode = 206;
-      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-      res.setHeader('Content-Length', String(end - start + 1));
-      createReadStream(filePath, { start, end }).pipe(res);
-      return;
-    }
+  const method = (req.method || 'GET').toUpperCase();
+  if (method === 'HEAD') {
+    res.statusCode = 200;
+    res.setHeader('Content-Length', String(size));
+    res.end();
+    return;
   }
 
-  res.statusCode = 200;
-  res.setHeader('Content-Length', String(size));
-  createReadStream(filePath).pipe(res);
+  let start = 0;
+  let end = size - 1;
+  let status = 200;
+  const range = req.headers.range;
+  if (range && size > 0) {
+    // Take first range only (ignore multipart).
+    const first = String(range).split(',', 1)[0].trim();
+    const m = /^bytes=(\d*)-(\d*)$/i.exec(first);
+    if (!m) {
+      res.statusCode = 416;
+      res.setHeader('Content-Range', `bytes */${size}`);
+      res.end();
+      return;
+    }
+    start = m[1] === '' ? 0 : Number(m[1]);
+    end = m[2] === '' ? size - 1 : Number(m[2]);
+    // Cap open-ended ranges so the first response returns quickly on large files.
+    if (m[2] === '' && end - start + 1 > OPEN_RANGE_CHUNK) {
+      end = start + OPEN_RANGE_CHUNK - 1;
+    }
+    if (Number.isNaN(start) || Number.isNaN(end) || start < 0 || end < start || start >= size) {
+      res.statusCode = 416;
+      res.setHeader('Content-Range', `bytes */${size}`);
+      res.end();
+      return;
+    }
+    end = Math.min(end, size - 1);
+    status = 206;
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+  }
+
+  const chunkSize = end - start + 1;
+  res.statusCode = status;
+  res.setHeader('Content-Length', String(chunkSize));
+
+  if (chunkSize <= 0) {
+    res.end();
+    return;
+  }
+
+  const stream = createReadStream(filePath, { start, end });
+  const onClose = () => {
+    stream.destroy();
+  };
+  req.on('close', onClose);
+  stream.on('error', () => {
+    req.off('close', onClose);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.end('Read error');
+    } else {
+      res.destroy();
+    }
+  });
+  stream.on('end', () => {
+    req.off('close', onClose);
+  });
+  stream.pipe(res);
 }
 
 /**
