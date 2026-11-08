@@ -6,6 +6,9 @@
 
 const INDEX_URL = '/__local/stockings/index.json';
 
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.avif']);
+const VIDEO_EXT = new Set(['.mp4', '.webm', '.mov', '.mkv', '.m4v', '.ogv']);
+
 /**
  * @param {HTMLElement} root
  * @returns {{ dispose: () => void }}
@@ -21,7 +24,10 @@ export function mountStockingsGallery(root) {
     <header class="stk-gallery__header">
       <p class="stk-gallery__eyebrow">LOCAL ONLY · NOT DEPLOYED</p>
       <h1 class="stk-gallery__title">Stockings</h1>
-      <p class="stk-gallery__lede">照片放在 <code>private/stockings/albums/&lt;相册&gt;/</code>；本页只在 <code>npm run dev</code> 可用。</p>
+      <p class="stk-gallery__lede">
+        本机媒体目录（默认 <code>private/stockings/</code>；可用 <code>STOCKINGS_ROOT</code> 指向如 <code>D:\\视频</code>）。
+        支持图片与视频；本页只在 <code>npm run dev</code> 可用，媒体<strong>不会</strong>进 git / Pages。
+      </p>
     </header>
     <div class="stk-gallery__body" data-stk-body>
       <p class="stk-gallery__status">正在读取本地相册…</p>
@@ -51,20 +57,26 @@ async function loadAlbums(body, isCancelled) {
   try {
     const res = await fetch(INDEX_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error(`index ${res.status}`);
-    /** @type {{ albums?: { id: string, title: string, count: number, cover: string | null }[] }} */
+    /** @type {{ root?: string, albums?: { id: string, title: string, count: number, cover: string | null, coverKind?: string | null }[] }} */
     const data = await res.json();
     if (isCancelled()) return;
 
     const albums = Array.isArray(data.albums) ? data.albums : [];
+    const rootHint = data.root ? escapeHtml(data.root) : 'private/stockings';
     if (!albums.length) {
       body.innerHTML = `
-        <p class="stk-gallery__empty">还没有相册。在 <code>private/stockings/albums/&lt;名称&gt;/</code> 放入图片后刷新本页。</p>
-        <p class="stk-gallery__hint">说明见仓库内 <code>private/stockings/README.md</code>。</p>
+        <p class="stk-gallery__empty">还没有相册。当前根目录：<code>${rootHint}</code>。</p>
+        <p class="stk-gallery__hint">
+          子文件夹 = 相册；根目录扁平的图片/视频也会显示。
+          Windows 可在 <code>.env.local</code> 设 <code>STOCKINGS_ROOT=D:\\视频</code>，或写入 gitignored 的 <code>.stockings-root.local</code>。
+          说明见 <code>private/stockings/README.md</code>。
+        </p>
       `;
       return;
     }
 
     body.innerHTML = `
+      <p class="stk-gallery__root-hint">媒体根：<code>${rootHint}</code></p>
       <ul class="stk-gallery__albums" data-stk-albums>
         ${albums
           .map(
@@ -72,15 +84,11 @@ async function loadAlbums(body, isCancelled) {
           <li>
             <button type="button" class="stk-gallery__album" data-album-id="${escapeAttr(a.id)}">
               <span class="stk-gallery__album-visual" aria-hidden="true">
-                ${
-                  a.cover
-                    ? `<img src="${escapeAttr(a.cover)}" alt="" loading="lazy" />`
-                    : '<span class="stk-gallery__album-placeholder">空</span>'
-                }
+                ${renderCover(a.cover, a.coverKind)}
               </span>
               <span class="stk-gallery__album-meta">
                 <span class="stk-gallery__album-title">${escapeHtml(a.title)}</span>
-                <span class="stk-gallery__album-count">${a.count} 张</span>
+                <span class="stk-gallery__album-count">${a.count} 项</span>
               </span>
             </button>
           </li>`,
@@ -105,6 +113,18 @@ async function loadAlbums(body, isCancelled) {
 }
 
 /**
+ * @param {string | null | undefined} cover
+ * @param {string | null | undefined} coverKind
+ */
+function renderCover(cover, coverKind) {
+  if (!cover) return '<span class="stk-gallery__album-placeholder">空</span>';
+  if (coverKind === 'video' || isVideoName(cover)) {
+    return `<span class="stk-gallery__album-placeholder stk-gallery__album-placeholder--video">视频</span>`;
+  }
+  return `<img src="${escapeAttr(cover)}" alt="" loading="lazy" />`;
+}
+
+/**
  * @param {HTMLElement} body
  * @param {string} albumId
  * @param {() => boolean} isCancelled
@@ -119,70 +139,96 @@ async function openAlbum(body, albumId, isCancelled) {
   viewer.innerHTML = `<p class="stk-gallery__status">加载相册…</p>`;
 
   try {
-    const res = await fetch(INDEX_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('index');
-    /** @type {{ albums?: { id: string }[] }} */
-    const data = await res.json();
-    if (isCancelled()) return;
-
-    // Re-fetch album file list via a dedicated listing by probing cover path pattern:
-    // middleware index only has counts; list files through album index extension.
     const albumRes = await fetch(
       `/__local/stockings/albums/${encodeURIComponent(albumId)}/index.json`,
       { cache: 'no-store' },
     );
 
-    /** @type {string[]} */
-    let images = [];
+    /** @type {{ name: string, kind: 'image' | 'video' }[]} */
+    let items = [];
     if (albumRes.ok) {
       const albumData = await albumRes.json();
-      images = Array.isArray(albumData.images) ? albumData.images : [];
+      if (Array.isArray(albumData.items) && albumData.items.length) {
+        items = albumData.items.map((it) => ({
+          name: String(it.name),
+          kind: it.kind === 'video' || isVideoName(it.name) ? 'video' : 'image',
+        }));
+      } else if (Array.isArray(albumData.images)) {
+        items = albumData.images.map((name) => ({
+          name: String(name),
+          kind: isVideoName(name) ? 'video' : 'image',
+        }));
+      }
     }
 
     if (isCancelled()) return;
 
-    if (!images.length) {
+    if (!items.length) {
       viewer.innerHTML = `
         <button type="button" class="stk-gallery__back" data-stk-back>← 全部相册</button>
-        <p class="stk-gallery__empty">相册「${escapeHtml(albumId)}」里还没有图片。</p>
+        <p class="stk-gallery__empty">相册「${escapeHtml(albumId)}」里还没有图片或视频。</p>
       `;
-      viewer.querySelector('[data-stk-back]')?.addEventListener('click', () => {
-        viewer.hidden = true;
-        viewer.innerHTML = '';
-        if (list) list.hidden = false;
-      });
+      wireBack(viewer, list);
       return;
     }
 
     viewer.innerHTML = `
       <button type="button" class="stk-gallery__back" data-stk-back>← 全部相册</button>
-      <h2 class="stk-gallery__album-heading">${escapeHtml(albumId)}</h2>
+      <h2 class="stk-gallery__album-heading">${escapeHtml(albumId === '__root__' ? '根目录' : albumId)}</h2>
       <ul class="stk-gallery__grid">
-        ${images
-          .map((name) => {
-            const src = `/__local/stockings/albums/${encodeURIComponent(albumId)}/${encodeURIComponent(name)}`;
-            return `<li><a href="${escapeAttr(src)}" target="_blank" rel="noopener"><img src="${escapeAttr(src)}" alt="${escapeAttr(name)}" loading="lazy" /></a></li>`;
+        ${items
+          .map((it) => {
+            const src = `/__local/stockings/albums/${encodeURIComponent(albumId)}/${encodeURIComponent(it.name)}`;
+            if (it.kind === 'video') {
+              return `<li class="stk-gallery__cell stk-gallery__cell--video">
+                <video src="${escapeAttr(src)}" controls playsinline preload="metadata" title="${escapeAttr(it.name)}"></video>
+                <span class="stk-gallery__caption">${escapeHtml(it.name)}</span>
+              </li>`;
+            }
+            return `<li class="stk-gallery__cell">
+              <a href="${escapeAttr(src)}" target="_blank" rel="noopener">
+                <img src="${escapeAttr(src)}" alt="${escapeAttr(it.name)}" loading="lazy" />
+              </a>
+            </li>`;
           })
           .join('')}
       </ul>
     `;
-    viewer.querySelector('[data-stk-back]')?.addEventListener('click', () => {
-      viewer.hidden = true;
-      viewer.innerHTML = '';
-      if (list) list.hidden = false;
-    });
+    wireBack(viewer, list);
   } catch {
     if (isCancelled()) return;
     viewer.innerHTML = `
       <button type="button" class="stk-gallery__back" data-stk-back>← 全部相册</button>
       <p class="stk-gallery__empty">无法读取相册「${escapeHtml(albumId)}」。</p>
     `;
-    viewer.querySelector('[data-stk-back]')?.addEventListener('click', () => {
-      viewer.hidden = true;
-      viewer.innerHTML = '';
-      if (list) list.hidden = false;
-    });
+    wireBack(viewer, list);
   }
+}
+
+/**
+ * @param {HTMLElement} viewer
+ * @param {HTMLElement | null} list
+ */
+function wireBack(viewer, list) {
+  viewer.querySelector('[data-stk-back]')?.addEventListener('click', () => {
+    viewer.querySelectorAll('video').forEach((v) => {
+      v.pause();
+      v.removeAttribute('src');
+      v.load();
+    });
+    viewer.hidden = true;
+    viewer.innerHTML = '';
+    if (list) list.hidden = false;
+  });
+}
+
+/** @param {string} name */
+function isVideoName(name) {
+  const i = name.lastIndexOf('.');
+  const ext = i >= 0 ? name.slice(i).toLowerCase() : '';
+  if (VIDEO_EXT.has(ext)) return true;
+  if (IMAGE_EXT.has(ext)) return false;
+  return false;
 }
 
 /** @param {string} s */
@@ -222,6 +268,11 @@ const GALLERY_CSS = `
   margin: 0;
   color: var(--muted);
   max-width: 42rem;
+}
+.stk-gallery__root-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 .stk-gallery__status,
 .stk-gallery__empty,
@@ -271,6 +322,9 @@ const GALLERY_CSS = `
   color: var(--muted);
   font-size: 0.85rem;
 }
+.stk-gallery__album-placeholder--video {
+  letter-spacing: 0.06em;
+}
 .stk-gallery__album-meta {
   display: flex;
   flex-direction: column;
@@ -302,8 +356,12 @@ const GALLERY_CSS = `
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.65rem;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.stk-gallery__cell--video {
+  grid-column: 1 / -1;
+  max-width: 56rem;
 }
 .stk-gallery__grid img {
   width: 100%;
@@ -313,5 +371,20 @@ const GALLERY_CSS = `
   border: 1px solid var(--border);
   display: block;
   background: rgba(0, 0, 0, 0.35);
+}
+.stk-gallery__grid video {
+  width: 100%;
+  max-height: min(70vh, 720px);
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--border);
+  display: block;
+  background: #000;
+}
+.stk-gallery__caption {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
 }
 `;
