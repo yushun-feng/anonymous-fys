@@ -11,7 +11,7 @@ sourceUrl: https://en.cppreference.com/w/cpp/algorithm/sort
 # 与 `std::sort` 的关系
 
 > 标准侧：[std::sort](https://en.cppreference.com/w/cpp/algorithm/sort) · [std::stable_sort](https://en.cppreference.com/w/cpp/algorithm/stable_sort) · Ranges 排序  
-> 库侧：[cpp-sort](https://github.com/Morwenn/cpp-sort) · 本系列 [01](./01-overview.md) / [02](./02-sorter-architecture.md)
+> 库侧：[cpp-sort](https://github.com/Morwenn/cpp-sort) · 本系列 [01](#/note/cpp/cpp-sort/01-overview) / [02](#/note/cpp/cpp-sort/02-sorter-architecture)
 
 ## 一句话对比
 
@@ -76,9 +76,9 @@ cpp-sort：
 
 ## 与 LearnCpp 笔记的衔接
 
-- 手写选择排序 / 迭代器动机：[ch18–19](../learncpp/ch18-19-iterators-dynamic.md)  
-- 把 sorter 当函数对象传递：[ch20](../learncpp/ch20-advanced-functions.md)、[ch11 模板](../learncpp/ch11-overload-templates.md)  
-- 元素移动代价与间接排序动机：[ch22](../learncpp/ch22-move-smart-pointers.md)
+- 手写选择排序 / 迭代器动机：[ch18–19](#/note/cpp/learncpp/ch18-19-iterators-dynamic)  
+- 把 sorter 当函数对象传递：[ch20](#/note/cpp/learncpp/ch20-advanced-functions)、[ch11 模板](#/note/cpp/learncpp/ch11-overload-templates)  
+- 元素移动代价与间接排序动机：[ch22](#/note/cpp/learncpp/ch22-move-smart-pointers)
 
 ## 练习指引
 
@@ -86,4 +86,4 @@ cpp-sort：
 2. 需要稳定时：`std::stable_sort` vs `cppsort::merge_sort`，用故意相等键的结构体验证保序。  
 3. 写一段「默认 `std::sort`，仅在 `#ifdef` 或策略标签下换 cpp-sort」的薄封装，体会依赖边界。
 
-回到路线：[00-roadmap](./00-roadmap.md)。
+回到路线：[00-roadmap](#/note/cpp/cpp-sort/00-roadmap)。

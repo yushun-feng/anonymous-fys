@@ -11,7 +11,7 @@ sourceUrl: https://github.com/Morwenn/cpp-sort/wiki/Sorters
 # 若干代表算法
 
 > 出处：[Wiki · Sorters](https://github.com/Morwenn/cpp-sort/wiki/Sorters) · 各算法原始论文 / 实现致谢见 [README](https://github.com/Morwenn/cpp-sort)  
-> 路线：[00](./00-roadmap.md) · 架构：[02](./02-sorter-architecture.md)
+> 路线：[00](#/note/cpp/cpp-sort/00-roadmap) · 架构：[02](#/note/cpp/cpp-sort/02-sorter-architecture)
 
 库内算法远不止下面几个。这里只挑**学习时高频对照**的样本：先建立「稳定 / 自适应 / 迭代器要求 / 内存」四维，再回 Wiki 查表扩展。
 
@@ -87,4 +87,4 @@ cppsort::pdq_sort(vec);
 2. 把数据改成「拼接多个已排序 run」，再跑 tim vs pdq，看名次是否翻转。  
 3. 对 `std::list` 尝试 pdq（应失败或不可用）再换 merge 或 hybrid——把错误变成架构课。
 
-下一章：[与 std::sort 的关系](./04-vs-std-sort.md)。
+下一章：[与 std::sort 的关系](#/note/cpp/cpp-sort/04-vs-std-sort)。

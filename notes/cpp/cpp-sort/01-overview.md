@@ -11,7 +11,7 @@ sourceUrl: https://github.com/Morwenn/cpp-sort
 # cpp-sort 概览
 
 > 出处：[Morwenn/cpp-sort](https://github.com/Morwenn/cpp-sort) · [Wiki Quickstart](https://github.com/Morwenn/cpp-sort/wiki/Quickstart)  
-> 说明：原创中文消化；细节与版本差异以上游为准。路线见 [00](./00-roadmap.md)。
+> 说明：原创中文消化；细节与版本差异以上游为准。路线见 [00](#/note/cpp/cpp-sort/00-roadmap)。
 
 ## 它解决什么问题
 
@@ -49,7 +49,7 @@ void demo(std::vector<int>& v) {
 | **Probe（disorder）** | 度量序列「有多乱」（逆序对、run 数等）；已排序多为 0 |
 | **Metrics** | 特殊 adapter：跑排序同时返回比较次数、耗时等 |
 
-学习顺序建议：**Sorter → Adapter（尤其 hybrid）→ Probe → Metrics**，与 [路线图](./00-roadmap.md) 一致。
+学习顺序建议：**Sorter → Adapter（尤其 hybrid）→ Probe → Metrics**，与 [路线图](#/note/cpp/cpp-sort/00-roadmap) 一致。
 
 ## 设计取向（读库时有用）
 
@@ -68,4 +68,4 @@ void demo(std::vector<int>& v) {
 2. 同一数据上加 `std::greater{}` 与成员指针投影，观察结果是否符合预期。  
 3. 打开 Wiki Sorters 表，给「稳定 / 不稳定」「内存 O(1) / O(n)」各挑一个候选，写进自己的对照表。
 
-下一章：[Sorter 与库架构](./02-sorter-architecture.md)。
+下一章：[Sorter 与库架构](#/note/cpp/cpp-sort/02-sorter-architecture)。

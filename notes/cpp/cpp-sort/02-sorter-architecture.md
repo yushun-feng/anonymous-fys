@@ -11,7 +11,7 @@ sourceUrl: https://github.com/Morwenn/cpp-sort/wiki/Quickstart
 # Sorter 概念与库架构
 
 > 出处：[Wiki Quickstart](https://github.com/Morwenn/cpp-sort/wiki/Quickstart) · [Sorters](https://github.com/Morwenn/cpp-sort/wiki/Sorters) · [Sorter adapters](https://github.com/Morwenn/cpp-sort/wiki/Sorter-adapters)  
-> 路线：[00](./00-roadmap.md) · 上一篇：[01 概览](./01-overview.md)
+> 路线：[00](#/note/cpp/cpp-sort/00-roadmap) · 上一篇：[01 概览](#/note/cpp/cpp-sort/01-overview)
 
 ## 为何是函数对象而不是自由函数模板
 
@@ -111,4 +111,4 @@ Adapter 通常**存一份**被适配 sorter 的副本，因而也能包有状态
 2. 构造 `hybrid_adapter<pdq_sorter, merge_sorter>`，对 `vector` 与 `list` 各调用一次。  
 3. 阅读任意一个 adapter 的 Wiki 段，记下它对「稳定性 / 最低迭代器」的硬性改写。
 
-下一章：[代表算法](./03-representative-algorithms.md)。
+下一章：[代表算法](#/note/cpp/cpp-sort/03-representative-algorithms)。
