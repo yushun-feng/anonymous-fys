@@ -333,27 +333,6 @@ function renderHome() {
 
   return layout(`
     ${continueBanner}
-    <div class="pagoda-home-slot" data-pagoda-mount data-pagoda-compact></div>
-    <p class="pagoda-home-link"><a href="#/pagoda">打开完整应县木塔展台 →</a></p>
-    <div class="shader-home-slot" data-shader-mount data-shader-compact></div>
-    <p class="shader-home-link"><a href="#/shader">打开完整 Shader Toy →</a></p>
-    <div class="proto-home-slot" data-protocol-mount data-protocol-compact></div>
-    <p class="proto-home-link"><a href="#/protocols">打开完整协议探索 →</a></p>
-    <div class="linux-home-slot" data-linux-sys-mount data-linux-sys-compact></div>
-    <p class="linux-home-link"><a href="#/linux">打开 Linux 系统探索（启动 / 目录 / 权限）→</a></p>
-    <div class="memory-home-slot" data-memory-mount data-memory-compact></div>
-    <p class="memory-home-link"><a href="#/memory">打开内存布局沙箱（栈 / 堆）→</a></p>
-    <div class="pointer-home-slot" data-pointer-mount data-pointer-compact></div>
-    <p class="pointer-home-link"><a href="#/pointers">打开指针操作（槽位 · 箭头 · 智能指针）→</a></p>
-    <div class="transform-home-slot" data-transform-mount data-transform-compact></div>
-    <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
-    <div class="daily-home-slot" data-daily-mount data-daily-compact></div>
-    <p class="daily-home-link"><a href="#/daily">打开日常节奏板（日 / 周 / 月 / 年）→</a></p>
-    <div class="ai-home-slot" data-ai-mount data-ai-compact></div>
-    <p class="ai-home-link"><a href="#/ai">打开 AI 史记时间线（时代 · 事件 · 五体索引）→</a></p>
-    <section class="opensource-home-teaser">
-      <p class="opensource-home-link"><a href="#/opensource">开源精选阅读架（HelloGitHub · FCL · OMPL · 按来源浏览）→</a></p>
-    </section>
     <section class="filters">
       <div class="filter-row">
         <span class="filter-label">Topic</span>
@@ -368,6 +347,21 @@ function renderHome() {
     </section>
     <p class="result-count">${filtered.length} 篇笔记</p>
     ${byTopic || '<p class="empty">没有匹配的笔记。</p>'}
+    <nav class="home-showcases" aria-label="交互展台入口">
+      <p class="home-showcases__label">交互展台</p>
+      <ul class="home-showcases__list">
+        <li><a href="#/pagoda">木塔</a></li>
+        <li><a href="#/shader">Shader</a></li>
+        <li><a href="#/protocols">协议</a></li>
+        <li><a href="#/linux">Linux</a></li>
+        <li><a href="#/memory">内存</a></li>
+        <li><a href="#/pointers">指针</a></li>
+        <li><a href="#/transform">变换</a></li>
+        <li><a href="#/ai">AI</a></li>
+        <li><a href="#/opensource">开源</a></li>
+        <li><a href="#/daily">日常</a></li>
+      </ul>
+    </nav>
   `);
 }
 
@@ -989,15 +983,6 @@ function mountContent() {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
     bindHomeFilters(browse);
-    mountPagodaIfPresent(browse);
-    mountShaderIfPresent(browse);
-    mountProtocolIfPresent(browse);
-    mountLinuxSysIfPresent(browse);
-    mountMemoryIfPresent(browse);
-    mountPointerIfPresent(browse);
-    mountTransformIfPresent(browse);
-    mountDailyIfPresent(browse);
-    mountAiIfPresent(browse);
   }
 }
 

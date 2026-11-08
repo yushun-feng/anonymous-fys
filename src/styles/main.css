@@ -943,12 +943,45 @@ html[data-route='daily'] .site-header {
 .filters {
   display: grid;
   gap: 0.85rem;
-  margin: 1rem 0 1.25rem;
+  margin: 0 0 1rem;
   padding: 1rem;
   background: rgba(23, 30, 38, 0.82);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   backdrop-filter: blur(10px);
+}
+
+.home-showcases {
+  margin: 2.25rem 0 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(42, 53, 65, 0.85);
+}
+
+.home-showcases__label {
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-showcases__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+}
+
+.home-showcases__list a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.home-showcases__list a:hover {
+  text-decoration: underline;
 }
 
 .filter-row {
