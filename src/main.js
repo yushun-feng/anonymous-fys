@@ -20,12 +20,13 @@ let shichenTimer = null;
 /** @type {'playground' | 'graphics-lab'} */
 let sidePanelMode = 'playground';
 
-const TOPICS = ['cpp', 'graphics', 'gpu', 'linux', 'opensource', 'daily'];
+const TOPICS = ['cpp', 'graphics', 'gpu', 'linux', 'ai', 'opensource', 'daily'];
 const TOPIC_LABELS = {
   cpp: 'C++',
   graphics: 'Graphics',
   gpu: 'GPU',
   linux: 'Linux',
+  ai: 'AI',
   opensource: '开源',
   daily: '日常',
 };
@@ -62,6 +63,10 @@ let pointerMountGen = 0;
 let dailyHandle = null;
 /** Bumps on remount so a late dynamic import does not attach after navigate-away. */
 let dailyMountGen = 0;
+/** Active AI Timeline Explorer instance; disposed on every remount. */
+let aiHandle = null;
+/** Bumps on remount so a late dynamic import does not attach after navigate-away. */
+let aiMountGen = 0;
 /** Whether the browse+playground shell has been created after unlock. */
 let shellReady = false;
 /** Active personal-notes panel; disposed on every remount / navigate-away. */
@@ -113,6 +118,12 @@ function disposeDaily() {
   dailyMountGen += 1;
   dailyHandle?.dispose();
   dailyHandle = null;
+}
+
+function disposeAi() {
+  aiMountGen += 1;
+  aiHandle?.dispose();
+  aiHandle = null;
 }
 
 function disposePersonalNotes() {
@@ -173,6 +184,9 @@ function parseRoute() {
   ) {
     return { name: 'opensource' };
   }
+  if (pathPart === 'ai' || pathPart === 'ai-history' || pathPart === 'history-of-ai') {
+    return { name: 'ai' };
+  }
   if (pathPart.startsWith('note/')) {
     return { name: 'note', id: decodeURIComponent(pathPart.slice(5)) };
   }
@@ -192,10 +206,11 @@ function layout(content) {
         <a href="#/memory">内存</a>
         <a href="#/pointers">指针</a>
         <a href="#/transform">变换</a>
+        <a href="#/ai">AI</a>
         <a href="#/opensource">开源</a>
         <a href="#/daily">日常</a>
       </nav>
-      <p class="tagline">C++ · Graphics · GPU · Linux · 开源 · 日常 — 公开笔记浏览</p>
+      <p class="tagline">C++ · Graphics · GPU · Linux · AI · 开源 · 日常 — 公开笔记浏览</p>
     </header>
     <main class="site-main">${content}</main>
     <footer class="site-footer">
@@ -270,6 +285,8 @@ function renderHome() {
     <p class="transform-home-link"><a href="#/transform">打开变换沙箱（矩阵 · 左乘/右乘）→</a></p>
     <div class="daily-home-slot" data-daily-mount data-daily-compact></div>
     <p class="daily-home-link"><a href="#/daily">打开日常节奏板（日 / 周 / 月 / 年）→</a></p>
+    <div class="ai-home-slot" data-ai-mount data-ai-compact></div>
+    <p class="ai-home-link"><a href="#/ai">打开 AI 史记时间线（时代 · 事件 · 五体索引）→</a></p>
     <section class="opensource-home-teaser">
       <p class="opensource-home-link"><a href="#/opensource">开源精选阅读架（HelloGitHub 起步 · 按来源浏览）→</a></p>
     </section>
@@ -365,6 +382,14 @@ function opensourceSourceLabel(note) {
   if (raw && !/^https?:\/\//i.test(raw)) return raw;
   if (note.series) return note.series;
   return '未标注来源';
+}
+
+function renderAiPage() {
+  return layout(`
+    <nav class="crumb"><a href="#/">首页</a> / <span>AI 史记</span></nav>
+    <div class="ai-page-slot site-main-breakout" data-ai-mount></div>
+    <p class="ai-credit">结构化大事年表改编自 <a href="https://github.com/zsjunai/history-of-ai" rel="noopener noreferrer" target="_blank">zsjunai/history-of-ai</a>（<a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener noreferrer" target="_blank">CC BY-SA 4.0</a>）；本纪/世家/列传/书长文外链上游，站内为导读与索引。详见 <a href="#/note/ai/ATTRIBUTION">署名说明</a>。</p>
+  `);
 }
 
 function renderOpensourcePage() {
@@ -621,6 +646,22 @@ async function mountDailyIfPresent(root) {
   }
 }
 
+async function mountAiIfPresent(root) {
+  const slot = root.querySelector('[data-ai-mount]');
+  if (!slot) return;
+  const compact = slot.hasAttribute('data-ai-compact');
+  const gen = aiMountGen;
+  try {
+    const { mountAiExplorer } = await import('./ai-explorer.js');
+    if (gen !== aiMountGen || !slot.isConnected) return;
+    aiHandle = mountAiExplorer(slot, { compact });
+  } catch {
+    if (gen !== aiMountGen || !slot.isConnected) return;
+    slot.innerHTML =
+      '<p class="ai-ex__credit">AI 时间线模块加载失败，笔记浏览不受影响。</p>';
+  }
+}
+
 /**
  * Ensure browse + playground shell exists; return the browse pane to fill.
  * Playground mounts once so hash navigations keep editor state.
@@ -707,6 +748,7 @@ function mountContent() {
   disposeTransform();
   disposePointer();
   disposeDaily();
+  disposeAi();
   disposePersonalNotes();
 
   const route = parseRoute();
@@ -734,6 +776,10 @@ function mountContent() {
   }
   if (rawPath === 'oss' || rawPath === 'reading' || rawPath === 'hellogithub') {
     window.location.replace(`${window.location.pathname}${window.location.search}#/opensource`);
+    return;
+  }
+  if (rawPath === 'ai-history' || rawPath === 'history-of-ai') {
+    window.location.replace(`${window.location.pathname}${window.location.search}#/ai`);
     return;
   }
 
@@ -790,6 +836,11 @@ function mountContent() {
   } else if (route.name === 'opensource') {
     browse.innerHTML = renderOpensourcePage();
     void syncSidePanel(null);
+  } else if (route.name === 'ai') {
+    browse.innerHTML = renderAiPage();
+    void syncSidePanel(null);
+    document.querySelector('.app-shell')?.classList.add('is-playground-collapsed');
+    mountAiIfPresent(browse);
   } else {
     browse.innerHTML = renderHome();
     void syncSidePanel(null);
@@ -802,6 +853,7 @@ function mountContent() {
     mountPointerIfPresent(browse);
     mountTransformIfPresent(browse);
     mountDailyIfPresent(browse);
+    mountAiIfPresent(browse);
   }
 }
 
