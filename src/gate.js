@@ -10,6 +10,9 @@ export const SITE_PASSWORD = import.meta.env.VITE_SITE_PASSWORD || 'notes';
 const GATE_SATIRE_QUOTE =
   '开发者反对的不是AI，是一些外行用AI来假装自己不需要理解，却要求别人为结果负责——最应该对开发者有用的东西，却成了外行免于理解、照常索要结果的许可证';
 
+const GATE_SATIRE_LINE =
+  '外行有了AI加持，只在表面上一套又一套，没有深度的积累';
+
 /** @typedef {'for' | 'against'} GateVote */
 
 export function isUnlocked() {
@@ -156,6 +159,7 @@ export function renderGate(root, { onSuccess }) {
           <div class="gate-quote-row">
             <blockquote class="gate-quote">
               <p>${GATE_SATIRE_QUOTE}</p>
+              <p>${GATE_SATIRE_LINE}</p>
             </blockquote>
             <div class="gate-vote" role="group" aria-label="对该观点投票">
               <button type="button" class="gate-vote-btn" data-gate-vote="for" aria-pressed="false">

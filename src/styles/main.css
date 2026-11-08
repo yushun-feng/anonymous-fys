@@ -1445,6 +1445,10 @@ html.is-gate #app {
   font-weight: 400;
 }
 
+.gate-quote p + p {
+  margin-top: 0.75rem;
+}
+
 .gate-vote {
   display: flex;
   flex-wrap: wrap;
