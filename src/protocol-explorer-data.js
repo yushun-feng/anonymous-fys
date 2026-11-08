@@ -42,6 +42,7 @@ function pkt(p) {
  *   fullName: string,
  *   category: 'core' | 'application' | 'security',
  *   osiLayer: number,
+ *   osiStack: number[],
  *   osiLabel: string,
  *   port: string,
  *   transport: string,
@@ -70,6 +71,7 @@ export const PROTOCOLS = [
     fullName: '超文本传输协议',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '80（HTTPS: 443）',
     transport: 'TCP',
@@ -198,6 +200,7 @@ export const PROTOCOLS = [
     fullName: '安全超文本传输协议',
     category: 'security',
     osiLayer: 7,
+    osiStack: [7, 6, 4, 3, 2, 1],
     osiLabel: '应用层（经 TLS）',
     port: '443',
     transport: 'TCP + TLS',
@@ -362,6 +365,7 @@ export const PROTOCOLS = [
     fullName: '传输控制协议',
     category: 'core',
     osiLayer: 4,
+    osiStack: [4, 3, 2, 1],
     osiLabel: '传输层',
     port: '由应用指定',
     transport: 'TCP',
@@ -563,6 +567,7 @@ export const PROTOCOLS = [
     fullName: '用户数据报协议',
     category: 'core',
     osiLayer: 4,
+    osiStack: [4, 3, 2, 1],
     osiLabel: '传输层',
     port: '由应用指定',
     transport: 'UDP',
@@ -672,6 +677,7 @@ export const PROTOCOLS = [
     fullName: '网际协议',
     category: 'core',
     osiLayer: 3,
+    osiStack: [3, 2, 1],
     osiLabel: '网络层',
     port: '—',
     transport: '承载 TCP/UDP/ICMP 等',
@@ -800,6 +806,7 @@ export const PROTOCOLS = [
     fullName: '域名系统',
     category: 'core',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '53',
     transport: 'UDP（常见）/ TCP',
@@ -941,6 +948,7 @@ export const PROTOCOLS = [
     fullName: '动态主机配置协议',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '67 / 68',
     transport: 'UDP',
@@ -1068,6 +1076,7 @@ export const PROTOCOLS = [
     fullName: '互联网控制报文协议',
     category: 'application',
     osiLayer: 3,
+    osiStack: [3, 2, 1],
     osiLabel: '网络层（配套）',
     port: '—',
     transport: '封装在 IP 中',
@@ -1215,6 +1224,7 @@ export const PROTOCOLS = [
     fullName: '简单邮件传输协议',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '465 / 587 / 25',
     transport: 'TCP（常 +TLS）',
@@ -1400,6 +1410,7 @@ export const PROTOCOLS = [
     fullName: '邮局协议第 3 版',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '995（TLS）/ 110',
     transport: 'TCP + TLS',
@@ -1565,6 +1576,7 @@ export const PROTOCOLS = [
     fullName: 'Internet 邮件访问协议',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '993（TLS）/ 143',
     transport: 'TCP + TLS',
@@ -1721,6 +1733,7 @@ export const PROTOCOLS = [
     fullName: '文件传输协议',
     category: 'application',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '21（控制）+ 动态数据口',
     transport: '双 TCP 连接',
@@ -1895,6 +1908,7 @@ export const PROTOCOLS = [
     fullName: '安全外壳协议',
     category: 'security',
     osiLayer: 7,
+    osiStack: [7, 4, 3, 2, 1],
     osiLabel: '应用层',
     port: '22',
     transport: 'TCP + SSH 二进制包',
@@ -2096,6 +2110,7 @@ export const PROTOCOLS = [
     fullName: '传输层安全',
     category: 'security',
     osiLayer: 6,
+    osiStack: [6, 4, 3, 2, 1],
     osiLabel: '表示层（常论）',
     port: '依应用（常 443）',
     transport: '通常跑在 TCP 上',
@@ -2255,12 +2270,164 @@ export const CATEGORY_LABELS = {
   security: '安全',
 };
 
+/**
+ * OSI 七层导读（教学用；与 TCP/IP 实务对照见 TCPIP_MAPPING）。
+ * @typedef {{
+ *   n: number,
+ *   name: string,
+ *   nameEn: string,
+ *   pdu: string,
+ *   pduHint: string,
+ *   responsibility: string,
+ *   examples: string,
+ *   digests: string,
+ * }} OsiLayerDef
+ */
+
+/** @type {OsiLayerDef[]} 自上而下：L7 → L1 */
 export const OSI_LAYERS = [
-  { n: 7, name: '应用层' },
-  { n: 6, name: '表示层' },
-  { n: 5, name: '会话层' },
-  { n: 4, name: '传输层' },
-  { n: 3, name: '网络层' },
-  { n: 2, name: '数据链路层' },
-  { n: 1, name: '物理层' },
+  {
+    n: 7,
+    name: '应用层',
+    nameEn: 'Application',
+    pdu: '数据 / Data（报文）',
+    pduHint: '对用户或进程有意义的请求与应答，尚未按「网络栈」打包。',
+    responsibility:
+      '面向具体业务：Web、邮件、名字解析、文件传输、远程登录等。决定「要说什么」——方法、资源、状态码、查询类型——而不是如何寻址或如何可靠投递。',
+    examples: 'HTTP / HTTPS、DNS、DHCP、SMTP、POP3、IMAP、FTP、SSH',
+    digests:
+      '把它想成「业务对话框」。本站大部分应用类协议的「家」在这一层；真正上路时还会叠传输/网络/链路。',
+  },
+  {
+    n: 6,
+    name: '表示层',
+    nameEn: 'Presentation',
+    pdu: '数据 / Data（已编码或变换）',
+    pduHint: '同一语义，不同「写法」：编码、压缩、加密后的字节形态。',
+    responsibility:
+      '统一数据表示：字符集与编码、序列化格式、压缩、以及传统教材里常挂在这里的加密/解密。保证两端对「这些比特表示什么」达成一致。',
+    examples: 'TLS/SSL 记录层（教学归位）、MIME、ASN.1、JPEG/PNG、常见编解码',
+    digests:
+      '现代 Internet 很少单独实现一个「表示层守护进程」；TLS、JSON、UTF-8 等常直接由应用或库完成——这是 L5–L7 常被合并的原因之一。',
+  },
+  {
+    n: 5,
+    name: '会话层',
+    nameEn: 'Session',
+    pdu: '数据 / Data（会话语义）',
+    pduHint: '带有「对话生命周期」的控制：建立、维持、恢复、结束。',
+    responsibility:
+      '管理端到端对话：会话建立与拆除、全双工/半双工约定、检查点与恢复（理论上）。回答「我们是否还在同一次对话里」。',
+    examples: 'RPC 会话、NetBIOS、TLS 会话票据/复用（概念对照）、应用内登录会话',
+    digests:
+      '实务中会话状态多半沉在应用（cookie、token）或传输连接里；独立 L5 协议在 Web 日常路径上几乎看不见。',
+  },
+  {
+    n: 4,
+    name: '传输层',
+    nameEn: 'Transport',
+    pdu: '段 / Segment（TCP）或 数据报 / Datagram（UDP）',
+    pduHint: '端口 +（TCP 时）序号/确认；把进程对进程的通道从主机对主机里分出来。',
+    responsibility:
+      '端到端进程通信：端口复用、可靠投递与拥塞控制（TCP），或轻量无连接数据报（UDP）。不关心「下一跳是谁」，只关心两端套接字。',
+    examples: 'TCP、UDP（本站核心协议）',
+    digests:
+      'OSI 与 TCP/IP 在这一层高度对齐：两边都明确有「传输层」。选 TCP 还是 UDP，往往比纠结 L5/L6 更影响设计。',
+  },
+  {
+    n: 3,
+    name: '网络层',
+    nameEn: 'Network',
+    pdu: '分组 / Packet（IP 数据报）',
+    pduHint: '源/目的 IP + TTL 等；路由器按地址做逐跳转发。',
+    responsibility:
+      '跨网络寻址与路由：把分组送到目标主机（或网络），处理分片、TTL、以及 ICMP 等控制消息。路由器主要工作在这一层。',
+    examples: 'IPv4 / IPv6、ICMP、路由相关（OSPF/BGP 等，本站未单列）',
+    digests:
+      '「谁在哪」是 IP 的事；「哪段对话」是端口的事。ICMP 挂在网络层旁路，不经过 TCP/UDP。',
+  },
+  {
+    n: 2,
+    name: '数据链路层',
+    nameEn: 'Data Link',
+    pdu: '帧 / Frame',
+    pduHint: 'MAC（或链路地址）+ 帧校验；只在本段链路上有意义。',
+    responsibility:
+      '同一段物理/逻辑链路上的可靠或尽力传送：成帧、寻址（如 MAC）、差错检测、介质访问（以太网/Wi‑Fi）。交换机主要工作在这里。',
+    examples: 'Ethernet、Wi‑Fi (802.11)、PPP、ARP（常挂 L2/L3 交界）',
+    digests:
+      '帧头里的地址出不了这一跳；跨网时路由器会剥掉旧帧、按 IP 转发、再封装新帧。',
+  },
+  {
+    n: 1,
+    name: '物理层',
+    nameEn: 'Physical',
+    pdu: '比特 / Bit（信号）',
+    pduHint: '电压、光脉冲、射频符号——不再有「报文结构」，只有信号。',
+    responsibility:
+      '在介质上发送与接收原始比特：电气/光学/射频特性、编码、连接器与线缆、速率与同步。',
+    examples: '光纤、双绞线、无线电、PHY 芯片与调制方式',
+    digests:
+      '抓包工具看到的是帧以上；物理层故障表现为链路灯不亮、噪声、误码——协议探索里用「栈底」占位即可。',
+  },
 ];
+
+/** 封装 / 解封装（发送自上而下，接收自下而上） */
+export const OSI_ENCAPSULATION = {
+  sendTitle: '发送：封装（自上而下）',
+  sendHint: '应用数据每下一层加一头（有时还有尾），像套一层信封。',
+  sendSteps: [
+    { layer: 7, action: '应用写出业务数据（如 HTTP 请求）' },
+    { layer: 6, action: '表示变换（编码 / 压缩 / 加密，实务常并入应用或 TLS）' },
+    { layer: 5, action: '会话定界（实务常并入应用或连接生命周期）' },
+    { layer: 4, action: '加上传输头 → TCP 段 / UDP 数据报（端口、序号…）' },
+    { layer: 3, action: '加上网络头 → IP 分组（源/目的 IP、TTL…）' },
+    { layer: 2, action: '加上链路头尾 → 帧（MAC、FCS…）' },
+    { layer: 1, action: '变成比特流 / 信号送上介质' },
+  ],
+  receiveTitle: '接收：解封装（自下而上）',
+  receiveHint: '每上一层剥掉本层头尾，把载荷交给上层——直到应用读懂业务数据。',
+  receiveSteps: [
+    { layer: 1, action: '从介质收回比特，恢复为帧边界可识别的字节流' },
+    { layer: 2, action: '校验并去掉帧头尾，取出网络层分组' },
+    { layer: 3, action: '按 IP 判断是否本机；去掉 IP 头，交给传输层' },
+    { layer: 4, action: '按端口交付套接字；去掉 TCP/UDP 头' },
+    { layer: 5, action: '恢复会话上下文（若有独立会话机制）' },
+    { layer: 6, action: '解密 / 解码 / 解压（若有）' },
+    { layer: 7, action: '应用解析业务报文并处理' },
+  ],
+};
+
+/**
+ * OSI ↔ TCP/IP（常见 4/5 层讲法）对照。
+ * 五层讲法把「主机到网络 / 网络接口」拆成链路+物理；四层讲法常合并为「网络接口层」。
+ */
+export const TCPIP_MAPPING = [
+  {
+    tcpip: '应用层',
+    tcpipEn: 'Application',
+    osi: [7, 6, 5],
+    note: 'HTTP、DNS、SSH 等直接待在这里；编码与会话不再单独立「层进程」。',
+  },
+  {
+    tcpip: '传输层',
+    tcpipEn: 'Transport',
+    osi: [4],
+    note: '与 OSI 对齐：TCP / UDP。',
+  },
+  {
+    tcpip: '网络层（互联网层）',
+    tcpipEn: 'Internet',
+    osi: [3],
+    note: '与 OSI 对齐：IP、ICMP。',
+  },
+  {
+    tcpip: '网络接口层（链路+物理）',
+    tcpipEn: 'Link / Network Access',
+    osi: [2, 1],
+    note: '四层模型常把 L1+L2 合成一层；五层教材会拆开讲以太网与 PHY。',
+  },
+];
+
+export const TCPIP_MERGE_NOTE =
+  '人们常把 OSI 的 L5–L7 并进 TCP/IP「应用层」，因为 Internet 栈没有强制的会话/表示中间件：TLS、UTF-8、JSON、cookie 会话都由应用或库在用户态完成，抓包时也很少看到独立的「第 5/6 层头」。L1–L4 仍大致一一对应（L1+L2 在四层讲法里再合并）。';
